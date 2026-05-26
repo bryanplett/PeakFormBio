@@ -1,0 +1,12 @@
+node_modules
+backend/node_modules
+.git
+.env
+.env.local
+docker-volumes
+uploads/*
+!uploads/.gitkeep
+*.log
+.DS_Store
+deploy/
+1_5058098532557259934/
