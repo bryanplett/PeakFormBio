@@ -8,5 +8,4 @@ uploads/*
 !uploads/.gitkeep
 *.log
 .DS_Store
-deploy/
 1_5058098532557259934/
