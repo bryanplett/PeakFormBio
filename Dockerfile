@@ -1,6 +1,5 @@
 # Railway-optimized Dockerfile
-# Builds a single image that serves BOTH the backend API and the static frontend.
-# Frontend source: the deploy/ folder (newer/more complete than repo root).
+# DEBUG VERSION — prints diagnostics before starting Node.
 
 FROM node:20-alpine
 
@@ -21,5 +20,7 @@ COPY deploy/*.js ./public/
 COPY deploy/*.css ./public/
 COPY deploy/assets/ ./public/assets/
 
-# Railway sets PORT at runtime; we listen on it (server.js already reads PORT)
 EXPOSE 3001
+
+# ── DEBUG: print container info BEFORE running node ──────────────────────────
+CMD ["sh", "-c", "echo '=== CONTAINER STARTED ===' && echo 'Node version:' && node --version && echo 'Files in /app:' && ls -la /app/ && echo 'Starting server.js...' && node server.js"]
