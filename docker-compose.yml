@@ -1,0 +1,56 @@
+version: '3.9'
+
+networks:
+  web:
+    external: 'true'
+  peakform: {}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./docker-volumes/postgres/data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./migrations/2025_recipes_and_meal_settings.sql:/docker-entrypoint-initdb.d/02_recipes.sql:ro
+    networks:
+      - peakform
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - postgres
+    volumes:
+      - ./docker-volumes/uploads/data:/app/uploads
+    networks:
+      - peakform
+
+  frontend:
+    build:
+      context: ./nginx
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - backend
+    volumes:
+      - ./:/usr/share/nginx/html:ro
+      - ./docker-volumes/uploads/data:/usr/share/nginx/html/uploads:ro
+    expose:
+      - 80
+      - 443
+    networks:
+      - web
+      - peakform
+    labels:
+      # Caddy
+      caddy: ${HOST}
+      caddy.reverse_proxy: "{{upstreams 80}}"
+
+      # Traefik
+      traefik.enable: 'true'
+      traefik.frontend.rule: "Host:${HOST}"
+      traefik.port: '80'

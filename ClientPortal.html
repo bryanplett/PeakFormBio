@@ -1,0 +1,2530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PeakForm Bio — Client Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="api-client.js"></script>
+<script src="pricelists.js"></script>
+<script type="text/babel" src="weighin.jsx"></script>
+<script type="text/babel" src="onboarding-quiz.jsx"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    background: #0a0a0a; color: #f5f5f7;
+    -webkit-font-smoothing: antialiased;
+  }
+  input, select, textarea, button { font-family: inherit; }
+  button:active { transform: scale(0.97); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+  .field-input {
+    width: 100%; border: 1px solid rgba(255,255,255,0.10); border-radius: 10px;
+    padding: 11px 14px; font-size: 15px; color: #f5f5f7; background: rgba(255,255,255,0.06);
+    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field-input::placeholder { color: rgba(255,255,255,0.28); }
+  .field-input:focus { border-color: #2997ff; box-shadow: 0 0 0 3px rgba(41,151,255,0.14); }
+  select.field-input { appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ffffff' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  select.field-input option { background: #1a1a1c; color: #f5f5f7; }
+  .btn-blue {
+    background: #0066cc; color: #fff; border: none; border-radius: 980px;
+    padding: 11px 24px; font-size: 15px; font-weight: 400; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-blue:hover { background: #2997ff; }
+  .btn-blue:active { transform: scale(0.96); }
+  .btn-ghost {
+    background: transparent; color: #2997ff; border: 1px solid rgba(41,151,255,0.5);
+    border-radius: 980px; padding: 10px 20px; font-size: 14px; cursor: pointer;
+    transition: transform 0.1s, border-color 0.15s;
+  }
+  .btn-ghost:hover { border-color: #2997ff; }
+  .card {
+    background: #1a1a1c; border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.07); padding: 28px;
+  }
+  .tag {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px; border-radius: 980px; font-size: 12px; font-weight: 600;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.2s ease; }
+  @media (max-width: 768px) {
+    .sidebar { display: none !important; }
+    .mobile-tabs { display: flex !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ─── API Client (replaces Supabase) ───────────────────────────────────────────
+const sb = window.createApiClient();
+window.supabaseClient = sb; // expose for sub-components like OnboardingQuiz
+
+// ─── Legacy demo data (fallback only) ─────────────────────────────────────────
+const USERS = {
+  john_doe: {
+    password: 'client123',
+    name: 'John Doe',
+    email: 'john@example.com',
+    orders: [
+      { id: 1, date: '2026-03-10', item: 'Whey Protein — Chocolate', qty: 2, status: 'Delivered' },
+      { id: 2, date: '2026-03-22', item: 'Omega-3 Fish Oil', qty: 1, status: 'Delivered' },
+      { id: 3, date: '2026-04-05', item: 'Creatine Monohydrate', qty: 1, status: 'In Transit' },
+    ],
+    nutrition: {
+      goal: 'Muscle Gain',
+      macros: { calories: 3100, protein: 220, carbs: 360, fat: 80 },
+      days: [
+        { day: 'Monday', meals: ['Oats + eggs + berries', 'Chicken breast + rice + broccoli', 'Greek yogurt', 'Salmon + sweet potato + greens'] },
+        { day: 'Tuesday', meals: ['Protein smoothie + banana', 'Turkey wrap + spinach', 'Almonds + apple', 'Beef stir-fry + rice'] },
+        { day: 'Wednesday', meals: ['Egg white omelette + toast', 'Tuna salad + quinoa', 'Cottage cheese', 'Grilled chicken + pasta'] },
+        { day: 'Thursday', meals: ['Greek yogurt parfait', 'Chicken Caesar salad', 'Protein bar', 'Shrimp + rice + veggies'] },
+        { day: 'Friday', meals: ['Scrambled eggs + avocado toast', 'Turkey bowl + brown rice', 'Whey shake', 'Lean beef + mashed potato'] },
+        { day: 'Saturday', meals: ['Pancakes + protein powder', 'Grilled chicken + fries', 'Mixed nuts', 'Pizza (controlled portions)'] },
+        { day: 'Sunday', meals: ['French toast + eggs', 'Salmon poke bowl', 'Protein smoothie', 'Roast chicken + veggies'] },
+      ],
+    },
+    workout: {
+      goal: 'Hypertrophy',
+      days: [
+        { day: 'Monday', focus: 'Chest & Triceps', exercises: [
+          { name: 'Bench Press', sets: 4, reps: '8–10', rest: '90s' },
+          { name: 'Incline Dumbbell Press', sets: 3, reps: '10–12', rest: '75s' },
+          { name: 'Cable Fly', sets: 3, reps: '12–15', rest: '60s' },
+          { name: 'Tricep Pushdown', sets: 3, reps: '12–15', rest: '60s' },
+        ]},
+        { day: 'Tuesday', focus: 'Back & Biceps', exercises: [
+          { name: 'Pull-Ups', sets: 4, reps: '6–8', rest: '90s' },
+          { name: 'Barbell Row', sets: 4, reps: '8–10', rest: '90s' },
+          { name: 'Lat Pulldown', sets: 3, reps: '10–12', rest: '75s' },
+          { name: 'Barbell Curl', sets: 3, reps: '10–12', rest: '60s' },
+        ]},
+        { day: 'Wednesday', focus: 'Active Recovery', exercises: [
+          { name: '30-min Walk', sets: 1, reps: '—', rest: '—' },
+          { name: 'Foam Roll', sets: 1, reps: '10 min', rest: '—' },
+        ]},
+        { day: 'Thursday', focus: 'Legs', exercises: [
+          { name: 'Squat', sets: 4, reps: '6–8', rest: '2min' },
+          { name: 'Romanian Deadlift', sets: 3, reps: '10', rest: '90s' },
+          { name: 'Leg Press', sets: 3, reps: '12', rest: '75s' },
+          { name: 'Calf Raise', sets: 4, reps: '15–20', rest: '45s' },
+        ]},
+        { day: 'Friday', focus: 'Shoulders', exercises: [
+          { name: 'Overhead Press', sets: 4, reps: '8–10', rest: '90s' },
+          { name: 'Lateral Raise', sets: 4, reps: '12–15', rest: '60s' },
+          { name: 'Face Pull', sets: 3, reps: '15', rest: '60s' },
+        ]},
+        { day: 'Saturday', focus: 'Full Body', exercises: [
+          { name: 'Deadlift', sets: 3, reps: '5', rest: '2min' },
+          { name: 'Push-Up', sets: 3, reps: '15', rest: '60s' },
+          { name: 'Dumbbell Row', sets: 3, reps: '12', rest: '60s' },
+        ]},
+        { day: 'Sunday', focus: 'Rest', exercises: [] },
+      ],
+    },
+    bloodwork: ['BloodPanel_Jan2026.pdf', 'Hormones_Feb2026.pdf'],
+  },
+
+  sarah_m: {
+    password: 'peak2026',
+    name: 'Sarah Mitchell',
+    email: 'sarah@example.com',
+    orders: [
+      { id: 1, date: '2026-02-14', item: 'Collagen Peptides', qty: 2, status: 'Delivered' },
+      { id: 2, date: '2026-03-30', item: 'Magnesium Glycinate', qty: 1, status: 'Delivered' },
+    ],
+    nutrition: {
+      goal: 'Fat Loss + Tone',
+      macros: { calories: 1950, protein: 155, carbs: 185, fat: 58 },
+      days: [
+        { day: 'Monday', meals: ['Egg whites + spinach + berries', 'Grilled chicken salad', 'Apple + almond butter', 'Baked salmon + asparagus'] },
+        { day: 'Tuesday', meals: ['Greek yogurt + granola', 'Turkey lettuce wraps', 'Protein shake', 'Chicken + zucchini noodles'] },
+        { day: 'Wednesday', meals: ['Overnight oats + chia', 'Tuna + mixed greens', 'Rice cakes + hummus', 'Shrimp stir-fry + cauliflower rice'] },
+        { day: 'Thursday', meals: ['Smoothie bowl', 'Grilled chicken + quinoa', 'Hard-boiled eggs', 'Lean beef + roasted veggies'] },
+        { day: 'Friday', meals: ['Avocado toast + eggs', 'Salmon salad', 'Protein bar', 'Chicken tacos (corn tortilla)'] },
+        { day: 'Saturday', meals: ['Waffles + protein powder', 'Sushi (sashimi-heavy)', 'Edamame', 'Grilled steak + sweet potato'] },
+        { day: 'Sunday', meals: ['Omelette + fruit', 'Chicken soup', 'Almonds', 'Poke bowl'] },
+      ],
+    },
+    workout: {
+      goal: 'Strength & Conditioning',
+      days: [
+        { day: 'Monday', focus: 'Lower Body', exercises: [
+          { name: 'Goblet Squat', sets: 4, reps: '12', rest: '60s' },
+          { name: 'Hip Thrust', sets: 4, reps: '12–15', rest: '75s' },
+          { name: 'Walking Lunge', sets: 3, reps: '10 each', rest: '60s' },
+          { name: 'Leg Curl', sets: 3, reps: '12–15', rest: '45s' },
+        ]},
+        { day: 'Tuesday', focus: 'Upper Body Push', exercises: [
+          { name: 'Dumbbell Press', sets: 3, reps: '10–12', rest: '60s' },
+          { name: 'Arnold Press', sets: 3, reps: '12', rest: '60s' },
+          { name: 'Lateral Raise', sets: 3, reps: '15', rest: '45s' },
+          { name: 'Tricep Dip', sets: 3, reps: '10–12', rest: '60s' },
+        ]},
+        { day: 'Wednesday', focus: 'Cardio / HIIT', exercises: [
+          { name: 'Treadmill Intervals', sets: 8, reps: '30s on / 30s off', rest: '—' },
+          { name: 'Jump Rope', sets: 3, reps: '2 min', rest: '60s' },
+        ]},
+        { day: 'Thursday', focus: 'Upper Body Pull', exercises: [
+          { name: 'Assisted Pull-Up', sets: 4, reps: '8', rest: '90s' },
+          { name: 'Seated Row', sets: 3, reps: '12', rest: '60s' },
+          { name: 'Face Pull', sets: 3, reps: '15', rest: '45s' },
+          { name: 'Dumbbell Curl', sets: 3, reps: '12', rest: '45s' },
+        ]},
+        { day: 'Friday', focus: 'Full Body Circuit', exercises: [
+          { name: 'Kettlebell Swing', sets: 4, reps: '15', rest: '45s' },
+          { name: 'Box Jump', sets: 3, reps: '8', rest: '60s' },
+          { name: 'Push-Up', sets: 3, reps: '15', rest: '45s' },
+          { name: 'TRX Row', sets: 3, reps: '12', rest: '45s' },
+        ]},
+        { day: 'Saturday', focus: 'Yoga / Mobility', exercises: [
+          { name: 'Sun Salutation', sets: 5, reps: '—', rest: '—' },
+          { name: 'Hip Flexor Stretch', sets: 2, reps: '60s each', rest: '—' },
+        ]},
+        { day: 'Sunday', focus: 'Rest', exercises: [] },
+      ],
+    },
+    bloodwork: ['FullPanel_Mar2026.pdf'],
+  },
+};
+
+const PRODUCTS = [
+  // Consulting Services
+  'Nutrition Plan — 1 Month — $350',
+  'Workout Routine — 1 Month — $250',
+  'Hormone / Bloodwork Consultation — 1 Month — $250',
+  'Nutrition / Workout / Hormone Bundle — 1 Month — $600',
+  // Peptides
+  'Selank — 10mg — $150',
+  'Semax — 10mg — $150',
+  'KPV — 10mg — $125',
+  'DSIP — 10mg — $175',
+  'SS-31 — 10mg — $125',
+  'SS-31 — 30mg — $175',
+  'CJC 1295 DAC — 5mg — $150',
+  'BPC — 10mg — $175',
+  '5 Amino — 50mg — $175',
+  'SNAP-8 — 8mg — $100',
+  'TB-500 — 10mg — $175',
+  'PT-141 — 10mg — $125',
+  'HGH — 10IU — $150',
+  'HGH — 36IU — $200',
+  'MOTS — 10mg — $125',
+  'MOTS — 40mg — $200',
+  'Epithalon — 50mg — $225',
+  'GHRP-2 — 10mg — $150',
+  'GHRP-6 — 10mg — $150',
+  'HCG — 5000IU — $150',
+  'CJC/IPA — 5+5mg — $175',
+  'IPA — 10mg — $125',
+  'IGF LR3 — 1mg — $200',
+  'Cagrilintide — 10mg — $150',
+  'KLOW — 80mg — $200',
+  'NAD+ — 1000mg — $150',
+  'Glutathione — 1200mg — $125',
+  // GLP-1 / Weight Loss
+  'Semaglutide — 10mg — $150',
+  'Semaglutide — 15mg — $175',
+  'Tirzepatide — 10mg — $150',
+  'Tirzepatide — 20mg — $175',
+  'Tirzepatide — 30mg — $200',
+  'Tirzepatide — 40mg — $225',
+  'Tirzepatide — 60mg — $250',
+  'Retatrutide — 10mg — $160',
+  'Retatrutide — 12mg — $170',
+  'Retatrutide — 15mg — $180',
+  'Retatrutide — 20mg — $200',
+  'Retatrutide — 30mg — $225',
+  'Retatrutide — 60mg — $275',
+];
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const icons = {
+  order:   <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="16" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M6 3V2a3 3 0 0 1 6 0v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  history: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="currentColor" strokeWidth="1.5"/><path d="M9 5v4l3 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  nutrition:<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2c-3.5 0-6 2.8-6 6 0 2.5 1.3 4.6 3.2 5.8V16h5.6v-2.2C13.7 12.6 15 10.5 15 8c0-3.2-2.5-6-6-6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><line x1="9" y1="2" x2="9" y2="6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  workout: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h2M13 9h2M5 9h3M10 9h3M5 6v6M13 6v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  weighin: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 14l4-4 3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M11 7h4v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  blood:   <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L4 9.5C4 12.5 6.2 15 9 15s5-2.5 5-5.5L9 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>,
+  logout:  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M11 11l3-3-3-3M7 8h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+};
+
+const statusColors = {
+  'Delivered':  { bg: 'rgba(52,199,89,0.12)', color: '#1a8a3c' },
+  'In Transit': { bg: 'rgba(255,159,10,0.13)', color: '#b86b00' },
+  'Processing': { bg: 'rgba(0,102,204,0.10)', color: '#0055b3' },
+};
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+const LoginScreen = ({ onLogin }) => {
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true); setError('');
+    const { data, error } = await sb.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+    setLoading(false);
+    if (error) setError(error.message || 'Sign-in failed.');
+    else if (data?.user) {
+      if (data.user.role === 'admin') {
+        window.location.href = 'Admin.html';
+      } else {
+        onLogin(data.user.id);
+      }
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#000',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 24,
+      backgroundImage: 'radial-gradient(ellipse at 50% 40%, rgba(0,102,204,0.18) 0%, transparent 65%)',
+    }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ textAlign: 'center', marginBottom: 40, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
+            style={{ height: 360, width: 'auto', marginBottom: 16 }} />
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            Client Portal
+          </p>
+        </div>
+
+        <div className="card" style={{ borderRadius: 20, padding: 36 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 6, letterSpacing: '-0.02em' }}>Sign in</h2>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>
+            Enter your email and password to access your portal.
+          </p>
+          <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Email</label>
+              <input className="field-input" type="email" placeholder="you@email.com" required
+                value={email} onChange={e => { setEmail(e.target.value); setError(''); }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Password</label>
+              <input className="field-input" type="password" placeholder="••••••••" required
+                value={password} onChange={e => { setPassword(e.target.value); setError(''); }} />
+            </div>
+            {error && <p style={{ fontSize: 13, color: '#ff453a', letterSpacing: '-0.12px' }}>{error}</p>}
+            <button type="submit" className="btn-blue" disabled={loading}
+              style={{ marginTop: 4, padding: '13px', fontSize: 16, opacity: loading ? 0.6 : 1 }}>
+              {loading ? 'Signing in…' : 'Sign In'}
+            </button>
+          </form>
+          <p style={{ marginTop: 20, fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 1.5 }}>
+            No account yet? Your coach will set up your access.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Portal Catalog ──────────────────────────────────────────────────────────
+// Categorized product browser using Option-3 reveal cards. Maps the user's
+// pricelist labels (e.g. "Tirzepatide — 20mg — $175") into the correct
+// category. When clicked, the card sets the selected product on the parent
+// OrderForm.
+
+const CATEGORY_MAP = [
+  {
+    id: 'metabolic', title: 'Metabolic / Weight Management', tint: '#ff9f0a',
+    matches: ['retatrutide', 'tirzepatide', 'semaglutide', 'cagrilintide', '5 amino', 'klow'],
+    blurbs: {
+      retatrutide: 'Triple agonist (GLP-1/GIP/glucagon) for advanced metabolic support.',
+      tirzepatide: 'Dual GIP/GLP-1 receptor agonist for weight management.',
+      semaglutide: 'GLP-1 receptor agonist for appetite regulation and metabolic health.',
+      cagrilintide: 'Long-acting amylin analog supporting satiety.',
+      '5 amino': 'Targets NNMT to support fat metabolism and metabolic flexibility.',
+      klow: 'Multi-peptide blend for metabolic and recovery support.',
+    },
+  },
+  {
+    id: 'growth', title: 'Growth Hormone / Recovery / Muscle', tint: '#34c759',
+    matches: ['cjc', 'ipamorelin', 'tesamorelin', 'ghrp', 'igf', 'bpc', 'tb-500', 'tb 500', 'wolverine'],
+    blurbs: {
+      cjc: 'GHRH analog supporting endogenous GH pulses and recovery.',
+      ipamorelin: 'Selective GH secretagogue with minimal cortisol impact.',
+      tesamorelin: 'GHRH analog for visceral fat reduction.',
+      ghrp: 'Growth hormone releasing peptide supporting GH and IGF-1.',
+      igf: 'Long-acting IGF-1 analog for tissue repair and lean muscle.',
+      bpc: 'Body protection compound — accelerates tissue repair.',
+      'tb-500': 'Thymosin beta-4 fragment for cellular regeneration.',
+      'tb 500': 'Thymosin beta-4 fragment for cellular regeneration.',
+      wolverine: 'Recovery-focused peptide blend.',
+    },
+  },
+  {
+    id: 'longevity', title: 'Longevity / Cellular Health / Mitochondrial', tint: '#bf5af2',
+    matches: ['nad', 'ss-31', 'ss 31', 'mots', 'epithalon'],
+    blurbs: {
+      nad: 'Foundational coenzyme for cellular energy and DNA repair.',
+      'ss-31': 'Cardiolipin-binding peptide that protects mitochondria.',
+      'ss 31': 'Cardiolipin-binding peptide that protects mitochondria.',
+      mots: 'Mitochondrial-derived peptide supporting metabolic health.',
+      epithalon: 'Telomerase activator studied for cellular aging support.',
+    },
+  },
+  {
+    id: 'cognitive', title: 'Cognitive / Mood / Sleep', tint: '#2997ff',
+    matches: ['selank', 'semax', 'dsip', 'semax-selank', 'semax selank'],
+    blurbs: {
+      selank: 'Anxiolytic peptide supporting calm focus and stress resilience.',
+      semax: 'Nootropic peptide supporting attention, memory, and BDNF.',
+      'semax-selank': 'Combined nootropic + anxiolytic — focus and calm in one.',
+      'semax selank': 'Combined nootropic + anxiolytic — focus and calm in one.',
+      dsip: 'Delta sleep-inducing peptide for restorative sleep.',
+    },
+  },
+  {
+    id: 'beauty', title: 'Skin / Beauty / Anti-Aging', tint: '#ff375f',
+    matches: ['ghk', 'snap', 'kpv'],
+    blurbs: {
+      ghk: 'Copper peptide for collagen synthesis and skin repair.',
+      snap: 'Topical peptide that softens expression lines.',
+      kpv: 'Anti-inflammatory tripeptide for skin and gut health.',
+    },
+  },
+  {
+    id: 'hormonal', title: 'Hormonal / Sexual Wellness', tint: '#ff6482',
+    matches: ['hcg', 'pt-141', 'pt 141'],
+    blurbs: {
+      hcg: 'Human chorionic gonadotropin for endogenous hormone support.',
+      'pt-141': 'Melanocortin agonist supporting sexual response.',
+      'pt 141': 'Melanocortin agonist supporting sexual response.',
+    },
+  },
+  {
+    id: 'programs', title: 'Programs / Services', tint: '#5ac8fa',
+    matches: ['nutrition plan', 'workout', 'hormone', 'bloodwork'],
+    blurbs: {
+      'nutrition plan': 'Custom macros, meal timing, and habit framework.',
+      workout: 'Periodized program for your schedule and goals.',
+      hormone: 'Comprehensive hormonal & bloodwork analysis.',
+      bloodwork: 'Comprehensive hormonal & bloodwork analysis.',
+    },
+  },
+  {
+    id: 'accessories', title: 'Accessories', tint: '#8e8e93',
+    matches: ['accessory pack'],
+    blurbs: {
+      'accessory pack': 'Add the supplies you need to your order. Each pack price is listed below.',
+      'pack \u2014 01':    'Syringes and alcohol wipes.',
+      'pack \u2014 02':    'BAC water.',
+      'pack \u2014 03':    'Syringes, alcohol wipes, and BAC water.',
+    },
+  },
+];
+
+const categorize = (label) => {
+  const lower = label.toLowerCase();
+  for (const cat of CATEGORY_MAP) {
+    for (const m of cat.matches) {
+      if (lower.includes(m)) {
+        // Find matching blurb (longest match wins)
+        let blurb = '';
+        for (const key of Object.keys(cat.blurbs)) {
+          if (lower.includes(key) && key.length > 0) blurb = cat.blurbs[key];
+        }
+        return { categoryId: cat.id, blurb };
+      }
+    }
+  }
+  return { categoryId: 'other', blurb: '' };
+};
+
+// Parse "Name — Strength — $Price" into parts.
+// IMPORTANT: split only on em/en dashes — hyphens are part of names like
+// "Semax-Selank Blend", "PT-141", "TB-500", "SS-31".
+const parseLabel = (label) => {
+  // Strip the price segment first so it isn't mistaken for a strength.
+  const priceMatch = label.match(/\$[\d,.]+/);
+  const price = priceMatch ? priceMatch[0] : '';
+  const withoutPrice = price ? label.replace(price, '').replace(/[—–]\s*$/, '').trim() : label;
+  const parts = withoutPrice.split(/[—–]/).map(s => s.trim()).filter(Boolean);
+  return {
+    name: parts[0] || label,
+    strength: parts[1] || '',
+    price,
+    fullLabel: label,
+  };
+};
+
+// Map product name (lowercase substring) to photo path in /assets
+const PRODUCT_PHOTOS = [
+  { match: 'semaglutide',  src: 'assets/product-semaglutide.png' },
+  { match: 'tirzepatide',  src: 'assets/product-tirzepatide.png' },
+  { match: 'retatrutide',  src: 'assets/product-retatrutide.png' },
+  { match: 'ghk',          src: 'assets/product-ghkcu.png' },
+  { match: 'klow',         src: 'assets/product-klow.png' },
+  { match: 'snap',         src: 'assets/product-snap8.png' },
+  { match: 'kpv',          src: 'assets/product-kpv.png' },
+  { match: 'pt-141',       src: 'assets/product-pt141.png' },
+  { match: 'pt 141',       src: 'assets/product-pt141.png' },
+  { match: 'hcg',          src: 'assets/product-hcg.png' },
+  { match: 'cagrilintide', src: 'assets/product-cagrilintide.png' },
+  { match: '5 amino',      src: 'assets/product-5amino1mq.png' },
+  { match: 'cjc-1295 + ipamorelin', src: 'assets/product-cjc1295-ipamorelin.png' },
+  { match: 'cjc',          src: 'assets/product-cjc1295.png' },
+  { match: 'ipamorelin',   src: 'assets/product-ipamorelin.png' },
+  { match: 'tesamorelin',  src: 'assets/product-tesamorelin.png' },
+  { match: 'ghrp-2',       src: 'assets/product-ghrp2.png' },
+  { match: 'ghrp-6',       src: 'assets/product-ghrp6.png' },
+  { match: 'igf',          src: 'assets/product-igflr3.png' },
+  { match: 'bpc',          src: 'assets/product-bpc157.png' },
+  { match: 'tb-500',       src: 'assets/product-tb500.png' },
+  { match: 'tb 500',       src: 'assets/product-tb500.png' },
+  { match: 'wolverine',    src: 'assets/product-wolverine.png' },
+  { match: 'semax-selank', src: 'assets/product-semax-selank.png' },
+  { match: 'semax selank', src: 'assets/product-semax-selank.png' },
+  { match: 'selank',       src: 'assets/product-selank.png' },
+  { match: 'semax',        src: 'assets/product-semax.png' },
+  { match: 'dsip',         src: 'assets/product-dsip.png' },
+  { match: 'nad',          src: 'assets/product-nad.png' },
+  { match: 'ss-31',        src: 'assets/product-ss31.png' },
+  { match: 'ss 31',        src: 'assets/product-ss31.png' },
+  { match: 'mots',         src: 'assets/product-motsc.png' },
+  { match: 'epithalon',    src: 'assets/product-epithalon.png' },
+  { match: 'nutrition plan', src: 'assets/program-nutrition.png' },
+  { match: 'workout',      src: 'assets/program-workout.png' },
+];
+
+const getProductPhoto = (label) => {
+  if (!label) return null;
+  const lower = label.toLowerCase();
+  // longest match wins so 'cjc-1295 + ipamorelin' beats 'cjc'
+  let best = null;
+  for (const p of PRODUCT_PHOTOS) {
+    if (lower.includes(p.match)) {
+      if (!best || p.match.length > best.match.length) best = p;
+    }
+  }
+  return best ? best.src : null;
+};
+
+const PortalVial = ({ name, strength, tint, size = 130 }) => (
+  <div style={{
+    width: size, height: size * 1.5, position: 'relative',
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    pointerEvents: 'none',
+  }}>
+    <div style={{
+      width: size * 0.4, height: size * 0.18,
+      background: 'linear-gradient(180deg, #d4d4d8 0%, #71717a 50%, #3f3f46 100%)',
+      borderRadius: '6px 6px 2px 2px',
+      boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5)',
+    }} />
+    <div style={{ width: size * 0.45, height: size * 0.05, background: '#52525b' }} />
+    <div style={{
+      width: size * 0.7, height: size * 0.95,
+      background: `linear-gradient(135deg, rgba(255,255,255,0.18) 0%, ${tint}33 40%, ${tint}55 100%)`,
+      border: '1px solid rgba(255,255,255,0.15)',
+      borderRadius: '4px 4px 12px 12px',
+      position: 'relative', overflow: 'hidden',
+      boxShadow: `inset -8px 0 16px rgba(0,0,0,0.3), inset 8px 0 12px rgba(255,255,255,0.1), 0 8px 24px rgba(0,0,0,0.4)`,
+    }}>
+      <div style={{
+        position: 'absolute', top: '6%', left: '12%', width: '14%', height: '60%',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 100%)',
+        borderRadius: '50%', filter: 'blur(2px)',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: '70%',
+        background: `linear-gradient(180deg, ${tint}99 0%, ${tint}cc 100%)`,
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)',
+        width: '82%', padding: '6px 4px',
+        background: 'rgba(255,255,255,0.94)',
+        borderRadius: 4, textAlign: 'center', color: '#1a1a1c',
+        fontSize: size * 0.085, fontWeight: 700, letterSpacing: 0.3, lineHeight: 1.15,
+      }}>
+        <div style={{ fontSize: size * 0.07, color: '#2997ff', fontWeight: 800 }}>PFB</div>
+        <div style={{ fontSize: size * 0.075 }}>{name.length > 13 ? name.slice(0, 13) + '…' : name}</div>
+        <div style={{ fontSize: size * 0.065, fontWeight: 500, color: '#52525b' }}>{strength}</div>
+      </div>
+    </div>
+  </div>
+);
+
+const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand, variants, selectedLabels = [], expanded = false }) => {
+  // `variants` (optional): array of { parsed: {...}, blurb } for products that
+  // share one card across multiple strengths (Semaglutide / Tirzepatide /
+  // Retatrutide). When supplied, the card shows a strength selector and
+  // adds the chosen variant — not `parsed.fullLabel` — to the cart.
+  const hasVariants = Array.isArray(variants) && variants.length > 0;
+  const [selectedIdx, setSelectedIdx] = React.useState(0);
+  const activeVariant = hasVariants ? variants[selectedIdx] : null;
+  const display = hasVariants ? activeVariant.parsed : parsed;
+  const displayBlurb = hasVariants ? (activeVariant.blurb || blurb) : blurb;
+
+  const [hover, setHover] = React.useState(false);
+  const variantSelected = hasVariants && selectedLabels.includes(activeVariant.parsed.fullLabel);
+  const anyVariantSelected = hasVariants && variants.some(v => selectedLabels.includes(v.parsed.fullLabel));
+  const cardSelected = hasVariants ? anyVariantSelected : isSelected;
+  const active = hover || cardSelected || expanded;
+
+  const panelRef = React.useRef(null);
+  const [panelHeight, setPanelHeight] = React.useState(0);
+
+  // Measure the slide-up panel so we can offset it consistently across all cards.
+  React.useLayoutEffect(() => {
+    if (panelRef.current) {
+      setPanelHeight(panelRef.current.scrollHeight);
+    }
+  }, [displayBlurb, display.name, display.strength, display.price, hasVariants, variants?.length]);
+
+  // Fixed card height keeps proportions identical across all cards.
+  const CARD_HEIGHT = expanded ? 600 : 460;
+  // At rest only the product name peeks. On hover/click the rest of the panel
+  // (strength, price, description, add-to-cart) slides up.
+  const PEEK_HEIGHT = 76;
+  const slideOffset = Math.max(panelHeight - PEEK_HEIGHT, 0);
+
+  const handlePrimaryAction = () => {
+    if (hasVariants) {
+      onSelect(activeVariant.parsed.fullLabel);
+    } else {
+      onSelect(parsed.fullLabel);
+    }
+  };
+
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={(e) => {
+        // Click expands the card to a focused, larger view. Adding to cart is
+        // handled by the dedicated button (which calls stopPropagation).
+        if (onExpand) onExpand();
+      }}
+      style={{
+        position: 'relative',
+        width: '100%', height: CARD_HEIGHT,
+        borderRadius: 24,
+        background: `linear-gradient(180deg, #1a1a1c 0%, #0f0f10 100%)`,
+        border: `1px solid ${cardSelected ? tint : (hover ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)')}`,
+        boxShadow: cardSelected ? `0 0 0 1px ${tint}, 0 12px 30px ${tint}33` : 'none',
+        cursor: 'pointer', overflow: 'hidden',
+        transition: 'border-color 0.3s, box-shadow 0.3s',
+      }}>
+      {/* Aura */}
+      <div style={{
+        position: 'absolute', inset: '20% 15%',
+        background: `radial-gradient(circle, ${tint}55 0%, transparent 70%)`,
+        opacity: active ? 0.7 : 0,
+        transition: 'opacity 0.4s',
+        filter: 'blur(20px)',
+        pointerEvents: 'none',
+      }} />
+      {/* Vial / photo */}
+      <div style={{
+        position: 'absolute', top: '4%', left: '50%',
+        transform: `translate(-50%, ${active ? '-20px' : '0'}) rotate(${active ? '-3deg' : '0deg'})`,
+        transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+      }}>
+        {(() => {
+          const photo = getProductPhoto(display.fullLabel);
+          if (photo) {
+            return (
+              <img src={photo} alt={`${display.name} ${display.strength}`}
+                style={{
+                  width: 220, height: 220, objectFit: 'cover',
+                  objectPosition: display.fullLabel.toLowerCase().includes('plan') || display.fullLabel.toLowerCase().includes('workout') ? '14% center' : '32% center',
+                  borderRadius: 16, display: 'block',
+                  filter: active ? 'brightness(1.05)' : 'brightness(0.95)',
+                  transition: 'filter 0.4s',
+                }}
+              />
+            );
+          }
+          return <PortalVial name={display.name} strength={display.strength} tint={tint} size={140} />;
+        })()}
+      </div>
+      {/* Slide-up panel — measured & offset so all cards have identical proportions */}
+      <div
+        ref={panelRef}
+        style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          background: 'linear-gradient(180deg, rgba(20,20,22,0) 0%, rgba(20,20,22,0.96) 30%, rgba(20,20,22,1) 100%)',
+          padding: '48px 22px 22px',
+          transform: active ? 'translateY(0)' : `translateY(${slideOffset}px)`,
+          transition: 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}>
+        <h3 style={{
+          fontSize: display.name.length > 22 ? 15 : (display.name.length > 17 ? 17 : 20),
+          fontWeight: 600, color: '#f5f5f7', marginBottom: 6,
+          letterSpacing: '-0.01em',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          lineHeight: 1.2,
+        }}>{display.name}</h3>
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          marginBottom: 14, height: 22, gap: 8,
+          opacity: active ? 1 : 0,
+          transition: 'opacity 0.25s 0.05s',
+        }}>
+          <span style={{
+            display: 'inline-block', padding: '2px 8px', borderRadius: 6,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
+            fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.7)',
+            whiteSpace: 'nowrap', letterSpacing: 0.2,
+          }}>{hasVariants ? `${variants.length} strengths` : (display.strength || '—')}</span>
+          <span style={{ flex: 1 }} />
+          <span style={{
+            fontSize: 14, fontWeight: 700, color: tint, whiteSpace: 'nowrap',
+            visibility: display.price ? 'visible' : 'hidden',
+          }}>{display.price || '$0'}</span>
+        </div>
+        {displayBlurb && (
+          <p style={{
+            fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, marginBottom: 14,
+            opacity: active ? 1 : 0, transition: 'opacity 0.3s 0.15s',
+          }}>{displayBlurb}</p>
+        )}
+
+        {hasVariants && (
+          <div style={{
+            opacity: active ? 1 : 0,
+            transition: 'opacity 0.3s 0.15s',
+            marginBottom: 14,
+          }}>
+            <p style={{
+              fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.45)',
+              letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8,
+            }}>Choose strength</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {variants.map((v, i) => {
+                const isThisSelected = i === selectedIdx;
+                const isInCart = selectedLabels.includes(v.parsed.fullLabel);
+                return (
+                  <button
+                    key={v.parsed.fullLabel}
+                    onClick={(e) => { e.stopPropagation(); setSelectedIdx(i); }}
+                    style={{
+                      background: isThisSelected ? `${tint}22` : 'rgba(255,255,255,0.04)',
+                      color: isThisSelected ? '#fff' : 'rgba(255,255,255,0.75)',
+                      border: `1px solid ${isThisSelected ? tint : 'rgba(255,255,255,0.10)'}`,
+                      borderRadius: 8, padding: '5px 10px',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit', letterSpacing: 0.2,
+                      transition: 'all 0.15s',
+                      position: 'relative',
+                    }}>
+                    {v.parsed.strength || '—'}
+                    {isInCart && (
+                      <span style={{
+                        position: 'absolute', top: -4, right: -4,
+                        width: 10, height: 10, borderRadius: '50%',
+                        background: tint, border: '1.5px solid #1a1a1c',
+                      }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={(e) => { e.stopPropagation(); handlePrimaryAction(); }}
+          style={{
+            background: (hasVariants ? variantSelected : isSelected) ? tint : 'transparent',
+            color: (hasVariants ? variantSelected : isSelected) ? '#000' : '#fff',
+            border: (hasVariants ? variantSelected : isSelected) ? `1px solid ${tint}` : '1px solid rgba(255,255,255,0.25)',
+            borderRadius: 980, padding: '7px 16px',
+            fontSize: 12, fontWeight: 500, cursor: 'pointer',
+            opacity: active ? 1 : 0, transition: 'opacity 0.3s 0.2s, background 0.2s',
+            fontFamily: 'inherit',
+          }}>
+          {(hasVariants ? variantSelected : isSelected) ? '✓ Added' : 'Add to cart'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect }) => {
+  const [expandedKey, setExpandedKey] = React.useState(null);
+
+  // Close on Esc.
+  React.useEffect(() => {
+    if (!expandedKey) return;
+    const onKey = (e) => { if (e.key === 'Escape') setExpandedKey(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expandedKey]);
+  // Group products into categories
+  const grouped = React.useMemo(() => {
+    const buckets = {};
+    CATEGORY_MAP.forEach(c => { buckets[c.id] = { ...c, items: [] }; });
+    buckets.other = { id: 'other', title: 'Other', tint: '#a1a1aa', items: [] };
+
+    productOptions.forEach(label => {
+      const { categoryId, blurb } = categorize(label);
+      const parsed = parseLabel(label);
+      buckets[categoryId].items.push({ parsed, blurb });
+    });
+
+    // Auto-collapse: any product with 2+ strengths under the same name becomes
+    // a single card with a strength selector at the bottom. Catches Sema /
+    // Tirz / Reta as well as SS-31, MOTS, HGH, etc.
+    const mgValue = (it) => {
+      const m = it.parsed.strength && it.parsed.strength.match(/(\d+(?:\.\d+)?)/);
+      return m ? parseFloat(m[1]) : 0;
+    };
+    Object.values(buckets).forEach(bucket => {
+      const byName = {};
+      bucket.items.forEach(it => {
+        const key = it.parsed.name.toLowerCase().trim();
+        (byName[key] = byName[key] || []).push(it);
+      });
+      const collapsed = [];
+      bucket.items.forEach(it => {
+        const key = it.parsed.name.toLowerCase().trim();
+        const group = byName[key];
+        if (!group) return; // already emitted
+        if (group.length > 1) {
+          group.sort((a, b) => mgValue(a) - mgValue(b));
+          const head = group[0];
+          collapsed.push({ parsed: head.parsed, blurb: head.blurb, variants: group });
+        } else {
+          collapsed.push(group[0]);
+        }
+        delete byName[key];
+      });
+      bucket.items = collapsed;
+    });
+
+    if (buckets.metabolic) {
+      // Within Metabolic / Weight Management, surface Semaglutide → Tirzepatide
+      // → Retatrutide first (in that order), before 5 Amino, Cagrilintide, KLOW.
+      const priority = ['semaglutide', 'tirzepatide', 'retatrutide'];
+      const rank = (item) => {
+        const lower = item.parsed.fullLabel.toLowerCase();
+        const idx = priority.findIndex(p => lower.includes(p));
+        return idx === -1 ? 999 : idx;
+      };
+      buckets.metabolic.items.sort((a, b) => rank(a) - rank(b));
+    }
+
+    return Object.values(buckets).filter(b => b.items.length > 0);
+  }, [productOptions]);
+
+  return (
+    <div>
+      {grouped.map(cat => (
+        <div key={cat.id} style={{ marginBottom: 44 }}>
+          <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 5, height: 22, borderRadius: 3, background: cat.tint,
+              boxShadow: `0 0 14px ${cat.tint}80`,
+            }} />
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.01em' }}>{cat.title}</h3>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>· {cat.items.length}</span>
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+            gap: 20,
+          }}>
+            {cat.items.map(({ parsed, blurb, variants }) => (
+              <PortalRevealCard
+                key={parsed.fullLabel}
+                parsed={parsed}
+                blurb={blurb}
+                tint={cat.tint}
+                variants={variants}
+                selectedLabels={selectedLabels}
+                isSelected={selectedLabels.includes(parsed.fullLabel)}
+                onSelect={onSelect}
+                onExpand={() => setExpandedKey(parsed.fullLabel)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {expandedKey && (() => {
+        // Find the item across all buckets.
+        let found = null, foundCat = null;
+        for (const cat of grouped) {
+          const it = cat.items.find(i => i.parsed.fullLabel === expandedKey);
+          if (it) { found = it; foundCat = cat; break; }
+        }
+        if (!found) return null;
+        return (
+          <div
+            onClick={() => setExpandedKey(null)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 200,
+              background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 24, animation: 'fadeIn 0.18s ease',
+            }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 440, position: 'relative' }}>
+              <button
+                onClick={() => setExpandedKey(null)}
+                aria-label="Close"
+                style={{
+                  position: 'absolute', top: -44, right: 0,
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.15)',
+                  color: '#fff', cursor: 'pointer', fontSize: 18, lineHeight: 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'inherit',
+                }}>✕</button>
+              <PortalRevealCard
+                parsed={found.parsed}
+                blurb={found.blurb}
+                tint={foundCat.tint}
+                variants={found.variants}
+                selectedLabels={selectedLabels}
+                isSelected={selectedLabels.includes(found.parsed.fullLabel)}
+                onSelect={onSelect}
+                expanded={true}
+              />
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+};
+
+// ─── Order Form ───────────────────────────────────────────────────────────────
+const OrderForm = ({ userData, onOrderPlaced }) => {
+  // cart: [{ label, qty }]
+  const [cart, setCart] = React.useState([]);
+  const [notes, setNotes] = React.useState('');
+  // Shipping fields — required at checkout. Prefill from the user's profile
+  // when we have it, but always let the client confirm/correct.
+  const [shippingAddress, setShippingAddress] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  // Payment method — required at checkout. Empty string = not yet chosen.
+  const [paymentMethod, setPaymentMethod] = React.useState('');
+  // Shipping method — required. Empty string = not yet chosen.
+  const [shippingMethod, setShippingMethod] = React.useState('');
+  // Coupon code — optional. Validated against the `coupons` Supabase table
+  // (loaded once on mount; admin manages them in Admin → Coupons).
+  const [couponCode, setCouponCode] = React.useState('');
+  const [activeCoupons, setActiveCoupons] = React.useState([]);
+  const [fieldErrors, setFieldErrors] = React.useState({});
+  const [success, setSuccess] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
+
+  // Hydrate shipping fields from the saved profile once it arrives.
+  React.useEffect(() => {
+    if (userData?.address && !shippingAddress) setShippingAddress(userData.address);
+    if (userData?.phone && !phone) setPhone(userData.phone);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.address, userData?.phone]);
+
+  // Pick the right product list for this client, based on their pricelist
+  // setting (set by the coach in the admin profile editor). Falls back to
+  // the legacy hardcoded PRODUCTS list if pricelists.js hasn't loaded.
+  const productOptions = React.useMemo(() => {
+    const key = userData?.profile?.pricelist || 'standard';
+    let list;
+    if (typeof window.getPricelistAsLabels === 'function') {
+      list = window.getPricelistAsLabels(key);
+    } else {
+      list = PRODUCTS;
+    }
+    // Only show products that have a matching card on the public catalog
+    // (i.e. ones with a photo). Semaglutide / Tirzepatide / Retatrutide are
+    // portal-only — no photos, but explicitly allowed through.
+    // Accessory packs are also portal-only — they share a single card with
+    // a variant selector and don't need an individual photo.
+    const portalOnlyAllow = /\b(semaglutide|tirzepatide|retatrutide|accessory pack)\b/i;
+    return list.filter(label => getProductPhoto(label) || portalOnlyAllow.test(label));
+  }, [userData?.profile?.pricelist]);
+
+  const addToCart = (label) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.label === label);
+      if (existing) {
+        return prev.map(item => item.label === label ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...prev, { label, qty: 1 }];
+    });
+  };
+
+  const updateQty = (label, qty) => {
+    if (qty < 1) return;
+    setCart(prev => prev.map(item => item.label === label ? { ...item, qty } : item));
+  };
+
+  const removeFromCart = (label) => {
+    setCart(prev => prev.filter(item => item.label !== label));
+  };
+
+  const cartLabels = cart.map(c => c.label);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (cart.length === 0 || submitting) return;
+
+    // Validate required shipping fields. We trim and require both — unless
+    // the client is picking up / dropping off in person, in which case a
+    // shipping address isn't applicable.
+    const isPickup = shippingMethod === 'Pick up / Drop Off';
+    const trimmedAddress = shippingAddress.trim();
+    const trimmedPhone = phone.trim();
+    const errs = {};
+    if (!isPickup) {
+      if (!trimmedAddress) errs.address = 'Shipping address is required.';
+      else if (trimmedAddress.length < 8) errs.address = 'Please enter a complete shipping address.';
+    }
+    // Phone: require exactly 10 digits (US format)
+    const digitCount = (trimmedPhone.match(/\d/g) || []).length;
+    if (!trimmedPhone) errs.phone = 'Phone number is required.';
+    else if (digitCount < 10) errs.phone = 'Please enter a valid 10-digit phone number.';
+    if (!paymentMethod) errs.payment = 'Please choose a payment method.';
+    if (!shippingMethod) errs.shipping = 'Please choose a shipping method.';
+    if (Object.keys(errs).length) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
+    setSubmitting(true);
+
+    const insertedOrders = [];
+    // 1. Insert one order row per cart line in Supabase.
+    //    Real schema is (product, quantity, ordered_at). We try those first and fall
+    //    back to (item, qty) in case the schema ever gets renamed.
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) {
+        for (const item of cart) {
+          // Per-order details captured at checkout. Until the 2026_order_details
+          // migration was added, all of these were collected on the form and
+          // then thrown away — admin only saw product/qty/notes. Now persisted.
+          const orderDetails = {
+            client_id: user.id,
+            notes: notes || null,
+            status: 'pending',
+            payment_method:   paymentMethod || null,
+            shipping_method:  shippingMethod || null,
+            shipping_address: shippingAddress.trim() || userData?.address || null,
+            shipping_cost:    Number.isFinite(shippingCost) ? shippingCost : null,
+            phone_at_order:   phone.trim() || userData?.phone || null,
+            coupon_code:      couponActive ? matchedCoupon.code : (couponCode.trim() || null),
+          };
+          const tryInsert = (lineCols) =>
+            sb.from('orders').insert({ ...orderDetails, ...lineCols }).select().single();
+
+          // 1st try: current schema (product/quantity) + new detail columns.
+          let { data, error } = await tryInsert({ product: item.label, quantity: item.qty });
+          // 2nd try: legacy line-item column names (item/qty).
+          if (error && /column .* does not exist/i.test(error.message || '')) {
+            const retry = await tryInsert({ item: item.label, qty: item.qty });
+            data = retry.data; error = retry.error;
+          }
+          // 3rd try: order_details migration not yet applied — fall back to a
+          // minimal insert so checkout still works. Admin will see product/qty
+          // only for these orders, same as before.
+          if (error && /column .* does not exist/i.test(error.message || '')) {
+            const minimal = { client_id: user.id, notes: notes || null, status: 'pending' };
+            let r = await sb.from('orders')
+              .insert({ ...minimal, product: item.label, quantity: item.qty })
+              .select().single();
+            if (r.error && /column .* does not exist/i.test(r.error.message || '')) {
+              r = await sb.from('orders')
+                .insert({ ...minimal, item: item.label, qty: item.qty })
+                .select().single();
+            }
+            data = r.data; error = r.error;
+          }
+          if (error) throw error;
+          insertedOrders.push(data);
+        }
+      } else {
+        console.warn('Order placed without a signed-in user; skipping DB insert.');
+      }
+    } catch (err) {
+      console.error('Order insert failed:', err);
+    }
+
+    // 2. Email/SMS notification via Formspree — single message with full cart
+    try {
+      const summary = cart.map(it => `• ${it.label} × ${it.qty}`).join('\n');
+      const totalItems = cart.reduce((s, it) => s + it.qty, 0);
+      await fetch('https://formspree.io/f/mnjwvgan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          _subject: `New Order: ${cart.length} item${cart.length > 1 ? 's' : ''} (${totalItems} total)`,
+          client_name: userData?.name && userData.name !== userData?.email ? userData.name : '(no name on file)',
+          client_email: userData?.email || 'Unknown',
+          client_phone: phone.trim() || userData?.phone || '(no phone on file)',
+          shipping_address: shippingAddress.trim() || userData?.address || '(no address on file — please contact client)',
+          order_summary: summary,
+          item_count: cart.length,
+          total_items: totalItems,
+          notes: notes || '(none)',
+          payment_method: paymentMethod,
+          shipping_method: shippingMethod,
+          shipping_cost: `$${shippingCost.toFixed(2)}`,
+          coupon_code: couponActive ? `${matchedCoupon.code} (${couponLabel}; saved $${couponSavings.toFixed(2)})` : (couponCode.trim() || '(none)'),
+          subtotal: `$${subtotalEffective.toFixed(2)}`,
+          order_total: `$${cartTotal.toFixed(2)}`,
+          submitted_at: new Date().toLocaleString(),
+        }),
+      });
+    } catch (err) {
+      console.error('Notification failed:', err);
+    }
+
+    // Push each cart line into history
+    cart.forEach((item, i) => {
+      onOrderPlaced({
+        id: insertedOrders[i]?.id,
+        item: item.label,
+        qty: item.qty,
+        notes,
+      });
+    });
+    setCart([]); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode('');
+    setSubmitting(false);
+    setSuccess(true);
+    // Keep the success card visible long enough to read the invoice message
+    setTimeout(() => setSuccess(false), 9000);
+  };
+
+  // ─── Coupon + shipping pricing ───────────────────────────────────────
+  // Coupons come from Supabase (`coupons` table). Each has:
+  //   kind:  'percent' | 'fixed'    → amount is % off (0–100) or $ off
+  //   scope: 'all' | 'retatrutide'  → entire cart, or Retatrutide line items
+  // Codes are case-insensitive and stored lowercased server-side.
+  React.useEffect(() => {
+    (async () => {
+      const { data, error } = await sb.from('coupons').select('*').eq('active', true);
+      if (error) {
+        console.warn('Could not load coupons:', error.message);
+        return;
+      }
+      setActiveCoupons(data || []);
+    })();
+  }, []);
+
+  const matchedCoupon = React.useMemo(() => {
+    const entered = couponCode.trim().toLowerCase();
+    if (!entered) return null;
+    return activeCoupons.find(c => (c.code || '').toLowerCase() === entered) || null;
+  }, [couponCode, activeCoupons]);
+  const couponActive = !!matchedCoupon;
+
+  const isRetatrutideLabel = (label) => /\bretatrutide\b/i.test(label || '');
+  const lineMatchesCoupon = (label) => {
+    if (!matchedCoupon) return false;
+    if (matchedCoupon.scope === 'all') return true;
+    if (matchedCoupon.scope === 'retatrutide') return isRetatrutideLabel(label);
+    return false;
+  };
+
+  // Per-line effective price.
+  //  - Percent coupons discount each matching line directly (we show strikethrough).
+  //  - Fixed coupons subtract a flat $ amount from the matching subtotal at
+  //    the bottom — line prices stay the same.
+  const priceFor = (label) => {
+    const m = label.match(/\$([\d,.]+)/);
+    const orig = m ? parseFloat(m[1].replace(/,/g, '')) : 0;
+    if (matchedCoupon && matchedCoupon.kind === 'percent' && lineMatchesCoupon(label)) {
+      const pct = parseFloat(matchedCoupon.amount) || 0;
+      const eff = Math.max(0, orig * (1 - pct / 100));
+      return { orig, eff, discounted: true };
+    }
+    return { orig, eff: orig, discounted: false };
+  };
+
+  const SHIPPING_OPTIONS = [
+    { value: 'Regular Shipping ($7)',   cost: 7,  label: 'Regular Shipping — $7' },
+    { value: 'Priority Shipping ($15)', cost: 15, label: 'Priority Shipping — $15' },
+    { value: 'Pick up / Drop Off',      cost: 0,  label: 'Pick up / Drop Off' },
+  ];
+  const shippingCost = SHIPPING_OPTIONS.find(o => o.value === shippingMethod)?.cost ?? 0;
+
+  // Subtotals
+  const subtotalOriginal = cart.reduce((sum, item) => sum + priceFor(item.label).orig * item.qty, 0);
+  const subtotalAfterLineDiscounts = cart.reduce((sum, item) => sum + priceFor(item.label).eff * item.qty, 0);
+
+  // Fixed-$ coupons: apply once to the matching subtotal, clamped so it can
+  // never push the order negative.
+  let fixedDiscount = 0;
+  if (matchedCoupon && matchedCoupon.kind === 'fixed') {
+    const matchingSubtotal = cart.reduce((sum, item) => {
+      if (!lineMatchesCoupon(item.label)) return sum;
+      return sum + priceFor(item.label).orig * item.qty;
+    }, 0);
+    fixedDiscount = Math.min(matchingSubtotal, parseFloat(matchedCoupon.amount) || 0);
+  }
+
+  const subtotalEffective = Math.max(0, subtotalAfterLineDiscounts - fixedDiscount);
+  const couponSavings = subtotalOriginal - subtotalEffective;
+  const cartTotal = subtotalEffective + shippingCost;
+  const hasPrices = cart.length > 0 && cart.every(item => /\$[\d,.]+/.test(item.label));
+
+  // Human-readable summary of the matched coupon (for the totals row).
+  const couponLabel = matchedCoupon
+    ? `${matchedCoupon.kind === 'percent' ? matchedCoupon.amount + '%' : '$' + matchedCoupon.amount} off${matchedCoupon.scope === 'retatrutide' ? ' Retatrutide' : ''}`
+    : '';
+  // Whether the matched coupon couldn't apply because no qualifying items
+  // are in the cart (e.g. Retatrutide-only coupon but no Retatrutide line).
+  const couponHasNoTarget = couponActive && couponSavings === 0;
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
+        <div>
+          <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 6 }}>Order Form</h2>
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)' }}>Tap any product to add it to your cart.</p>
+        </div>
+        {cart.length > 0 && (
+          <a href="#cart" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '10px 18px', borderRadius: 980,
+            background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.45)',
+            color: '#2997ff', fontSize: 14, fontWeight: 500, textDecoration: 'none',
+          }}>
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+              <path d="M2 3h2l2 9h9l2-7H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="7" cy="15.5" r="1.2" fill="currentColor"/>
+              <circle cx="14" cy="15.5" r="1.2" fill="currentColor"/>
+            </svg>
+            <span>{cart.reduce((s, c) => s + c.qty, 0)} in cart · review</span>
+          </a>
+        )}
+      </div>
+
+      {/* Catalog grid */}
+      <PortalCatalog
+        productOptions={productOptions}
+        selectedLabels={cartLabels}
+        onSelect={addToCart}
+      />
+
+      {/* Cart / Checkout panel */}
+      <div id="cart" style={{ scrollMarginTop: 24 }}>
+        {cart.length > 0 && (
+          <div className="card" style={{ maxWidth: 760, marginTop: 40, padding: 28 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 22, gap: 12 }}>
+              <div>
+                <p style={{ fontSize: 11, letterSpacing: 1.5, color: '#2997ff', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Your Cart</p>
+                <h3 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em' }}>
+                  {cart.length} {cart.length === 1 ? 'item' : 'items'}
+                </h3>
+              </div>
+              <button type="button" onClick={() => setCart([])} style={{
+                background: 'transparent', color: 'rgba(255,255,255,0.5)', border: 'none',
+                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', padding: 4,
+              }}>Clear cart</button>
+            </div>
+
+            {/* Accessory pack helper note — always visible to help clients pick the right one */}
+            <div style={{
+              marginBottom: 18, padding: '12px 14px',
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 10, fontSize: 12.5, color: 'rgba(255,255,255,0.7)', lineHeight: 1.55,
+            }}>
+              <span style={{ fontWeight: 600, color: '#f5f5f7' }}>Need supplies?</span>{' '}
+              If you need <strong style={{ color: '#f5f5f7' }}>Syringes and Wipes</strong>, choose <strong style={{ color: '#f5f5f7' }}>Accessory Pack 01</strong>.{' '}
+              If you need <strong style={{ color: '#f5f5f7' }}>BAC Water</strong>, choose <strong style={{ color: '#f5f5f7' }}>Accessory Pack 02</strong>.{' '}
+              If you need <strong style={{ color: '#f5f5f7' }}>Syringes, Wipes, and BAC Water</strong>, choose <strong style={{ color: '#f5f5f7' }}>Accessory Pack 03</strong>.
+            </div>
+
+            {/* Cart lines */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 22 }}>
+              {cart.map(item => {
+                const photo = getProductPhoto(item.label);
+                const parsed = parseLabel(item.label);
+                const { orig, eff, discounted } = priceFor(item.label);
+                return (
+                  <div key={item.label} style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: 12, background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12,
+                  }}>
+                    <div style={{
+                      width: 56, height: 56, borderRadius: 10, flexShrink: 0,
+                      background: '#0a0a0a', overflow: 'hidden',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {photo ? (
+                        <img src={photo} alt="" style={{
+                          width: '100%', height: '100%', objectFit: 'cover',
+                          objectPosition: item.label.toLowerCase().includes('plan') || item.label.toLowerCase().includes('workout') ? '14% center' : '32% center',
+                        }} />
+                      ) : (
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>PFB</div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 15, fontWeight: 500, color: '#f5f5f7', marginBottom: 2 }}>{parsed.name}</p>
+                      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                        {parsed.strength}
+                        {parsed.price && !discounted && ` · ${parsed.price}`}
+                        {discounted && (
+                          <>
+                            {' · '}
+                            <span style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.35)' }}>${orig.toFixed(0)}</span>
+                            {' '}
+                            <span style={{ color: '#7be39a', fontWeight: 600 }}>${eff.toFixed(0)}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button type="button" onClick={() => updateQty(item.label, item.qty - 1)} style={{
+                        width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
+                        background: 'transparent', color: '#f5f5f7', cursor: 'pointer', fontSize: 16, lineHeight: 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>−</button>
+                      <input type="number" min="1" max="99" value={item.qty}
+                        onChange={e => updateQty(item.label, parseInt(e.target.value) || 1)}
+                        style={{
+                          width: 44, textAlign: 'center', fontSize: 14, fontWeight: 600,
+                          background: 'transparent', border: 'none', color: '#f5f5f7',
+                          outline: 'none',
+                        }} />
+                      <button type="button" onClick={() => updateQty(item.label, item.qty + 1)} style={{
+                        width: 28, height: 28, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
+                        background: 'transparent', color: '#f5f5f7', cursor: 'pointer', fontSize: 16, lineHeight: 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>+</button>
+                    </div>
+                    <button type="button" onClick={() => removeFromCart(item.label)} title="Remove" style={{
+                      width: 30, height: 30, borderRadius: 8, border: 'none',
+                      background: 'transparent', color: 'rgba(255,255,255,0.4)',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Coupon code — optional */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                Coupon Code <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>(optional)</span>
+              </label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                <input
+                  className="field-input"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Enter code"
+                  value={couponCode}
+                  onChange={e => setCouponCode(e.target.value)}
+                  style={{
+                    flex: 1,
+                    borderColor: couponActive ? 'rgba(52,199,89,0.55)' : (couponCode.trim() ? 'rgba(255,107,107,0.4)' : undefined),
+                    textTransform: 'none',
+                  }}
+                />
+                {couponActive && (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '0 14px', borderRadius: 10,
+                    background: 'rgba(52,199,89,0.12)', border: '1px solid rgba(52,199,89,0.35)',
+                    color: '#7be39a', fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M3 7l3 3 5-6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Applied
+                  </div>
+                )}
+              </div>
+              {couponCode.trim() && !couponActive && (
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, letterSpacing: '-0.1px' }}>
+                  That code isn’t recognized. Double-check spelling or leave blank.
+                </p>
+              )}
+              {couponActive && couponSavings > 0 && (
+                <p style={{ fontSize: 12, color: '#7be39a', marginTop: 6, letterSpacing: '-0.1px' }}>
+                  You’re saving ${couponSavings.toFixed(2)} on this order · {couponLabel}.
+                </p>
+              )}
+              {couponActive && couponHasNoTarget && (
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, letterSpacing: '-0.1px' }}>
+                  Code applied{matchedCoupon.scope === 'retatrutide' ? ', but no Retatrutide items in your cart yet.' : '.'}
+                </p>
+              )}
+            </div>
+
+            {hasPrices && (
+              <div style={{
+                padding: '14px 16px', background: 'rgba(41,151,255,0.08)',
+                border: '1px solid rgba(41,151,255,0.18)', borderRadius: 10, marginBottom: 18,
+                display: 'flex', flexDirection: 'column', gap: 8,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+                  <span>Subtotal</span>
+                  <span style={{ color: '#f5f5f7' }}>${subtotalOriginal.toFixed(2)}</span>
+                </div>
+                {couponActive && couponSavings > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7be39a' }}>
+                    <span>Coupon “{matchedCoupon.code.toUpperCase()}” <span style={{ color: 'rgba(123,227,154,0.7)', fontWeight: 400 }}>({couponLabel})</span></span>
+                    <span>− ${couponSavings.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+                  <span>Shipping</span>
+                  <span style={{ color: shippingMethod ? '#f5f5f7' : 'rgba(255,255,255,0.4)' }}>
+                    {shippingMethod ? (shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free') : '—'}
+                  </span>
+                </div>
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '2px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>Estimated total</span>
+                  <span style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7' }}>${cartTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Shipping section header */}
+              <div style={{
+                fontSize: 11, letterSpacing: 1.5, color: '#2997ff',
+                textTransform: 'uppercase', fontWeight: 600,
+                marginBottom: -6,
+              }}>Shipping Details</div>
+
+              {/* Shipping Method — required */}
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                  Shipping Method <span style={{ color: '#ff6b6b', fontWeight: 600 }}>*</span>
+                </label>
+                <select
+                  className="field-input"
+                  value={shippingMethod}
+                  onChange={e => {
+                    setShippingMethod(e.target.value);
+                    if (fieldErrors.shipping) setFieldErrors(prev => ({ ...prev, shipping: undefined }));
+                  }}
+                  required
+                  aria-invalid={!!fieldErrors.shipping}
+                  style={{
+                    borderColor: fieldErrors.shipping ? 'rgba(255,107,107,0.55)' : undefined,
+                  }}>
+                  <option value="" disabled>Choose a shipping method…</option>
+                  {SHIPPING_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                {fieldErrors.shipping && (
+                  <p style={{ fontSize: 12, color: '#ff8a8a', marginTop: 6, letterSpacing: '-0.1px' }}>
+                    {fieldErrors.shipping}
+                  </p>
+                )}
+              </div>
+
+              {/* Shipping Address — required (unless pickup) */}
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                  Shipping Address{' '}
+                  {shippingMethod === 'Pick up / Drop Off'
+                    ? <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>(not needed for pickup)</span>
+                    : <span style={{ color: '#ff6b6b', fontWeight: 600 }}>*</span>}
+                </label>
+                <textarea
+                  className="field-input"
+                  rows="2"
+                  placeholder={shippingMethod === 'Pick up / Drop Off' ? 'Optional — leave blank for pickup' : 'Street, city, state, ZIP / postal code, country'}
+                  value={shippingAddress}
+                  onChange={e => {
+                    setShippingAddress(e.target.value);
+                    if (fieldErrors.address) setFieldErrors(prev => ({ ...prev, address: undefined }));
+                  }}
+                  aria-invalid={!!fieldErrors.address}
+                  style={{
+                    resize: 'vertical', minHeight: 64,
+                    borderColor: fieldErrors.address ? 'rgba(255,107,107,0.55)' : undefined,
+                  }}
+                />
+                {fieldErrors.address && (
+                  <p style={{ fontSize: 12, color: '#ff8a8a', marginTop: 6, letterSpacing: '-0.1px' }}>
+                    {fieldErrors.address}
+                  </p>
+                )}
+              </div>
+
+              {/* Phone — required */}
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                  Phone Number <span style={{ color: '#ff6b6b', fontWeight: 600 }}>*</span>
+                </label>
+                <input
+                  className="field-input"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="(555) 123-4567"
+                  value={phone}
+                  onChange={e => {
+                    setPhone(e.target.value);
+                    if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: undefined }));
+                  }}
+                  required
+                  aria-invalid={!!fieldErrors.phone}
+                  style={{
+                    borderColor: fieldErrors.phone ? 'rgba(255,107,107,0.55)' : undefined,
+                  }}
+                />
+                {fieldErrors.phone && (
+                  <p style={{ fontSize: 12, color: '#ff8a8a', marginTop: 6, letterSpacing: '-0.1px' }}>
+                    {fieldErrors.phone}
+                  </p>
+                )}
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, letterSpacing: '-0.1px' }}>
+                  Used to send you the invoice and shipment updates via SMS.
+                </p>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Special Notes <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>(optional)</span></label>
+                <textarea className="field-input" rows="3" placeholder="Allergies, preferences, timing requests…"
+                  value={notes} onChange={e => setNotes(e.target.value)}
+                  style={{ resize: 'vertical', minHeight: 80 }} />
+              </div>
+
+              {/* Payment method — required */}
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                  Payment Method <span style={{ color: '#ff6b6b', fontWeight: 600 }}>*</span>
+                </label>
+                <select
+                  className="field-input"
+                  value={paymentMethod}
+                  onChange={e => {
+                    setPaymentMethod(e.target.value);
+                    if (fieldErrors.payment) setFieldErrors(prev => ({ ...prev, payment: undefined }));
+                  }}
+                  required
+                  aria-invalid={!!fieldErrors.payment}
+                  style={{
+                    borderColor: fieldErrors.payment ? 'rgba(255,107,107,0.55)' : undefined,
+                  }}>
+                  <option value="" disabled>Choose how you'd like to pay…</option>
+                  <option value="Debit/Credit Card (Invoiced)">Debit/Credit Card (Invoiced)</option>
+                  <option value="PayPal">PayPal</option>
+                  <option value="Venmo">Venmo</option>
+                </select>
+                {fieldErrors.payment && (
+                  <p style={{ fontSize: 12, color: '#ff8a8a', marginTop: 6, letterSpacing: '-0.1px' }}>
+                    {fieldErrors.payment}
+                  </p>
+                )}
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, letterSpacing: '-0.1px' }}>
+                  We'll send invoice + payment instructions for your selected method.
+                </p>
+              </div>
+
+              {/* Invoice notice — always visible at checkout */}
+              <div style={{
+                background: 'rgba(41,151,255,0.06)', border: '1px solid rgba(41,151,255,0.22)',
+                borderRadius: 12, padding: '14px 16px',
+                display: 'flex', gap: 12, alignItems: 'flex-start',
+              }}>
+                <div style={{ flexShrink: 0, marginTop: 2 }}>
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <circle cx="9" cy="9" r="8" stroke="#2997ff" strokeWidth="1.5"/>
+                    <path d="M9 5v5M9 13v.5" stroke="#2997ff" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.78)', lineHeight: 1.55 }}>
+                  <strong style={{ color: '#f5f5f7', fontWeight: 600 }}>How payment works.</strong>{' '}
+                  Once we receive your order, you'll be sent an invoice via <strong style={{ color: '#f5f5f7' }}>email and SMS</strong> with payment options. No payment is collected at this step.
+                </div>
+              </div>
+
+              {success && (
+                <div style={{
+                  background: 'rgba(52,199,89,0.10)', border: '1px solid rgba(52,199,89,0.28)',
+                  borderRadius: 12, padding: '14px 16px',
+                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <circle cx="10" cy="10" r="9" stroke="#34c759" strokeWidth="1.5"/>
+                    <path d="M6 10l3 3 5-6" stroke="#34c759" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <div style={{ fontSize: 14, color: '#7be39a', lineHeight: 1.5 }}>
+                    <strong style={{ color: '#a6f2bd', fontWeight: 600, display: 'block', marginBottom: 2 }}>Order received.</strong>
+                    An invoice will be sent to you shortly via email and SMS with payment options.
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" className="btn-blue" disabled={submitting}
+                style={{ alignSelf: 'flex-start', padding: '13px 32px', fontSize: 15, opacity: submitting ? 0.6 : 1 }}>
+                {submitting ? 'Placing order…' : `Place order (${cart.reduce((s, c) => s + c.qty, 0)} ${cart.reduce((s, c) => s + c.qty, 0) === 1 ? 'item' : 'items'})`}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {cart.length === 0 && success && (
+          <div className="card" style={{ maxWidth: 760, marginTop: 40, padding: 28 }}>
+            <div style={{
+              background: 'rgba(52,199,89,0.10)', border: '1px solid rgba(52,199,89,0.28)',
+              borderRadius: 12, padding: '16px 18px',
+              display: 'flex', gap: 12, alignItems: 'flex-start',
+            }}>
+              <svg width="22" height="22" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                <circle cx="10" cy="10" r="9" stroke="#34c759" strokeWidth="1.5"/>
+                <path d="M6 10l3 3 5-6" stroke="#34c759" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div style={{ fontSize: 14, color: '#a6f2bd', lineHeight: 1.55 }}>
+                <strong style={{ color: '#a6f2bd', fontWeight: 600, display: 'block', marginBottom: 4, fontSize: 15 }}>Order received.</strong>
+                An invoice will be sent to you shortly via email and SMS with payment options.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {cart.length === 0 && !success && (
+          <div style={{
+            maxWidth: 760, marginTop: 40, padding: '24px 28px',
+            background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.08)',
+            borderRadius: 16, color: 'rgba(255,255,255,0.4)', fontSize: 14, textAlign: 'center',
+          }}>
+            Your cart is empty. Tap any product above to add it.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Purchase History ─────────────────────────────────────────────────────────
+const PurchaseHistory = ({ orders }) => (
+  <div className="fade-in">
+    <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 6 }}>Purchase History</h2>
+    <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>{orders.length} orders total.</p>
+
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              {['Date', 'Item', 'Qty', 'Status'].map(h => (
+                <th key={h} style={{
+                  padding: '13px 20px', textAlign: 'left',
+                  fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.45)',
+                  letterSpacing: '0.04em', textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o, i) => {
+              const sc = statusColors[o.status] || { bg: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' };
+              return (
+                <tr key={o.id} style={{ borderBottom: i < orders.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  <td style={{ padding: '16px 20px', fontSize: 14, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>{o.date}</td>
+                  <td style={{ padding: '16px 20px', fontSize: 15, fontWeight: 500, color: '#f5f5f7' }}>{o.item}</td>
+                  <td style={{ padding: '16px 20px', fontSize: 15, color: '#f5f5f7' }}>{o.qty}</td>
+                  <td style={{ padding: '16px 20px' }}>
+                    <span className="tag" style={{ background: sc.bg, color: sc.color }}>{o.status}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Nutrition Plan ───────────────────────────────────────────────────────────
+const NutritionPlan = ({ plan, userId }) => {
+  const [activeDay, setActiveDay] = React.useState(0);
+  const picksKey = `pfb_meal_picks_${userId || 'anon'}_${plan?.id || 'noplan'}`;
+  const [picks, setPicks] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem(picksKey) || '{}'); } catch { return {}; }
+  });
+  const setPick = (dayIdx, mealIdx, value) => {
+    setPicks(p => {
+      const k = `${dayIdx}_${mealIdx}`;
+      const next = { ...p };
+      if (value == null) delete next[k]; else next[k] = value;
+      try { localStorage.setItem(picksKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const canChoose = !!plan?.settings?.clientCanChoose;
+  const macros = [
+    { label: 'Calories', value: plan.macros.calories, unit: 'kcal', color: '#0066cc' },
+    { label: 'Protein', value: plan.macros.protein, unit: 'g', color: '#34c759' },
+    { label: 'Carbs', value: plan.macros.carbs, unit: 'g', color: '#ff9f0a' },
+    { label: 'Fat', value: plan.macros.fat, unit: 'g', color: '#ff3b30' },
+  ];
+
+  return (
+    <div className="fade-in">
+      <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 4 }}>Nutrition Plan</h2>
+      <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>Goal: {plan.goal}</p>
+
+      {/* Macro cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 28 }}>
+        {macros.map(m => (
+          <div key={m.label} className="card" style={{ padding: '20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: m.color, letterSpacing: '-0.03em', lineHeight: 1 }}>{m.value}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{m.unit}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#f5f5f7', marginTop: 6 }}>{m.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Day tabs — only if we have days */}
+      {Array.isArray(plan.days) && plan.days.length > 0 ? (
+        <React.Fragment>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+            {plan.days.map((d, i) => (
+              <button key={(d && d.day) || i} onClick={() => setActiveDay(i)}
+                style={{
+                  borderRadius: 980, padding: '7px 16px', fontSize: 13, cursor: 'pointer', border: 'none',
+                  fontFamily: 'inherit', fontWeight: activeDay === i ? 600 : 400,
+                  background: activeDay === i ? '#0066cc' : 'rgba(255,255,255,0.07)',
+                  color: activeDay === i ? '#fff' : 'rgba(255,255,255,0.7)',
+                  boxShadow: 'none',
+                  transition: 'all 0.12s',
+                }}>
+                {((d && d.day) || `Day ${i+1}`).slice(0, 3)}
+              </button>
+            ))}
+          </div>
+
+          {plan.days[activeDay] && (
+            <div className="card">
+              <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 16, color: '#f5f5f7' }}>
+                {plan.days[activeDay].day || `Day ${activeDay+1}`}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {(plan.days[activeDay].meals || []).map((meal, i) => {
+                  // Legacy string meal
+                  if (typeof meal === 'string') {
+                    return (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 12,
+                        padding: '12px 16px', background: 'rgba(255,255,255,0.05)', borderRadius: 10,
+                      }}>
+                        <div style={{
+                          width: 24, height: 24, borderRadius: '50%', background: '#0066cc',
+                          color: '#fff', fontSize: 11, fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, marginTop: 1,
+                        }}>{i + 1}</div>
+                        <span style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.5 }}>{meal}</span>
+                      </div>
+                    );
+                  }
+                  const items = (meal && meal.items) || [];
+                  const summary = items
+                    .filter(it => it && (it.ingredient || it.qty))
+                    .map(it => `${it.qty || ''}${it.unit || ''} ${it.ingredient || ''}`.trim())
+                    .join(', ');
+
+                  // Default (coach-assigned) view of this meal
+                  const defaultView = {
+                    recipe_id: meal.recipe_id || null,
+                    name: (meal.recipe_name) || (meal.name) || `Meal ${i+1}`,
+                    photo: meal.recipe_photo || '',
+                    prep: meal.recipe_prep || 0,
+                    calories: items.reduce((s,it)=>s+(parseFloat(it.calories)||0),0),
+                    protein:  items.reduce((s,it)=>s+(parseFloat(it.protein)||0),0),
+                    carbs:    items.reduce((s,it)=>s+(parseFloat(it.carbs)||0),0),
+                    fat:      items.reduce((s,it)=>s+(parseFloat(it.fat)||0),0),
+                    isDefault: true,
+                    summary,
+                    items,
+                  };
+
+                  const alts = (meal.alternatives || []);
+                  const hasAlts = canChoose && alts.length > 0;
+                  const pickKey = `${activeDay}_${i}`;
+                  const pickedId = picks[pickKey] || null;
+                  const pickedAlt = pickedId ? alts.find(a => a.recipe_id === pickedId) : null;
+                  const view = pickedAlt ? {
+                    recipe_id: pickedAlt.recipe_id, name: pickedAlt.recipe_name,
+                    photo: pickedAlt.recipe_photo, prep: pickedAlt.recipe_prep,
+                    calories: pickedAlt.calories, protein: pickedAlt.protein,
+                    carbs: pickedAlt.carbs, fat: pickedAlt.fat,
+                    isDefault: false, summary: '', items: [],
+                  } : defaultView;
+
+                  return (
+                    <div key={i} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}>
+                      <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+                        <div style={{
+                          width: 24, height: 24, borderRadius: '50%', background: '#0066cc',
+                          color: '#fff', fontSize: 11, fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, marginTop: 4,
+                        }}>{i + 1}</div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10, flexWrap:'wrap' }}>
+                            <div>
+                              <div style={{ fontSize: 11, color:'rgba(255,255,255,0.45)', textTransform:'uppercase', letterSpacing:'0.06em', fontWeight:600 }}>
+                                {meal.name || `Meal ${i+1}`}
+                              </div>
+                              <div style={{ fontSize: 17, fontWeight: 600, color: '#f5f5f7', marginTop: 2, letterSpacing:'-0.01em' }}>{view.name}</div>
+                            </div>
+                            {(view.calories > 0 || view.protein > 0) && (
+                              <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)', fontFamily:'ui-monospace,monospace', textAlign:'right' }}>
+                                <div>{Math.round(view.calories)} kcal</div>
+                                <div>P{Math.round(view.protein)} · C{Math.round(view.carbs)} · F{Math.round(view.fat)}</div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Photo strip when a recipe (or alt) is the source */}
+                          {view.photo && (
+                            <div style={{ marginTop:10, borderRadius:10, overflow:'hidden', maxHeight:160, background:'#1a1a1c' }}>
+                              <img src={view.photo} alt="" style={{ width:'100%', height:'100%', maxHeight:160, objectFit:'cover', display:'block' }} />
+                            </div>
+                          )}
+
+                          {view.summary && (
+                            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, marginTop: 10 }}>{view.summary}</p>
+                          )}
+                          {view.prep ? (
+                            <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginTop:8, fontFamily:'ui-monospace,monospace' }}>⏱ {view.prep} min</div>
+                          ) : null}
+
+                          {/* Alternatives picker */}
+                          {hasAlts && (
+                            <div style={{ marginTop:14, paddingTop:12, borderTop:'1px solid rgba(255,255,255,0.08)' }}>
+                              <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'0.06em', fontWeight:600, marginBottom:8 }}>
+                                Choose what you'll eat
+                              </div>
+                              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                                {/* Default chip */}
+                                <button
+                                  onClick={()=>setPick(activeDay, i, null)}
+                                  style={{
+                                    display:'inline-flex', flexDirection:'column', alignItems:'flex-start', gap:2,
+                                    padding:'8px 12px', borderRadius:10, cursor:'pointer', fontFamily:'inherit',
+                                    border: !pickedAlt ? '1.5px solid #0066cc' : '1px solid rgba(255,255,255,0.10)',
+                                    background: !pickedAlt ? 'rgba(0,102,204,0.12)' : 'rgba(255,255,255,0.03)',
+                                    color:'#f5f5f7', textAlign:'left',
+                                  }}>
+                                  <span style={{ fontSize:12, fontWeight:600 }}>
+                                    {!pickedAlt && '✓ '}{defaultView.name}
+                                  </span>
+                                  <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)', fontFamily:'ui-monospace,monospace' }}>
+                                    {Math.round(defaultView.calories)}kcal · P{Math.round(defaultView.protein)}
+                                  </span>
+                                </button>
+                                {alts.map(alt => {
+                                  const sel = pickedId === alt.recipe_id;
+                                  return (
+                                    <button key={alt.recipe_id} onClick={()=>setPick(activeDay, i, alt.recipe_id)}
+                                      style={{
+                                        display:'inline-flex', flexDirection:'column', alignItems:'flex-start', gap:2,
+                                        padding:'8px 12px', borderRadius:10, cursor:'pointer', fontFamily:'inherit',
+                                        border: sel ? '1.5px solid #0066cc' : '1px solid rgba(255,255,255,0.10)',
+                                        background: sel ? 'rgba(0,102,204,0.12)' : 'rgba(255,255,255,0.03)',
+                                        color:'#f5f5f7', textAlign:'left',
+                                      }}>
+                                      <span style={{ fontSize:12, fontWeight:600 }}>
+                                        {sel && '✓ '}{alt.recipe_name}
+                                      </span>
+                                      <span style={{ fontSize:10, color:'rgba(255,255,255,0.5)', fontFamily:'ui-monospace,monospace' }}>
+                                        {Math.round(alt.calories||0)}kcal · P{Math.round(alt.protein||0)}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <p style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginTop:8 }}>
+                                Your pick is saved on this device.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {(!plan.days[activeDay].meals || plan.days[activeDay].meals.length === 0) && (
+                  <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: 16 }}>
+                    No meals planned for this day yet.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </React.Fragment>
+      ) : (
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+            Your macro targets are set above. Your specialist will add a full meal plan here soon.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Workout Plan ─────────────────────────────────────────────────────────────
+const WorkoutPlan = ({ plan }) => {
+  const [activeDay, setActiveDay] = React.useState(0);
+  const day = plan.days[activeDay];
+
+  return (
+    <div className="fade-in">
+      <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 4 }}>Workout Plan</h2>
+      <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>Goal: {plan.goal}</p>
+
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+        {plan.days.map((d, i) => (
+          <button key={d.day} onClick={() => setActiveDay(i)}
+            style={{
+              borderRadius: 980, padding: '7px 16px', fontSize: 13, cursor: 'pointer', border: 'none',
+              fontFamily: 'inherit', fontWeight: activeDay === i ? 600 : 400,
+              background: activeDay === i ? '#2997ff' : 'rgba(255,255,255,0.07)',
+              color: activeDay === i ? '#fff' : 'rgba(255,255,255,0.7)',
+              boxShadow: 'none',
+              transition: 'all 0.12s',
+            }}>
+            {d.day.slice(0, 3)}
+          </button>
+        ))}
+      </div>
+
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f5f5f7' }}>{day.day}</h3>
+            <p style={{ fontSize: 14, color: '#0066cc', fontWeight: 500, marginTop: 2 }}>{day.focus}</p>
+          </div>
+        </div>
+
+        {day.exercises.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(255,255,255,0.4)', fontSize: 15 }}>
+            Rest day. Recovery is training.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  {['Exercise', 'Sets', 'Reps', 'Rest'].map(h => (
+                    <th key={h} style={{
+                      padding: '8px 12px', textAlign: 'left',
+                      fontSize: 11, fontWeight: 600, color: 'rgba(0,0,0,0.45)',
+                      letterSpacing: '0.04em', textTransform: 'uppercase',
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {day.exercises.map((ex, i) => (
+                  <tr key={i} style={{ borderBottom: i < day.exercises.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    <td style={{ padding: '13px 12px', fontSize: 15, fontWeight: 500, color: '#f5f5f7' }}>{ex.name}</td>
+                    <td style={{ padding: '13px 12px', fontSize: 14, color: '#f5f5f7' }}>{ex.sets}</td>
+                    <td style={{ padding: '13px 12px', fontSize: 14, color: '#f5f5f7' }}>{ex.reps}</td>
+                    <td style={{ padding: '13px 12px', fontSize: 14, color: 'rgba(255,255,255,0.45)' }}>{ex.rest}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Blood Work Upload ─────────────────────────────────────────────────────────
+const BloodWork = ({ userId, files, onUpload }) => {
+  const [dragging, setDragging] = React.useState(false);
+  const [newFile, setNewFile] = React.useState(null);
+  const [error, setError] = React.useState('');
+  const [uploading, setUploading] = React.useState(false);
+  const inputRef = React.useRef();
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    setError('');
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${userId}/${Date.now()}_${safeName}`;
+      const { error: upErr } = await sb.storage.from('bloodwork').upload(path, file);
+      if (upErr) throw upErr;
+      const { error: dbErr } = await sb.from('bloodwork_files').insert({
+        client_id: userId,
+        filename: file.name,
+        storage_path: path,
+        uploaded_by: userId,
+      });
+      if (dbErr) throw dbErr;
+      setNewFile(file.name);
+      onUpload(file.name);
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setError(err.message || 'Upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="fade-in">
+      <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 6 }}>Blood Work</h2>
+      <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>Upload lab results for review by your specialist.</p>
+
+      {/* Upload zone */}
+      <div
+        onClick={() => inputRef.current.click()}
+        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
+        style={{
+          border: `2px dashed ${dragging ? '#2997ff' : 'rgba(255,255,255,0.12)'}`,
+          borderRadius: 16, padding: '48px 24px', textAlign: 'center',
+          background: dragging ? 'rgba(41,151,255,0.07)' : 'rgba(255,255,255,0.03)',
+          cursor: 'pointer', transition: 'all 0.15s', marginBottom: 24,
+        }}>
+        <input ref={inputRef} type="file" accept=".pdf,image/*" style={{ display: 'none' }}
+          onChange={e => handleFile(e.target.files[0])} />
+        <div style={{
+          width: 52, height: 52, borderRadius: '50%', background: 'rgba(0,102,204,0.08)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 16px',
+        }}>
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <path d="M11 14V4M7 8l4-4 4 4" stroke="#0066cc" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M4 16v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1" stroke="#0066cc" strokeWidth="1.7" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 16, fontWeight: 500, color: '#f5f5f7', marginBottom: 6 }}>Upload lab results</p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>PDF or image · Drag & drop or click to browse</p>
+      </div>
+
+      {newFile && !error && (
+        <div style={{
+          background: 'rgba(52,199,89,0.09)', border: '1px solid rgba(52,199,89,0.25)',
+          borderRadius: 10, padding: '12px 16px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="9" r="8" stroke="#1a8a3c" strokeWidth="1.5"/>
+            <path d="M5.5 9l2.5 2.5 4-4" stroke="#1a8a3c" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span style={{ fontSize: 14, color: '#1a8a3c' }}><strong>{newFile}</strong> uploaded successfully.</span>
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          background: 'rgba(255,59,48,0.10)', border: '1px solid rgba(255,59,48,0.3)',
+          borderRadius: 10, padding: '12px 16px', marginBottom: 20,
+        }}>
+          <span style={{ fontSize: 14, color: '#ff453a' }}>{error}</span>
+        </div>
+      )}
+
+      {uploading && (
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
+          Uploading…
+        </div>
+      )}
+
+      {/* File list */}
+      <div className="card">
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Uploaded Files</h3>
+        {files.length === 0 ? (
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '20px 0' }}>No files yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {files.map((f, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: 10,
+              }}>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="#0066cc" strokeWidth="1.4"/>
+                  <path d="M12 2v4h4" stroke="#0066cc" strokeWidth="1.4" strokeLinejoin="round"/>
+                </svg>
+                <span style={{ fontSize: 14, color: '#f5f5f7', flex: 1 }}>{f}</span>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>PDF</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Portal Shell ─────────────────────────────────────────────────────────────
+const Portal = ({ userId, onLogout }) => {
+  const [activeTab, setActiveTab] = React.useState('order');
+  const [userData, setUserData] = React.useState(null);
+  const [loadError, setLoadError] = React.useState('');
+  const [unread, setUnread] = React.useState({});  // { workout: [ids], nutrition: [ids] }
+
+  // Map notification kind → tab id
+  const NOTIF_TAB = { workout_updated: 'workout', nutrition_updated: 'nutrition' };
+
+  // Load unread notifications
+  const loadNotifications = React.useCallback(async () => {
+    try {
+      const { data } = await sb.from('client_notifications')
+        .select('id, kind').eq('client_id', userId).is('read_at', null);
+      const map = {};
+      (data || []).forEach(n => {
+        const tab = NOTIF_TAB[n.kind];
+        if (!tab) return;
+        if (!map[tab]) map[tab] = [];
+        map[tab].push(n.id);
+      });
+      setUnread(map);
+    } catch (e) { /* table may not exist yet — silent */ }
+  }, [userId]);
+  React.useEffect(() => { if (userId) loadNotifications(); }, [userId, loadNotifications]);
+
+  // Wrapper that marks notifications for a tab as read
+  const switchTab = async (tabId) => {
+    setActiveTab(tabId);
+    const ids = unread[tabId];
+    if (ids && ids.length) {
+      setUnread(u => { const n = {...u}; delete n[tabId]; return n; });
+      try { await sb.from('client_notifications').update({ read_at: new Date().toISOString() }).in('id', ids); } catch {}
+    }
+  };
+
+  // Load all data for this client from Supabase
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let step = 'starting';
+      try {
+        // First, fetch by id (the normal case for already-linked clients)
+        let profileRow = null;
+        step = 'lookup-by-id';
+        const idLookup = await sb.from('clients').select('*').eq('id', userId).maybeSingle();
+        if (idLookup.error) throw idLookup.error;
+        if (idLookup.data) {
+          profileRow = idLookup.data;
+        } else {
+          // Possibly an invited client whose clients row was inserted with a different
+          // generated uuid. Find their row by email and re-key it to auth.uid().
+          step = 'get-auth-user';
+          const { data: { user } } = await sb.auth.getUser();
+          const email = user?.email;
+          if (email) {
+            step = 'lookup-by-email';
+            const byEmail = await sb.from('clients').select('*').eq('email', email).maybeSingle();
+            if (byEmail.error) throw byEmail.error;
+            if (byEmail.data) {
+              const oldId = byEmail.data.id;
+              if (oldId !== userId) {
+                step = 'rekey-update';
+                // Re-key: update the clients.id to match auth.uid().
+                const { error: rkErr } = await sb.from('clients')
+                  .update({ id: userId }).eq('id', oldId);
+                if (rkErr) {
+                  console.warn('Re-key failed, using existing row:', rkErr);
+                  profileRow = byEmail.data;
+                } else {
+                  step = 'rekey-refetch';
+                  const refetch = await sb.from('clients').select('*').eq('id', userId).maybeSingle();
+                  profileRow = refetch.data || { ...byEmail.data, id: userId };
+                }
+              } else {
+                profileRow = byEmail.data;
+              }
+            } else {
+              step = 'create-profile';
+              // Brand-new auth user with no matching clients row at all — create one.
+              const meta = user?.user_metadata || {};
+              const { error: createErr } = await sb.from('clients').insert({
+                id: userId,
+                email,
+                name: meta.name || email,
+                phone: meta.phone || null,
+                status: 'active',
+              });
+              if (createErr) throw createErr;
+              step = 'create-refetch';
+              const refetch = await sb.from('clients').select('*').eq('id', userId).maybeSingle();
+              if (!refetch.data) throw new Error('Created profile but could not read it back.');
+              profileRow = refetch.data;
+            }
+          }
+        }
+        if (!profileRow) throw new Error('Could not load your profile.');
+        const profileId = profileRow.id;
+
+        step = 'load-related-data';
+        const [ordersRes, nutritionRes, workoutRes, bloodworkRes] = await Promise.all([
+          sb.from('orders').select('*').eq('client_id', profileId).order('ordered_at', { ascending: false }),
+          sb.from('nutrition_plans').select('*').eq('client_id', profileId).eq('active', true).order('created_at', { ascending: false }).limit(1),
+          sb.from('workout_plans').select('*').eq('client_id', profileId).eq('active', true).order('created_at', { ascending: false }).limit(1),
+          sb.from('bloodwork_files').select('*').eq('client_id', profileId).order('uploaded_at', { ascending: false }),
+        ]);
+        if (cancelled) return;
+
+        const profileRes = { data: profileRow };
+
+        if (profileRes.error) throw profileRes.error;
+
+        // Map Supabase rows → shape the rest of the portal expects
+        const statusMap = { pending: 'Processing', invoiced: 'Processing', paid: 'Processing', shipped: 'In Transit', completed: 'Delivered', cancelled: 'Cancelled' };
+        const orders = (ordersRes.data || []).map(o => ({
+          id: o.id,
+          date: o.ordered_at ? o.ordered_at.split('T')[0] : '',
+          item: o.product,
+          qty: o.quantity,
+          status: statusMap[o.status] || 'Processing',
+        }));
+
+        const np = (nutritionRes.data || [])[0];
+        const nutrition = np ? {
+          id: np.id,
+          goal: np.title || 'Current Plan',
+          macros: {
+            calories: np.daily_calories || 0,
+            protein: np.protein_g || 0,
+            carbs: np.carbs_g || 0,
+            fat: np.fats_g || 0,
+          },
+          days: Array.isArray(np.plan_data) ? np.plan_data : [],
+          settings: (np.meal_settings && typeof np.meal_settings === 'object') ? np.meal_settings : {},
+        } : null;
+
+        const wp = (workoutRes.data || [])[0];
+        const workout = wp ? {
+          goal: wp.title || 'Current Program',
+          days: Array.isArray(wp.plan_data) ? wp.plan_data : [],
+        } : null;
+
+        const bloodwork = (bloodworkRes.data || []).map(b => b.filename);
+
+        setUserData({
+          id: profileRes.data.id,
+          name: profileRes.data.name || profileRes.data.email,
+          email: profileRes.data.email,
+          phone: profileRes.data.phone,
+          address: profileRes.data.address,
+          profile: profileRes.data,
+          onboardedAt: profileRes.data.onboarded_at || null,
+          orders, nutrition, workout, bloodwork,
+        });
+      } catch (err) {
+        console.error('Load failed at step:', step, err);
+        if (!cancelled) {
+          const detail = [
+            `Step: ${step}`,
+            err?.message && `Message: ${err.message}`,
+            err?.code && `Code: ${err.code}`,
+            err?.details && `Details: ${err.details}`,
+            err?.hint && `Hint: ${err.hint}`,
+          ].filter(Boolean).join('\n');
+          setLoadError(detail || 'Failed to load your data.');
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  if (loadError) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="card" style={{ maxWidth: 480, textAlign: 'left' }}>
+          <h2 style={{ fontSize: 20, marginBottom: 8, textAlign: 'center' }}>Couldn't load your data</h2>
+          <pre style={{
+            fontSize: 12, color: 'rgba(255,255,255,0.7)',
+            background: 'rgba(255,255,255,0.04)',
+            padding: 12, borderRadius: 8,
+            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            marginBottom: 20, fontFamily: 'SF Mono, Menlo, monospace', lineHeight: 1.5,
+          }}>{loadError}</pre>
+          <button className="btn-blue" onClick={onLogout} style={{ width: '100%' }}>Sign out</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}>
+        Loading…
+      </div>
+    );
+  }
+
+  // First-time client: show onboarding quiz before the portal
+  if (!userData.onboardedAt && window.OnboardingQuiz) {
+    const Quiz = window.OnboardingQuiz;
+    return (
+      <Quiz
+        clientId={userData.id}
+        clientName={userData.name}
+        onComplete={(profile) => {
+          setUserData({
+            ...userData,
+            profile,
+            onboardedAt: profile.onboarded_at || new Date().toISOString(),
+          });
+        }}
+        onSignOut={onLogout}
+      />
+    );
+  }
+
+  const tabs = [
+    { id: 'order',    label: 'Order Form',        icon: icons.order },
+    { id: 'history',  label: 'Purchase History',   icon: icons.history },
+    { id: 'nutrition',label: 'Nutrition Plan',     icon: icons.nutrition },
+    { id: 'workout',  label: 'Workout Plan',       icon: icons.workout },
+    { id: 'weighin',  label: 'Weekly Weigh-In',    icon: icons.weighin },
+    { id: 'blood',    label: 'Blood Work',         icon: icons.blood },
+  ];
+
+  const addOrder = (order) => {
+    // Optimistically add to UI; OrderForm has already inserted to Supabase
+    const newOrder = {
+      id: order.id || `tmp-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      status: 'Processing',
+      item: order.item,
+      qty: order.qty,
+    };
+    setUserData(d => ({ ...d, orders: [newOrder, ...d.orders] }));
+  };
+
+  const addFile = (name) => {
+    setUserData(d => ({ ...d, bloodwork: [name, ...d.bloodwork] }));
+  };
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0a' }}>
+      {/* Sidebar */}
+      <aside className="sidebar" style={{
+        width: 260, flexShrink: 0, background: '#111113',
+        borderRight: '1px solid rgba(255,255,255,0.07)',
+        display: 'flex', flexDirection: 'column',
+        position: 'sticky', top: 0, height: '100vh', overflowY: 'auto',
+      }}>
+        {/* Logo */}
+        <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <img src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
+            style={{ height: 110, marginBottom: 20 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%', background: '#0066cc',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: 14, fontWeight: 700, flexShrink: 0,
+            }}>{userData.name.split(' ').map(n => n[0]).join('')}</div>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.2 }}>{userData.name}</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{userData.email}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ padding: '16px 12px', flex: 1 }}>
+          {tabs.map(t => {
+            const hasUnread = unread[t.id] && unread[t.id].length > 0;
+            return (
+              <button key={t.id} onClick={() => switchTab(t.id)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 14, fontWeight: activeTab === t.id ? 600 : 400,
+                  textAlign: 'left', marginBottom: 2, transition: 'all 0.12s',
+                  background: activeTab === t.id ? 'rgba(41,151,255,0.12)' : 'transparent',
+                  color: activeTab === t.id ? '#2997ff' : 'rgba(255,255,255,0.75)',
+                }}>
+                <span style={{ opacity: activeTab === t.id ? 1 : 0.5 }}>{t.icon}</span>
+                <span style={{ flex: 1 }}>{t.label}</span>
+                {hasUnread && (
+                  <span title="Updated" style={{
+                    width: 8, height: 8, borderRadius: '50%', background: '#ff453a',
+                    boxShadow: '0 0 0 3px rgba(255,69,58,0.18)', flexShrink: 0,
+                  }} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <button onClick={onLogout}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 14, color: 'rgba(255,255,255,0.45)',
+              background: 'transparent', transition: 'all 0.12s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.06)'}
+            onMouseLeave={e => e.currentTarget.style.background='transparent'}
+          >
+            {icons.logout} Sign out
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile tab bar */}
+      <div className="mobile-tabs" style={{
+        display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(12px)',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        padding: '8px 4px',
+      }}>
+        {tabs.map(t => {
+          const hasUnread = unread[t.id] && unread[t.id].length > 0;
+          return (
+            <button key={t.id} onClick={() => switchTab(t.id)}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                background: 'none', border: 'none', cursor: 'pointer', padding: '6px 2px',
+                color: activeTab === t.id ? '#2997ff' : 'rgba(255,255,255,0.35)',
+                fontFamily: 'inherit', position: 'relative',
+              }}>
+              {t.icon}
+              {hasUnread && (
+                <span style={{
+                  position: 'absolute', top: 2, right: '50%', marginRight: -16,
+                  width: 7, height: 7, borderRadius: '50%', background: '#ff453a',
+                  boxShadow: '0 0 0 2px #0a0a0a',
+                }} />
+              )}
+              <span style={{ fontSize: 9, fontWeight: activeTab === t.id ? 600 : 400 }}>
+                {t.label.split(' ')[0]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main content */}
+      <main style={{ flex: 1, padding: '48px 40px', maxWidth: 960, paddingBottom: 80, background: '#0a0a0a' }}>
+        {/* Top bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
+          <div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', letterSpacing: '-0.12px' }}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.025em' }}>
+              Welcome back, {userData.name.split(' ')[0]}.
+            </h1>
+          </div>
+        </div>
+
+        {activeTab === 'order'     && <OrderForm userData={userData} onOrderPlaced={addOrder} />}
+        {activeTab === 'history'   && <PurchaseHistory orders={userData.orders} />}
+        {activeTab === 'nutrition' && (userData.nutrition
+          ? <NutritionPlan plan={userData.nutrition} userId={userId} />
+          : <EmptyState title="Nutrition Plan" message="Your nutrition plan will appear here once your specialist sets it up." />)}
+        {activeTab === 'workout'   && (userData.workout
+          ? <WorkoutPlan plan={userData.workout} />
+          : <EmptyState title="Workout Plan" message="Your workout plan will appear here once your specialist sets it up." />)}
+        {activeTab === 'weighin'   && <WeighIn sb={sb} userId={userId} />}
+        {activeTab === 'blood'     && <BloodWork userId={userId} files={userData.bloodwork} onUpload={addFile} />}
+      </main>
+    </div>
+  );
+};
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+const EmptyState = ({ title, message }) => (
+  <div className="fade-in">
+    <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 6 }}>{title}</h2>
+    <div className="card" style={{ padding: 60, textAlign: 'center' }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,102,204,0.12)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 18px',
+      }}>
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="11" cy="11" r="9" stroke="#2997ff" strokeWidth="1.6"/>
+          <path d="M11 7v4M11 14.5v.5" stroke="#2997ff" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      </div>
+      <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', maxWidth: 380, margin: '0 auto', lineHeight: 1.5 }}>{message}</p>
+    </div>
+  </div>
+);
+
+// ─── App ─────────────────────────────────────────────────────────────────────
+const App = () => {
+  const [userId, setUserId] = React.useState(null);
+  const [checking, setChecking] = React.useState(true);
+
+  // Restore session on mount + listen for auth changes
+  React.useEffect(() => {
+    sb.auth.getSession().then(({ data }) => {
+      const user = data?.session?.user;
+      if (user) {
+        if (user.role === 'admin') {
+          window.location.href = 'Admin.html';
+          return;
+        }
+        setUserId(user.id);
+      }
+      setChecking(false);
+    });
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user;
+      if (user?.role === 'admin') {
+        window.location.href = 'Admin.html';
+        return;
+      }
+      setUserId(user?.id || null);
+    });
+    return () => subscription?.unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await sb.auth.signOut();
+    setUserId(null);
+  };
+
+  if (checking) {
+    return <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}>Loading…</div>;
+  }
+
+  return userId
+    ? <Portal userId={userId} onLogout={logout} />
+    : <LoginScreen onLogin={setUserId} />;
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
