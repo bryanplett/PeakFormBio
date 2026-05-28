@@ -939,20 +939,18 @@ const ConsultationModal = ({ onClose }) => {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const res = await fetch('https://formspree.io/f/mnjwvgan', {
+       const res = await fetch('/api/notifications/consultation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          _subject: `New Consultation Booking — ${form.name} (${form.focus || 'Unspecified'})`,
           name: form.name,
           email: form.email,
-          phone: form.phone || '(not provided)',
-          focus_area: form.focus || '(not selected)',
-          primary_goal: form.goal || '(none provided)',
-          preferred_date: form.date,
-          preferred_time: form.time,
-          meeting_option: form.meeting,
-          submitted_at: new Date().toLocaleString(),
+          phone: form.phone || null,
+          focus: form.focus || null,
+          goal: form.goal || null,
+          preferred_date: form.date || null,
+          preferred_time: form.time || null,
+          meeting_option: form.meeting || null,
         }),
       });
       if (!res.ok) throw new Error('Submission failed');
