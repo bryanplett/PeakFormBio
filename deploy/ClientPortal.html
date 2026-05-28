@@ -1108,26 +1108,31 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     try {
       const summary = cart.map(it => `• ${it.label} × ${it.qty}`).join('\n');
       const totalItems = cart.reduce((s, it) => s + it.qty, 0);
-      await fetch('https://formspree.io/f/mnjwvgan', {
+    const token = sb.auth.getToken();
+      await fetch('/api/notifications/order', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+        },
         body: JSON.stringify({
-          _subject: `New Order: ${cart.length} item${cart.length > 1 ? 's' : ''} (${totalItems} total)`,
+          items: cart.map(it => ({ label: it.label, qty: it.qty })),
+          total: cartTotal.toFixed(2),
           client_name: userData?.name && userData.name !== userData?.email ? userData.name : '(no name on file)',
           client_email: userData?.email || 'Unknown',
           client_phone: phone.trim() || userData?.phone || '(no phone on file)',
-          shipping_address: shippingAddress.trim() || userData?.address || '(no address on file — please contact client)',
-          order_summary: summary,
-          item_count: cart.length,
-          total_items: totalItems,
-          notes: notes || '(none)',
-          payment_method: paymentMethod,
-          shipping_method: shippingMethod,
-          shipping_cost: `$${shippingCost.toFixed(2)}`,
-          coupon_code: couponActive ? `${matchedCoupon.code} (${couponLabel}; saved $${couponSavings.toFixed(2)})` : (couponCode.trim() || '(none)'),
-          subtotal: `$${subtotalEffective.toFixed(2)}`,
-          order_total: `$${cartTotal.toFixed(2)}`,
-          submitted_at: new Date().toLocaleString(),
+          summary: [
+            'Items:', summary,
+            '',
+            `Subtotal: $${subtotalEffective.toFixed(2)}`,
+            `Shipping (${shippingMethod}): $${shippingCost.toFixed(2)}`,
+            couponActive ? `Coupon: ${matchedCoupon.code} (saved $${couponSavings.toFixed(2)})` : '',
+            `Total: $${cartTotal.toFixed(2)}`,
+            '',
+            `Payment method: ${paymentMethod}`,
+            `Shipping address: ${shippingAddress.trim() || userData?.address || '(no address on file)'}`,
+            `Notes: ${notes || '(none)'}`,
+          ].filter(Boolean).join('\n'),
         }),
       });
     } catch (err) {
