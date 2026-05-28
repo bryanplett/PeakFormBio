@@ -4,8 +4,5 @@ backend/node_modules
 .env
 .env.local
 docker-volumes
-uploads/*
-!uploads/.gitkeep
 *.log
 .DS_Store
-1_5058098532557259934/
