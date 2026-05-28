@@ -14,6 +14,12 @@ COPY deploy/*.js ./public/
 COPY deploy/*.css ./public/
 COPY deploy/assets/ ./public/assets/
 
+# Logo / brand assets folder (referenced from HTML as /1_5058...)
+COPY deploy/1_5058098532557259934/ ./public/1_5058098532557259934/
+
+# Hero / static images (referenced from HTML as /uploads/...)
+COPY uploads/ ./uploads/
+
 EXPOSE 3001
 
 CMD ["node", "server.js"]
