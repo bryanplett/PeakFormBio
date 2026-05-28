@@ -25,7 +25,28 @@ app.use('/api/storage', storageRouter);
 app.use('/api/rpc',     rpcRouter);
 app.use('/api/notifications', notificationsRouter);
 app.get('/api/health',  (_req, res) => res.json({ ok: true }));
+// ── Serve frontend pages ────────────────────────────────────────────────────
+const PUBLIC_FILES = [
+  'index.html',
+  'Admin.html',
+  'ClientPortal.html',
+  'PeakFormBio.html',
+  'api-client.js',
+  'inventory-helper.js',
+  'pricelists.js',
+  'supabase-config.js',
+];
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/assets',  express.static(path.join(__dirname, 'assets')));
+
+PUBLIC_FILES.forEach(file => {
+  app.get('/' + file, (_req, res) => res.sendFile(path.join(__dirname, file)));
+});
+
+app.get('/',       (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/admin',  (_req, res) => res.sendFile(path.join(__dirname, 'Admin.html')));
+app.get('/portal', (_req, res) => res.sendFile(path.join(__dirname, 'ClientPortal.html')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
