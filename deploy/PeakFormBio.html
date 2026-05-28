@@ -240,7 +240,7 @@
     .section-divider { height: 80px !important; }
 
     /* Scrolling banner */
-    .marquee-track { animation-duration: 24s !important; }
+    .marquee-track { animation-duration: 48s !important; }
 
     /* Top promo banner — mobile */
     .promo-banner { height: 32px !important; }
@@ -344,9 +344,8 @@ const Nav = ({ onSchedule }) => {
 
   return (
     <>
-      <PromoBanner />
       <nav className="nav-root" style={{
-        position: 'fixed', top: 36, left: 0, right: 0, zIndex: 500,
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 500,
         background: scrolled ? 'rgba(0,0,0,0.90)' : '#000',
         backdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
@@ -1218,7 +1217,7 @@ const ScrollingBanner = () => {
     <div style={{ background: '#000', overflow: 'hidden', padding: '0', borderTop: '1px solid rgba(41,151,255,0.15)', borderBottom: '1px solid rgba(41,151,255,0.15)' }}>
       <style>{`
         @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .marquee-track { display: flex; width: max-content; animation: marquee 40s linear infinite; }
+        .marquee-track { display: flex; width: max-content; animation: marquee 80s linear infinite; }
         .marquee-track:hover { animation-play-state: paused; }
       `}</style>
       <div className="marquee-track">
@@ -1325,7 +1324,7 @@ const App = () => {
     <div style={{ minHeight: '100vh' }}>
       <Nav onSchedule={openModal} />
 
-      <div style={{ paddingTop: 88 }}>
+      <div style={{ paddingTop: 52 }}>
         <Hero onSchedule={openModal} />
         <ScrollingBanner />
         <PillarTile {...pillars[0]} onSchedule={openModal} />
