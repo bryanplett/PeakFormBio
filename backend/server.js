@@ -8,6 +8,7 @@ import authRouter from './routes/auth.js';
 import dataRouter from './routes/data.js';
 import storageRouter from './routes/storage.js';
 import rpcRouter from './routes/rpc.js';
+import notificationsRouter from './routes/notifications.js';
 import bcrypt from 'bcryptjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,6 +23,7 @@ app.use('/api/auth',    authRouter);
 app.use('/api/data',    dataRouter);
 app.use('/api/storage', storageRouter);
 app.use('/api/rpc',     rpcRouter);
+app.use('/api/notifications', notificationsRouter);
 app.get('/api/health',  (_req, res) => res.json({ ok: true }));
 
 app.use(express.static(path.join(__dirname, 'public')));
