@@ -145,8 +145,9 @@ function ClientInvite({ sb, onInvited, onCancel }) {
                 </button>
               </div>
              <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 8 }}>
-                <a
-                  href={`mailto:${msg.creds.email}?subject=${encodeURIComponent('Welcome to PeakForm Bio — your portal access')}&body=${encodeURIComponent(`Welcome to PeakForm Bio. Sign in here:\n${msg.creds.portalUrl}\n\nEmail: ${msg.creds.email}\nPassword: ${msg.creds.password}\n\nUse the "Use email & password" option on the sign-in screen.`)}`}
+               <a
+                  href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(msg.creds.email)}&su=${encodeURIComponent('Welcome to PeakForm Bio — your portal access')}&body=${encodeURIComponent(`Welcome to PeakForm Bio. Sign in here:\n${msg.creds.portalUrl}\n\nEmail: ${msg.creds.email}\nPassword: ${msg.creds.password}\n\nUse the "Use email & password" option on the sign-in screen.`)}`}
+                  target="_blank" rel="noopener"
                   style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: 'rgba(0,102,204,0.45)', border: '1px solid rgba(0,102,204,0.65)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '4px 10px', cursor: 'pointer' }}>
                   ✉ Send welcome email
                 </a>
