@@ -144,13 +144,18 @@ function ClientInvite({ sb, onInvited, onCancel }) {
                   {copied === 'creds-pw' ? '✓' : 'Copy'}
                 </button>
               </div>
-              <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 8 }}>
+                <a
+                  href={`mailto:${msg.creds.email}?subject=${encodeURIComponent('Welcome to PeakForm Bio — your portal access')}&body=${encodeURIComponent(`Welcome to PeakForm Bio. Sign in here:\n${msg.creds.portalUrl}\n\nEmail: ${msg.creds.email}\nPassword: ${msg.creds.password}\n\nUse the "Use email & password" option on the sign-in screen.`)}`}
+                  style={{ flex: 1, textAlign: 'center', textDecoration: 'none', background: 'rgba(0,102,204,0.45)', border: '1px solid rgba(0,102,204,0.65)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '4px 10px', cursor: 'pointer' }}>
+                  ✉ Send welcome email
+                </a>
                 <button type="button" onClick={() => copyText(
                   `Welcome to PeakForm Bio. Sign in here:\n${msg.creds.portalUrl}\n\nEmail: ${msg.creds.email}\nPassword: ${msg.creds.password}\n\nUse the "Use email & password" option on the sign-in screen.`,
                   'creds-all'
                 )}
-                  style={{ background: 'rgba(0,102,204,0.25)', border: '1px solid rgba(0,102,204,0.45)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '4px 10px', cursor: 'pointer', width: '100%' }}>
-                  {copied === 'creds-all' ? '✓ Copied welcome message' : 'Copy welcome message (paste in text/email)'}
+                  style={{ flex: 1, background: 'rgba(0,102,204,0.25)', border: '1px solid rgba(0,102,204,0.45)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '4px 10px', cursor: 'pointer' }}>
+                  {copied === 'creds-all' ? '✓ Copied' : 'Copy for SMS/other'}
                 </button>
               </div>
             </div>
