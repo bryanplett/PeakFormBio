@@ -2343,6 +2343,15 @@ const Portal = ({ userId, onLogout }) => {
   const [userData, setUserData] = React.useState(null);
   const [loadError, setLoadError] = React.useState('');
   const [unread, setUnread] = React.useState({});  // { workout: [ids], nutrition: [ids] }
+  const [quizSkipped, setQuizSkipped] = React.useState(false);
+
+  React.useEffect(() => {
+    if (userData?.id) {
+      try {
+        setQuizSkipped(localStorage.getItem(`pfb_skip_onboarding_${userData.id}`) === '1');
+      } catch {}
+    }
+  }, [userData?.id]);
 
   // Map notification kind → tab id
   const NOTIF_TAB = { workout_updated: 'workout', nutrition_updated: 'nutrition' };
@@ -2537,9 +2546,6 @@ const Portal = ({ userId, onLogout }) => {
 
   // First-time client: show onboarding quiz before the portal (unless they skipped)
   const skipKey = `pfb_skip_onboarding_${userData.id}`;
-  const [quizSkipped, setQuizSkipped] = React.useState(() => {
-    try { return localStorage.getItem(skipKey) === '1'; } catch { return false; }
-  });
 
   if (!userData.onboardedAt && !quizSkipped && window.OnboardingQuiz) {
     const Quiz = window.OnboardingQuiz;
