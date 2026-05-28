@@ -96,7 +96,7 @@ const Tiles = ({ value, onChange, options, columns = 2 }) => (
 );
 
 // ---------- main component ----------
-function OnboardingQuiz({ clientId, clientName, onComplete, onSignOut }) {
+function OnboardingQuiz({ clientId, clientName, onComplete, onSkip, onSignOut }) {
   const [stepIdx, setStepIdx] = useState(0);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState(null);
@@ -237,10 +237,19 @@ function OnboardingQuiz({ clientId, clientName, onComplete, onSignOut }) {
         alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
         <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.2px' }}>Welcome to your portal</div>
-        <button onClick={onSignOut} style={{
-          background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)',
-          fontSize: 13, cursor: 'pointer',
-        }}>Sign out</button>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          {onSkip && (
+            <button onClick={onSkip} style={{
+              background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
+              color: 'rgba(255,255,255,0.7)', fontSize: 12, cursor: 'pointer',
+              padding: '6px 12px', borderRadius: 6,
+            }}>Skip for now</button>
+          )}
+          <button onClick={onSignOut} style={{
+            background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)',
+            fontSize: 13, cursor: 'pointer',
+          }}>Sign out</button>
+        </div>
       </div>
 
       {/* progress */}
