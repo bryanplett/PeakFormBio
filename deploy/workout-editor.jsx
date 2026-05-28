@@ -234,15 +234,18 @@ const WorkoutEditor = ({ sb, client, onBack }) => {
 
         // 2. Email via Formspree
         try {
-          await fetch('https://formspree.io/f/mnjwvgan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({
-              _subject: `Workout plan updated for ${client.name}`,
-              client_name: client.name, client_email: client.email,
-              kind: 'workout_updated', updated_at: new Date().toISOString(),
-            }),
-          });
+         const token = sb.auth.getToken();
+        await fetch('/api/notifications/admin-event', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+          },
+          body: JSON.stringify({
+            subject: `Workout plan updated for ${client.name}`,
+            body: `Workout plan for ${client.name} (${client.email}) was updated at ${new Date().toLocaleString()}.`,
+          }),
+        });
         } catch (e) { console.warn('formspree failed', e); }
       }
 
