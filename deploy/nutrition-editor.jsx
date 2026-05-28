@@ -447,10 +447,18 @@ const NutritionEditor = ({ sb, client, onBack }) => {
       if (notify) {
         try { await sb.from('client_notifications').insert({ client_id: client.id, kind:'nutrition_updated', message:'Your nutrition plan was updated.' }); } catch {}
         try {
-          await fetch('https://formspree.io/f/mnjwvgan', { method:'POST',
-            headers:{'Content-Type':'application/json','Accept':'application/json'},
-            body: JSON.stringify({ _subject:`Nutrition plan updated for ${client.name}`,
-              client_name: client.name, client_email: client.email, kind:'nutrition_updated' }) });
+         const token = sb.auth.getToken();
+        await fetch('/api/notifications/admin-event', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+          },
+          body: JSON.stringify({
+            subject: `Nutrition plan updated for ${client.name}`,
+            body: `Nutrition plan for ${client.name} (${client.email}) was updated.`,
+          }),
+        });
         } catch {}
       }
       setTimeout(()=>setSaveMsg(''), 2500);
