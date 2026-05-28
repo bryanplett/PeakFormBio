@@ -2535,24 +2535,40 @@ const Portal = ({ userId, onLogout }) => {
     );
   }
 
-  // First-time client: show onboarding quiz before the portal
-  if (!userData.onboardedAt && window.OnboardingQuiz) {
+  // First-time client: show onboarding quiz before the portal (unless they skipped)
+  const skipKey = `pfb_skip_onboarding_${userData.id}`;
+  const [quizSkipped, setQuizSkipped] = React.useState(() => {
+    try { return localStorage.getItem(skipKey) === '1'; } catch { return false; }
+  });
+
+  if (!userData.onboardedAt && !quizSkipped && window.OnboardingQuiz) {
     const Quiz = window.OnboardingQuiz;
     return (
       <Quiz
         clientId={userData.id}
         clientName={userData.name}
         onComplete={(profile) => {
+          try { localStorage.removeItem(skipKey); } catch {}
           setUserData({
             ...userData,
             profile,
             onboardedAt: profile.onboarded_at || new Date().toISOString(),
           });
         }}
+        onSkip={() => {
+          try { localStorage.setItem(skipKey, '1'); } catch {}
+          setQuizSkipped(true);
+        }}
         onSignOut={onLogout}
       />
     );
   }
+
+  const showOnboardingReminder = !userData.onboardedAt && quizSkipped;
+  const resumeOnboarding = () => {
+    try { localStorage.removeItem(skipKey); } catch {}
+    setQuizSkipped(false);
+  };
 
   const tabs = [
     { id: 'order',    label: 'Order Form',        icon: icons.order },
@@ -2683,7 +2699,43 @@ const Portal = ({ userId, onLogout }) => {
       </div>
 
       {/* Main content */}
-      <main style={{ flex: 1, padding: '48px 40px', maxWidth: 960, paddingBottom: 80, background: '#0a0a0a' }}>
+     <main style={{ flex: 1, padding: '48px 40px', maxWidth: 960, paddingBottom: 80, background: '#0a0a0a' }}>
+        {/* Onboarding reminder banner */}
+        {showOnboardingReminder && (
+          <div style={{
+            background: 'rgba(0,102,204,0.12)',
+            border: '1px solid rgba(0,102,204,0.4)',
+            borderRadius: 12,
+            padding: '14px 18px',
+            marginBottom: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+            flexWrap: 'wrap',
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#f5f5f7', marginBottom: 2 }}>
+                Finish setting up your profile
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
+                Your specialist needs your intake info before they can build a personalized plan. Takes about 3 minutes.
+              </div>
+            </div>
+            <button onClick={resumeOnboarding} style={{
+              background: '#0066cc',
+              border: 'none',
+              borderRadius: 8,
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 500,
+              padding: '9px 16px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}>Complete now</button>
+          </div>
+        )}
+
         {/* Top bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
           <div>
