@@ -256,8 +256,7 @@ function LoginAccessPanel({ sb, client }) {
 
   if (!client?.email) return null;
 
-  const portalUrl = window.location.origin
-    + window.location.pathname.replace(/Admin\.html$/, 'ClientPortal.html');
+  const portalUrl = window.location.origin + '/ClientPortal.html';
 
   const setPasswordDirect = async () => {
     if (!newPw || newPw.length < 8) {
