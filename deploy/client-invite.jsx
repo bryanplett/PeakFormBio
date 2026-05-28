@@ -9,8 +9,7 @@ function ClientInvite({ sb, onInvited, onCancel }) {
   const [msg,  setMsg]    = useState(null);            // { kind: 'ok'|'err', text, creds? }
   const [copied, setCopied] = useState(false);
 
-  const portalUrl = window.location.origin
-    + window.location.pathname.replace(/Admin\.html$/, 'ClientPortal.html');
+  const portalUrl = window.location.origin + '/ClientPortal.html';
 
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
