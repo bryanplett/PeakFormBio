@@ -2149,71 +2149,237 @@ const NutritionPlan = ({ plan, userId }) => {
 };
 
 // ─── Workout Plan ─────────────────────────────────────────────────────────────
-const WorkoutPlan = ({ plan }) => {
+// Helpers for set logging
+const woParseRestSec = (rest) => {
+  if (!rest) return 60;
+  const min = String(rest).match(/(\d+)\s*min/i);
+  if (min) return parseInt(min[1], 10) * 60;
+  const s = String(rest).match(/(\d+)/);
+  return s ? parseInt(s[1], 10) : 60;
+};
+const woMmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.max(0, sec % 60)).padStart(2, '0')}`;
+const woRepHint = (reps) => { const m = String(reps || '').match(/(\d+)/); return m ? m[1] : ''; };
+
+const WoCell = ({ value, onChange, placeholder, readOnly }) => (
+  readOnly ? (
+    <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.55)', padding: '9px 4px' }}>{value || '—'}</div>
+  ) : (
+    <input value={value} onChange={e => onChange(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder={placeholder}
+      style={{
+        width: '100%', textAlign: 'center', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: '#f5f5f7',
+        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 4px', outline: 'none', minWidth: 0,
+      }}
+      onFocus={e => { e.target.style.borderColor = '#2997ff'; e.target.select(); }}
+      onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'} />
+  )
+);
+
+// ─── Workout Plan (with set logging) ─────────────────────────────────────────
+// Clients log Weight + Actual Reps (+ optional RPE / per-set note) against the
+// coach-prescribed Target Reps and check each set done. Saved to `workout_logs`.
+const WO_GRID = '26px 1fr 1fr 1fr 34px 26px';
+
+const WorkoutPlan = ({ plan, sb, userId }) => {
   const [activeDay, setActiveDay] = React.useState(0);
-  const day = plan.days[activeDay];
+  const [log, setLog] = React.useState({});            // { [exIdx]: [{weight,reps,rpe,note,done}] }
+  const [noteOpen, setNoteOpen] = React.useState({});  // { 'ei-si': bool }
+  const [startedAt, setStartedAt] = React.useState(null);
+  const [now, setNow] = React.useState(Date.now());
+  const [rest, setRest] = React.useState(null);        // { remaining, total }
+  const [saving, setSaving] = React.useState(false);
+  const [savedMsg, setSavedMsg] = React.useState('');
+
+  const day = plan.days[activeDay] || { day: '', focus: '', exercises: [] };
+
+  // (Re)build a blank log whenever the day changes.
+  React.useEffect(() => {
+    const l = {};
+    (day.exercises || []).forEach((ex, ei) => {
+      const n = parseInt(ex.sets, 10) || 0;
+      l[ei] = Array.from({ length: n }, () => ({ weight: '', reps: '', rpe: '', note: '', done: false }));
+    });
+    setLog(l); setNoteOpen({}); setStartedAt(null); setRest(null); setSavedMsg('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDay]);
+
+  // Ticking clock for elapsed + rest countdown.
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setNow(Date.now());
+      setRest(r => (r && r.remaining > 0) ? { ...r, remaining: r.remaining - 1 } : (r ? null : r));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const ensureStart = () => setStartedAt(s => s || Date.now());
+  const patch = (ei, si, p) => { ensureStart(); setLog(prev => ({ ...prev, [ei]: prev[ei].map((s, k) => k === si ? { ...s, ...p } : s) })); };
+  const toggleDone = (ei, si) => {
+    const willDo = !log[ei][si].done;
+    patch(ei, si, { done: willDo });
+    if (willDo) { const sec = woParseRestSec(day.exercises[ei].rest); setRest({ remaining: sec, total: sec }); }
+  };
+
+  const allSets = Object.values(log).flat();
+  const doneCount = allSets.filter(s => s.done).length;
+  const totalCount = allSets.length;
+  const volume = allSets.reduce((a, s) => a + (s.done ? (parseFloat(s.weight) || 0) * (parseInt(s.reps, 10) || 0) : 0), 0);
+  const elapsed = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
+
+  const finish = async () => {
+    if (saving || doneCount === 0) return;
+    setSaving(true); setSavedMsg('');
+    const sessionId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    const finishedAt = new Date().toISOString();
+    const startedISO = startedAt ? new Date(startedAt).toISOString() : finishedAt;
+    const rows = [];
+    (day.exercises || []).forEach((ex, ei) => {
+      (log[ei] || []).forEach((s, si) => {
+        rows.push({
+          client_id: userId, plan_id: plan.id || null, session_id: sessionId,
+          day: day.day, focus: day.focus || null,
+          exercise_index: ei, exercise_name: ex.name, set_number: si + 1,
+          target_reps: ex.reps || null,
+          weight: s.weight !== '' ? parseFloat(s.weight) : null,
+          actual_reps: s.reps !== '' ? parseInt(s.reps, 10) : null,
+          rpe: s.rpe !== '' ? parseFloat(s.rpe) : null,
+          notes: s.note ? s.note.trim() : null,
+          done: !!s.done, started_at: startedISO, finished_at: finishedAt,
+        });
+      });
+    });
+    try {
+      const { error } = await sb.from('workout_logs').insert(rows);
+      if (error) throw new Error(error.message || 'Save failed');
+      setSavedMsg('Workout logged — your coach can see it now.');
+    } catch (e) {
+      setSavedMsg('Could not save: ' + (e.message || e));
+    } finally { setSaving(false); }
+  };
 
   return (
     <div className="fade-in">
       <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 4 }}>Workout Plan</h2>
-      <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>Goal: {plan.goal}</p>
+      <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 22 }}>Goal: {plan.goal} · log your sets as you train</p>
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
         {plan.days.map((d, i) => (
           <button key={d.day} onClick={() => setActiveDay(i)}
             style={{
               borderRadius: 980, padding: '7px 16px', fontSize: 13, cursor: 'pointer', border: 'none',
               fontFamily: 'inherit', fontWeight: activeDay === i ? 600 : 400,
               background: activeDay === i ? '#2997ff' : 'rgba(255,255,255,0.07)',
-              color: activeDay === i ? '#fff' : 'rgba(255,255,255,0.7)',
-              boxShadow: 'none',
-              transition: 'all 0.12s',
+              color: activeDay === i ? '#fff' : 'rgba(255,255,255,0.7)', transition: 'all 0.12s',
             }}>
             {d.day.slice(0, 3)}
           </button>
         ))}
       </div>
 
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div>
-            <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f5f5f7' }}>{day.day}</h3>
-            <p style={{ fontSize: 14, color: '#0066cc', fontWeight: 500, marginTop: 2 }}>{day.focus}</p>
-          </div>
+      {(day.exercises || []).length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>
+          {day.day} — rest day. Recovery is training.
         </div>
+      ) : (
+        <React.Fragment>
+          {/* Session summary */}
+          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: 18, marginBottom: 16 }}>
+            <div>
+              <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f5f5f7' }}>{day.day}</h3>
+              <p style={{ fontSize: 14, color: '#0066cc', fontWeight: 500, marginTop: 2 }}>{day.focus}</p>
+            </div>
+            <div style={{ display: 'flex', gap: 22 }}>
+              {[['Elapsed', woMmss(elapsed)], ['Sets', `${doneCount}/${totalCount}`], ['Volume', volume.toLocaleString() + ' lb']].map(([k, v]) => (
+                <div key={k} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.6, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 3 }}>{k}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#f5f5f7', fontVariantNumeric: 'tabular-nums' }}>{v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-        {day.exercises.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(255,255,255,0.4)', fontSize: 15 }}>
-            Rest day. Recovery is training.
+          {/* Exercises */}
+          {day.exercises.map((ex, ei) => (
+            <div key={ei} className="card" style={{ padding: 18, marginBottom: 14 }}>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 16, fontWeight: 600, color: '#f5f5f7' }}>{ex.name}</div>
+                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>
+                  Target: {ex.sets} sets · {ex.reps} reps{ex.rest ? ` · ${ex.rest} rest` : ''}{ex.tempo ? ` · tempo ${ex.tempo}` : ''}
+                </div>
+                {ex.notes ? <div style={{ fontSize: 12.5, color: '#2997ff', marginTop: 6 }}>Coach note: {ex.notes}</div> : null}
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <div style={{ minWidth: 360 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: WO_GRID, gap: 8, padding: '0 0 7px',
+                    fontSize: 10, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
+                    borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span>Set</span><span style={{ textAlign: 'center' }}>Weight</span>
+                    <span style={{ textAlign: 'center' }}>Target Reps</span><span style={{ textAlign: 'center' }}>Actual Reps</span>
+                    <span style={{ textAlign: 'center' }}>Done</span><span />
+                  </div>
+
+                  {(log[ei] || []).map((s, si) => {
+                    const key = ei + '-' + si;
+                    return (
+                      <React.Fragment key={si}>
+                        <div style={{ display: 'grid', gridTemplateColumns: WO_GRID, gap: 8, alignItems: 'center', padding: '7px 0',
+                          background: s.done ? 'rgba(52,199,89,0.08)' : 'transparent' }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: s.done ? '#34c759' : 'rgba(255,255,255,0.6)', textAlign: 'center' }}>{si + 1}</span>
+                          <WoCell value={s.weight} onChange={v => patch(ei, si, { weight: v })} placeholder="0" />
+                          <WoCell value={ex.reps} readOnly />
+                          <WoCell value={s.reps} onChange={v => patch(ei, si, { reps: v })} placeholder={woRepHint(ex.reps)} />
+                          <button onClick={() => toggleDone(ei, si)} style={{
+                            width: 34, height: 34, borderRadius: 9, margin: '0 auto', cursor: 'pointer',
+                            border: `1px solid ${s.done ? '#34c759' : 'rgba(255,255,255,0.18)'}`,
+                            background: s.done ? '#34c759' : 'rgba(255,255,255,0.04)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.5L19 6.5" stroke={s.done ? '#06210f' : 'rgba(255,255,255,0.4)'} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                          </button>
+                          <button onClick={() => setNoteOpen(o => ({ ...o, [key]: !o[key] }))} title="Add a note"
+                            style={{ width: 24, height: 24, borderRadius: 6, margin: '0 auto', cursor: 'pointer',
+                              border: 'none', background: 'transparent', color: s.note ? '#2997ff' : 'rgba(255,255,255,0.35)', fontSize: 14 }}>✎</button>
+                        </div>
+                        {noteOpen[key] && (
+                          <div style={{ padding: '4px 0 10px' }}>
+                            <input value={s.note} onChange={e => patch(ei, si, { note: e.target.value })}
+                              placeholder="Note for this set (optional)…"
+                              style={{ width: '100%', fontFamily: 'inherit', fontSize: 13, color: '#f5f5f7',
+                                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 10px', outline: 'none' }} />
+                          </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Finish */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
+            <button onClick={finish} disabled={saving || doneCount === 0} className="btn-blue"
+              style={{ opacity: (saving || doneCount === 0) ? 0.5 : 1 }}>
+              {saving ? 'Saving…' : `Finish & log workout${doneCount ? ` · ${doneCount} sets` : ''}`}
+            </button>
+            {savedMsg && <span style={{ fontSize: 13, color: savedMsg.startsWith('Could not') ? '#ff6b6b' : '#34c759' }}>{savedMsg}</span>}
           </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                  {['Exercise', 'Sets', 'Reps', 'Rest'].map(h => (
-                    <th key={h} style={{
-                      padding: '8px 12px', textAlign: 'left',
-                      fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)',
-                      letterSpacing: '0.04em', textTransform: 'uppercase',
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {day.exercises.map((ex, i) => (
-                  <tr key={i} style={{ borderBottom: i < day.exercises.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                    <td style={{ padding: '13px 12px', fontSize: 15, fontWeight: 500, color: '#f5f5f7' }}>{ex.name}</td>
-                    <td style={{ padding: '13px 12px', fontSize: 14, color: '#f5f5f7' }}>{ex.sets}</td>
-                    <td style={{ padding: '13px 12px', fontSize: 14, color: '#f5f5f7' }}>{ex.reps}</td>
-                    <td style={{ padding: '13px 12px', fontSize: 14, color: 'rgba(255,255,255,0.45)' }}>{ex.rest}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+
+          {/* Rest timer */}
+          {rest && (
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 24, display: 'flex', justifyContent: 'center', zIndex: 500, pointerEvents: 'none' }}>
+              <div style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
+                background: 'rgba(20,20,22,0.97)', border: '1px solid rgba(41,151,255,0.4)', borderRadius: 980, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Rest</span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: '#f5f5f7', minWidth: 46, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{woMmss(rest.remaining)}</span>
+                <button onClick={() => setRest(r => ({ ...r, remaining: r.remaining + 15 }))} style={{ background: 'rgba(41,151,255,0.14)', border: '1px solid rgba(41,151,255,0.3)', color: '#2997ff', borderRadius: 980, padding: '5px 11px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>+15s</button>
+                <button onClick={() => setRest(null)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', borderRadius: 980, padding: '5px 11px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Skip</button>
+              </div>
+            </div>
+          )}
+        </React.Fragment>
+      )}
     </div>
   );
 };
@@ -2489,6 +2655,7 @@ const Portal = ({ userId, onLogout }) => {
 
         const wp = (workoutRes.data || [])[0];
         const workout = wp ? {
+          id: wp.id,
           goal: wp.title || 'Current Program',
           days: Array.isArray(wp.plan_data) ? wp.plan_data : [],
         } : null;
@@ -2766,7 +2933,7 @@ const Portal = ({ userId, onLogout }) => {
           ? <NutritionPlan plan={userData.nutrition} userId={userId} />
           : <EmptyState title="Nutrition Plan" message="Your nutrition plan will appear here once your specialist sets it up." />)}
         {activeTab === 'workout'   && (userData.workout
-          ? <WorkoutPlan plan={userData.workout} />
+          ? <WorkoutPlan plan={userData.workout} sb={sb} userId={userId} />
           : <EmptyState title="Workout Plan" message="Your workout plan will appear here once your specialist sets it up." />)}
         {activeTab === 'weighin'   && <WeighIn sb={sb} userId={userId} />}
         {activeTab === 'blood'     && <BloodWork userId={userId} files={userData.bloodwork} onUpload={addFile} />}
