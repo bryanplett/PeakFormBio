@@ -496,6 +496,16 @@ const McResults = ({ result, inputs, clients, sb, onRestart }) => {
         )}
       </div>
 
+      {/* Meal Plan Builder — build a plan that fits the calculated macros */}
+      {window.MealPlanner && (
+        <window.MealPlanner
+          target={{ calories: result.calories, protein_g: result.protein_g, carbs_g: result.carbs_g, fat_g: result.fat_g }}
+          goalLabel={inputs.goalId === 'lose' ? 'Cut' : inputs.goalId === 'gain' ? 'Lean Bulk' : inputs.goalId === 'performance' ? 'Performance' : 'Maintenance'}
+          clients={clients}
+          sb={sb}
+        />
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 24 }}>
         <button className="btn-ghost" onClick={onRestart}>↻ Recalculate</button>
         <button className="btn-ghost" onClick={() => window.print()}>Print results</button>
