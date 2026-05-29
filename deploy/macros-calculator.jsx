@@ -338,7 +338,7 @@ const McChevron = ({ selected }) => (
 );
 
 // ─── Results ────────────────────────────────────────────────────────────────
-const McResults = ({ result, inputs, clients, sb, onRestart }) => {
+const McResults = ({ result, inputs, clients, sb, onRestart, onApplyTarget }) => {
   const [selectedClientId, setSelectedClientId] = React.useState('');
   const [importMsg, setImportMsg] = React.useState('');
   const [importing, setImporting] = React.useState(false);
@@ -496,8 +496,21 @@ const McResults = ({ result, inputs, clients, sb, onRestart }) => {
         )}
       </div>
 
-      {/* Meal Plan Builder — build a plan that fits the calculated macros */}
-      {window.MealPlanner && (
+      {/* Hand the calculated macros back to the standalone Meal Planner (optional) */}
+      {onApplyTarget && (
+        <div className="card" style={{ marginBottom: 18, border: '1px solid rgba(41,151,255,0.3)', background: 'rgba(41,151,255,0.06)' }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: '#fff', marginBottom: 6 }}>Use these macros in the meal plan</h3>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 14, lineHeight: 1.55 }}>
+            Send this target back to the meal plan you were editing. The plan's meals stay exactly as they are — only the daily target updates.
+          </p>
+          <button className="btn-blue" onClick={() => onApplyTarget({ calories: result.calories, protein_g: result.protein_g, carbs_g: result.carbs_g, fat_g: result.fat_g })}>
+            ✓ Apply these macros →
+          </button>
+        </div>
+      )}
+
+      {/* Legacy: embedded Meal Plan Builder (only when no standalone planner is wired) */}
+      {!onApplyTarget && window.MealPlanner && (
         <window.MealPlanner
           target={{ calories: result.calories, protein_g: result.protein_g, carbs_g: result.carbs_g, fat_g: result.fat_g }}
           goalLabel={inputs.goalId === 'lose' ? 'Cut' : inputs.goalId === 'gain' ? 'Lean Bulk' : inputs.goalId === 'performance' ? 'Performance' : 'Maintenance'}
@@ -527,7 +540,7 @@ const McRow = ({ label, value, highlight = false, warn = false }) => (
 );
 
 // ─── Main ───────────────────────────────────────────────────────────────────
-const MacrosCalculator = ({ sb, clients, onBack }) => {
+const MacrosCalculator = ({ sb, clients, onBack, onApplyTarget }) => {
   const [step, setStep] = React.useState(0);
   const [units, setUnits] = React.useState('imperial');
 
@@ -634,7 +647,7 @@ const MacrosCalculator = ({ sb, clients, onBack }) => {
           {currentId === 'activity' && <McStepActivity value={activityId} onChange={setActivityId} />}
           {currentId === 'pace'     && <McStepPace goalId={goalId} value={paceId} onChange={setPaceId} />}
           {currentId === 'results'  && result && (
-            <McResults result={result} inputs={{ goalId, sex }} clients={clients} sb={sb} onRestart={restart} />
+            <McResults result={result} inputs={{ goalId, sex }} clients={clients} sb={sb} onRestart={restart} onApplyTarget={onApplyTarget} />
           )}
 
           {currentId !== 'results' && (

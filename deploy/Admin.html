@@ -12,15 +12,15 @@
 <script src="api-client.js"></script>
 <script src="pricelists.js"></script>
 <script src="inventory-helper.js"></script>
- <script src="food-db.js"></script>
 <script src="food-db.js"></script>
 <script type="text/babel" src="weighin.jsx"></script>
 <script type="text/babel" src="workout-editor.jsx"></script>
 <script type="text/babel" src="recipes-db.jsx"></script>
 <script type="text/babel" src="nutrition-editor.jsx"></script>
- <script type="text/babel" src="meal-planner.jsx"></script>
-<script type="text/babel" src="meal-planner.jsx"></script>
 <script type="text/babel" src="macros-calculator.jsx"></script>
+<script type="text/babel" src="mp-foodpicker.jsx"></script>
+<script type="text/babel" src="mp-macropanel.jsx"></script>
+<script type="text/babel" src="meal-planner-v2.jsx"></script>
 <script type="text/babel" src="workout-builder.jsx"></script>
 <script type="text/babel" src="profile-editor.jsx"></script>
 <script type="text/babel" src="client-invite.jsx"></script>
@@ -675,7 +675,7 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
 };
 
 // ─── Client Detail ────────────────────────────────────────────────────────────
-const ClientDetail = ({ client, onBack, onEdit }) => {
+const ClientDetail = ({ client, onBack, onEdit, onMealPlan }) => {
   const [tab, setTab] = React.useState('profile');
   const [orders, setOrders] = React.useState([]);
   const [coupons, setCoupons] = React.useState([]);
@@ -792,6 +792,7 @@ const ClientDetail = ({ client, onBack, onEdit }) => {
         <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
           <button className="btn-ghost" onClick={()=>onEdit && onEdit(client,'workout')}>Edit Workout</button>
           <button className="btn-ghost" onClick={()=>onEdit && onEdit(client,'nutrition')}>Edit Nutrition</button>
+          <button className="btn-ghost" onClick={()=>onMealPlan && onMealPlan(client)}>Edit Meal Plan</button>
           <button className="btn-ghost" onClick={deleteClient}
             style={{ color: '#ff453a', borderColor: 'rgba(255,69,58,0.3)' }}>Delete client</button>
         </div>
@@ -1051,6 +1052,8 @@ const App = () => {
   const [selected, setSelected] = React.useState(null);
   const [editor, setEditor] = React.useState(null); // { client, kind: 'workout'|'nutrition' }
   const [showCalculator, setShowCalculator] = React.useState(false);
+  const [showPlanner, setShowPlanner] = React.useState(false);
+  const [plannerClientId, setPlannerClientId] = React.useState(null);
   const [showBuilder, setShowBuilder] = React.useState(false);
   const [showRecipes, setShowRecipes] = React.useState(false);
   const [showOrders, setShowOrders] = React.useState(false);
@@ -1060,6 +1063,8 @@ const App = () => {
   const clearViews = () => {
     setShowBuilder(false);
     setShowCalculator(false);
+    setShowPlanner(false);
+    setPlannerClientId(null);
     setShowRecipes(false);
     setShowOrders(false);
     setShowCoupons(false);
@@ -1111,6 +1116,7 @@ const App = () => {
           <button className="btn-ghost" onClick={() => { clearViews(); setShowCoupons(true); }}>Coupons</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowBuilder(true); }}><span className="label-long">Workout </span>Builder</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowCalculator(true); }}><span className="label-long">Macros </span>Calculator</button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowPlanner(true); }}><span className="label-long">Meal </span>Planner</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowRecipes(true); }}>Recipes</button>
           <span className="admin-email" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{user.email}</span>
           <button className="btn-ghost" onClick={signOut}>Sign Out</button>
@@ -1120,6 +1126,8 @@ const App = () => {
       <main className={"admin-main" + ((showOrders || selected || editor) ? " is-wide" : "")}>
         {showBuilder
           ? <WorkoutBuilder sb={sb} clients={clients} onBack={() => setShowBuilder(false)} />
+          : showPlanner && window.StandaloneMealPlanner
+          ? <window.StandaloneMealPlanner sb={sb} clients={clients} initialClientId={plannerClientId} onBack={() => { setShowPlanner(false); setPlannerClientId(null); }} />
           : showCalculator
           ? <MacrosCalculator sb={sb} clients={clients} onBack={() => setShowCalculator(false)} />
           : showRecipes
@@ -1138,7 +1146,7 @@ const App = () => {
               ? <WorkoutEditor sb={sb} client={editor.client} onBack={() => setEditor(null)} />
               : <NutritionEditor sb={sb} client={editor.client} onBack={() => setEditor(null)} />)
           : selected
-            ? <ClientDetail client={selected} onBack={() => { setSelected(null); loadClients(); }} onEdit={(c,kind)=>setEditor({client:c,kind})} />
+            ? <ClientDetail client={selected} onBack={() => { setSelected(null); loadClients(); }} onEdit={(c,kind)=>setEditor({client:c,kind})} onMealPlan={(c)=>{ clearViews(); setPlannerClientId(c.id); setShowPlanner(true); }} />
             : <ClientsList clients={clients} onSelect={setSelected} onEdit={(c,kind)=>setEditor({client:c,kind})} onRefresh={loadClients} />}
       </main>
     </div>

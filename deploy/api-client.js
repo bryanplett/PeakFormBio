@@ -6,6 +6,18 @@
 
   const API = '/api';
 
+  // Parse a fetch Response as JSON, tolerating empty or non-JSON bodies
+  // (e.g. a plain-text "404 page not found" when the backend isn't reachable).
+  async function safeParse(res) {
+    const text = await res.text().catch(() => '');
+    try { return text ? JSON.parse(text) : null; } catch { return null; }
+  }
+  function reachError(res) {
+    if (res && res.status === 404) return { message: "Couldn't reach the server (404). Make sure the backend is running and /api is available." };
+    if (res && res.status >= 500) return { message: 'Server error (' + res.status + '). Please try again shortly.' };
+    return { message: "Couldn't reach the server. Check your connection and try again." };
+  }
+
   class QueryBuilder {
     constructor(table, getToken) {
       this._table    = table;
@@ -131,8 +143,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
-        const json = await res.json();
-        if (!res.ok) return { data: null, error: json };
+        const json = await safeParse(res);
+        if (!res.ok || json === null) return { data: null, error: (json && (json.error || json)) || reachError(res) };
         this._save(json.token, json.user);
         const session = { access_token: json.token, user: json.user };
         this._notify('SIGNED_IN', session);
@@ -165,8 +177,8 @@
             phone: options && options.data && options.data.phone,
           }),
         });
-        const json = await res.json();
-        if (!res.ok) return { data: null, error: json };
+        const json = await safeParse(res);
+        if (!res.ok || json === null) return { data: null, error: (json && (json.error || json)) || reachError(res) };
         return { data: {}, error: null };
       } catch (err) {
         return { data: null, error: { message: err.message } };
@@ -233,8 +245,8 @@
           },
           body: JSON.stringify({ email, password }),
         });
-        const json = await res.json();
-        if (!res.ok) return { error: json };
+        const json = await safeParse(res);
+        if (!res.ok || json === null) return { error: (json && (json.error || json)) || reachError(res) };
         return { error: null };
       } catch (err) {
         return { error: { message: err.message } };

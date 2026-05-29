@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal Planner — Standalone Preview</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="food-db.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: #0a0a0a; color: #f5f5f7; -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+  .field-input { width: 100%; border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 11px 14px; font-size: 15px; color: #f5f5f7; background: rgba(255,255,255,0.06); outline: none; }
+  .field-input::placeholder { color: rgba(255,255,255,0.28); }
+  select.field-input option { background: #1a1a1c; color: #f5f5f7; }
+  select option { background: #1a1a1c; color: #f5f5f7; }
+  .btn-blue { background: #0066cc; color: #fff; border: none; border-radius: 980px; padding: 11px 24px; font-size: 15px; cursor: pointer; }
+  .btn-ghost { background: transparent; color: #2997ff; border: 1px solid rgba(41,151,255,0.5); border-radius: 980px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
+  .card { background: #1a1a1c; border-radius: 18px; border: 1px solid rgba(255,255,255,0.07); padding: 28px; }
+  button:active { transform: scale(0.97); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.2s ease; }
+
+  /* Macro slider */
+  input.macro-range { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.12); outline: none; cursor: pointer; }
+  input.macro-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--c, #2997ff); border: 3px solid #1a1a1c; box-shadow: 0 0 0 1px var(--c, #2997ff); cursor: grab; }
+  input.macro-range::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.12); }
+  input.macro-range::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--c, #2997ff); border: 3px solid #1a1a1c; box-shadow: 0 0 0 1px var(--c, #2997ff); cursor: grab; }
+  input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
+</style>
+</head>
+<body>
+<div style="max-width: 780px; margin: 0 auto; padding: 32px 28px 90px;">
+  <div id="root"></div>
+</div>
+
+<script type="text/babel" src="mp-foodpicker.jsx"></script>
+<script type="text/babel" src="mp-macropanel.jsx"></script>
+<script type="text/babel" src="macros-calculator.jsx"></script>
+<script type="text/babel" src="meal-planner-v2.jsx"></script>
+<script type="text/babel">
+  /* ── Preview-only stubbed backend ──────────────────────────────────────
+     Mimics the Supabase chain used by the planner. Seeds three clients:
+       • Bryan Plett  — has a saved 7-day plan (Continue last plan works)
+       • Jane Doe     — macros set, no meal plan yet (Start fresh)
+       • Marcus Reed  — brand new, no macros, no plan
+     ──────────────────────────────────────────────────────────────────── */
+  const clients = [
+    { id: 'c1', name: 'Bryan Plett' },
+    { id: 'c2', name: 'Jane Doe' },
+    { id: 'c3', name: 'Marcus Reed' },
+  ];
+
+  // A saved day template for Bryan (mirrors what the planner pushes)
+  const mkDay = (day) => ({
+    day,
+    meals: [
+      { name: 'Breakfast', items: [
+        { ingredient: 'Oats, dry', qty: '0.5', unit: 'cup (40g)', calories: 150, protein: 5, carbs: 27, fat: 3 },
+        { ingredient: 'Whey protein powder', qty: '1', unit: 'scoop (30g)', calories: 120, protein: 24, carbs: 3, fat: 1.5 },
+        { ingredient: 'Banana', qty: '1', unit: 'medium', calories: 105, protein: 1, carbs: 27, fat: 0.4 },
+      ]},
+      { name: 'Lunch', items: [
+        { ingredient: 'Chicken breast, grilled', qty: '200', unit: 'g', calories: 330, protein: 62, carbs: 0, fat: 7.2 },
+        { ingredient: 'White rice, cooked', qty: '1.5', unit: 'cup (158g)', grams: 237, calories: 308, protein: 6, carbs: 68, fat: 0.6 },
+        { ingredient: 'Broccoli, steamed', qty: '1', unit: 'cup', calories: 55, protein: 4, carbs: 11, fat: 0.6 },
+      ]},
+      { name: 'Dinner', items: [
+        { ingredient: 'Salmon, baked', qty: '170', unit: 'g', calories: 350, protein: 37, carbs: 0, fat: 22 },
+        { ingredient: 'Sweet potato, baked', qty: '1', unit: 'medium (150g)', calories: 130, protein: 3, carbs: 30, fat: 0.1 },
+      ]},
+      { name: 'Snack', items: [
+        { ingredient: 'Greek yogurt, nonfat', qty: '1', unit: 'cup', calories: 130, protein: 23, carbs: 9, fat: 0 },
+        { ingredient: 'Almonds', qty: '28', unit: 'g', calories: 164, protein: 6, carbs: 6, fat: 14 },
+      ]},
+    ],
+  });
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const bryanPlan = DAYS.map(mkDay);
+
+  const TABLES = {
+    nutrition_plans: [
+      { id: 'p1', client_id: 'c1', active: true, goal: 'Lean Bulk', title: 'Meal Plan',
+        daily_calories: 2800, protein_g: 200, carbs_g: 325, fats_g: 78,
+        updated_at: '2026-05-21T10:00:00Z', created_at: '2026-03-01T10:00:00Z', plan_data: bryanPlan },
+      { id: 'p2', client_id: 'c2', active: true, goal: 'Cut', title: 'Macro Targets',
+        daily_calories: 1900, protein_g: 170, carbs_g: 170, fats_g: 60,
+        updated_at: '2026-05-12T10:00:00Z', created_at: '2026-04-01T10:00:00Z', plan_data: [] },
+    ],
+  };
+
+  function makeQuery(table) {
+    const rows = TABLES[table] ? [...TABLES[table]] : [];
+    const filters = [];
+    let _limit = null;
+    const apply = () => {
+      let r = rows.filter(row => filters.every(([c, v]) => row[c] === v));
+      if (_limit != null) r = r.slice(0, _limit);
+      return r;
+    };
+    const q = {
+      select() { return q; },
+      eq(c, v) { filters.push([c, v]); return q; },
+      order() { return q; },
+      limit(n) { _limit = n; return q; },
+      maybeSingle() { return Promise.resolve({ data: apply()[0] || null, error: null }); },
+      single() { return Promise.resolve({ data: apply()[0] || { id: 'demo' }, error: null }); },
+      then(res, rej) { return Promise.resolve({ data: apply(), error: null }).then(res, rej); },
+      update(payload) {
+        const result = Promise.resolve({ data: { id: 'p1', ...payload }, error: null });
+        return { eq: () => ({ select: () => ({ single: () => result }) }) };
+      },
+      insert(payload) {
+        const result = Promise.resolve({ data: { id: 'new', ...payload }, error: null });
+        return { select: () => ({ single: () => result }) };
+      },
+    };
+    return q;
+  }
+  const sb = { from: () => makeQuery('nutrition_plans') };
+
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <window.StandaloneMealPlanner sb={sb} clients={clients} />
+  );
+</script>
+</body>
+</html>
