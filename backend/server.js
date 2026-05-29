@@ -63,6 +63,57 @@ async function init() {
     console.error('Could not connect to database. Exiting.');
     process.exit(1);
   }
+  // ── Schema reconciliation ───────────────────────────────────────────────
+  // The frontend uses FLAT plan columns, but older DBs / the Supabase migration
+  // packed everything into a `content` jsonb blob. Add the flat columns if
+  // missing and backfill from content. Idempotent — safe on every boot.
+  try {
+    await pool.query(`
+      ALTER TABLE nutrition_plans
+        ADD COLUMN IF NOT EXISTS title          text,
+        ADD COLUMN IF NOT EXISTS goal           text,
+        ADD COLUMN IF NOT EXISTS daily_calories integer,
+        ADD COLUMN IF NOT EXISTS protein_g      integer,
+        ADD COLUMN IF NOT EXISTS carbs_g        integer,
+        ADD COLUMN IF NOT EXISTS fats_g         integer,
+        ADD COLUMN IF NOT EXISTS plan_data      jsonb;
+
+      UPDATE nutrition_plans SET
+        title          = COALESCE(title, content->>'title', 'Nutrition Plan'),
+        goal           = COALESCE(goal, content->>'goal'),
+        daily_calories = COALESCE(daily_calories, NULLIF(content->>'daily_calories','')::int),
+        protein_g      = COALESCE(protein_g, NULLIF(content->>'protein_g','')::int),
+        carbs_g        = COALESCE(carbs_g, NULLIF(content->>'carbs_g','')::int),
+        fats_g         = COALESCE(fats_g, NULLIF(content->>'fats_g','')::int),
+        plan_data      = COALESCE(plan_data, content->'plan')
+      WHERE content IS NOT NULL AND content::text <> '{}';
+
+      ALTER TABLE workout_plans
+        ADD COLUMN IF NOT EXISTS title       text,
+        ADD COLUMN IF NOT EXISTS goal        text,
+        ADD COLUMN IF NOT EXISTS limitations text,
+        ADD COLUMN IF NOT EXISTS plan_data   jsonb;
+
+      UPDATE workout_plans SET
+        title       = COALESCE(title, content->>'title', 'Workout Plan'),
+        goal        = COALESCE(goal, content->>'goal'),
+        limitations = COALESCE(limitations, content->>'limitations'),
+        plan_data   = COALESCE(plan_data, content->'plan')
+      WHERE content IS NOT NULL AND content::text <> '{}';
+
+      ALTER TABLE plan_templates
+        ADD COLUMN IF NOT EXISTS plan_data jsonb,
+        ADD COLUMN IF NOT EXISTS meta      jsonb;
+
+      UPDATE plan_templates SET
+        meta      = COALESCE(meta, content->'_meta'),
+        plan_data = COALESCE(plan_data, content - '_meta')
+      WHERE content IS NOT NULL AND content::text <> '{}';
+    `);
+    console.log('Schema reconciled (flat plan columns ensured).');
+  } catch (err) {
+    console.error('Schema reconciliation warning:', err.message);
+  }
 
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
