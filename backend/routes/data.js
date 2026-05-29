@@ -21,6 +21,13 @@ const ADMIN_WRITE_ONLY = new Set([
 // Columns allowed for filtering (prevent SQL injection via column names)
 const VALID_IDENTIFIER = /^[a-z_][a-z0-9_]*$/i;
 
+// Serialize a value for pg. JS objects AND arrays destined for jsonb columns must
+// be sent as JSON text — node-postgres otherwise turns arrays into Postgres array
+// literals, which jsonb rejects ("invalid input syntax for type json").
+function toParam(v) {
+  return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
+}
+
 function validateTable(table) {
   return CLIENT_READABLE.has(table);
 }
@@ -130,7 +137,7 @@ router.post('/:table', requireAuth, async (req, res) => {
     const cols = Object.keys(row).filter(k => VALID_IDENTIFIER.test(k));
     if (cols.length === 0) return res.status(400).json({ message: 'No valid columns.' });
     const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
-    const values = cols.map(c => row[c]);
+    const values = cols.map(c => toParam(row[c]));
     const sql = `INSERT INTO "${table}" (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders}) RETURNING *`;
     try {
       const r = await pool.query(sql, values);
@@ -160,7 +167,7 @@ router.patch('/:table', requireAuth, async (req, res) => {
   if (cols.length === 0) return res.status(400).json({ message: 'No valid columns to update.' });
 
   const setClauses = cols.map((c, i) => `"${c}" = $${i + 1}`).join(', ');
-  const values = cols.map(c => data[c]);
+  const values = cols.map(c => toParam(data[c]));
 
   const filters = parseFilters(req.query);
   const { where, values: filterValues } = buildWhereClause(filters, values.length + 1);
@@ -199,7 +206,7 @@ router.put('/:table', requireAuth, async (req, res) => {
 
   const results = [];
   for (const row of rows) {
-    const values = cols.map(c => row[c]);
+    const values = cols.map(c => toParam(row[c]));
     const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
     const updateSet = updateCols.map((c, i) => `"${c}" = $${cols.indexOf(c) + 1}`).join(', ');
     const sql = `INSERT INTO "${table}" (${cols.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})
