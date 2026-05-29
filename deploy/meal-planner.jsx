@@ -27,6 +27,10 @@
     { id: uid(), name: 'Snack',     items: [] },
   ]);
 
+  const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const initDays = () => DAY_NAMES.map(d => ({ id: uid(), day: d, meals: DEFAULT_MEALS() }));
+  const cloneMeals = (meals) => meals.map(m => ({ id: uid(), name: m.name, items: m.items.map(it => ({ ...it, uid: uid() })) }));
+
   /* ─── Food picker modal ──────────────────────────────────────────────── */
   const FoodPicker = ({ title, onPick, onClose }) => {
     const [q, setQ] = useState('');
@@ -110,22 +114,26 @@
 
   /* ─── Main builder ───────────────────────────────────────────────────── */
   const MealPlanner = ({ target, goalLabel, clients, sb }) => {
-    const [meals, setMeals] = useState(DEFAULT_MEALS);
+    const [days, setDays] = useState(initDays);
+    const [ai, setAi] = useState(0); // active day index
     const [picker, setPicker] = useState(null); // { mealId, swapUid? }
     const [selectedClientId, setSelectedClientId] = useState('');
     const [pushMsg, setPushMsg] = useState('');
     const [pushing, setPushing] = useState(false);
 
+    const dayMeals = days[ai].meals;
     const totals = useMemo(() => {
       let t = { kcal: 0, p: 0, c: 0, f: 0 };
-      meals.forEach(m => m.items.forEach(it => { const x = im(it); t.kcal += x.kcal; t.p += x.p; t.c += x.c; t.f += x.f; }));
+      dayMeals.forEach(m => m.items.forEach(it => { const x = im(it); t.kcal += x.kcal; t.p += x.p; t.c += x.c; t.f += x.f; }));
       return t;
-    }, [meals]);
+    }, [days, ai]);
 
-    const updateMeal = (mealId, fn) => setMeals(ms => ms.map(m => m.id === mealId ? fn(m) : m));
+    const setMealsForActive = (fn) => setDays(ds => ds.map((d, i) => i === ai ? { ...d, meals: fn(d.meals) } : d));
+    const updateMeal = (mealId, fn) => setMealsForActive(ms => ms.map(m => m.id === mealId ? fn(m) : m));
     const addItem = (mealId, food) => updateMeal(mealId, m => ({ ...m, items: [...m.items, mkItem(food)] }));
     const removeItem = (mealId, u) => updateMeal(mealId, m => ({ ...m, items: m.items.filter(it => it.uid !== u) }));
-    const setServings = (mealId, u, s) => updateMeal(mealId, m => ({ ...m, items: m.items.map(it => it.uid === u ? { ...it, servings: Math.max(0.25, s) } : it) }));
+    const setServings = (mealId, u, s) => updateMeal(mealId, m => ({ ...m, items: m.items.map(it => it.uid === u ? { ...it, servings: Math.max(0.05, s) } : it) }));
+    const setAmount = (mealId, u, amt) => updateMeal(mealId, m => ({ ...m, items: m.items.map(it => it.uid === u ? { ...it, servings: Math.max(0.05, (parseFloat(amt) || 0) / it.baseQty) } : it) }));
     const swapItem = (mealId, u, food) => updateMeal(mealId, m => ({ ...m, items: m.items.map(it => it.uid === u ? mkItem(food, it.servings) : it) }));
 
     const onPick = (food) => {
@@ -173,30 +181,32 @@
       // A veg in each main meal
       veg.forEach((v, idx) => { const f = byName(v); if (f) next[idx].items.push(mkItem(f)); });
 
-      setMeals(next);
+      setMealsForActive(() => next);
     };
 
-    const clearAll = () => setMeals(DEFAULT_MEALS());
+    const clearDay = () => setMealsForActive(() => DEFAULT_MEALS());
+    const copyToAll = () => setDays(ds => ds.map((d, i) => i === ai ? d : { ...d, meals: cloneMeals(dayMeals) }));
 
     const pushToClient = async () => {
       if (!selectedClientId) return;
       setPushing(true); setPushMsg('');
       const client = clients.find(c => c.id === selectedClientId);
       try {
-        const planMeals = meals.map(m => ({
-          name: m.name,
-          items: m.items.map(it => ({
-            ingredient: it.name,
-            qty: String(r1(it.baseQty * it.servings)),
-            unit: it.unit,
-            calories: r0(it.kcal * it.servings),
-            protein: r0(it.p * it.servings),
-            carbs: r0(it.c * it.servings),
-            fat: r0(it.f * it.servings),
+        const plan_data = days.map(d => ({
+          day: d.day,
+          meals: d.meals.map(m => ({
+            name: m.name,
+            items: m.items.map(it => ({
+              ingredient: it.name,
+              qty: String(r1(it.baseQty * it.servings)),
+              unit: it.unit,
+              calories: r0(it.kcal * it.servings),
+              protein: r0(it.p * it.servings),
+              carbs: r0(it.c * it.servings),
+              fat: r0(it.f * it.servings),
+            })),
           })),
         }));
-        const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        const plan_data = DAYS.map(d => ({ day: d, meals: JSON.parse(JSON.stringify(planMeals)) }));
 
         const payload = {
           title: 'Meal Plan',
@@ -221,25 +231,46 @@
           res = await sb.from('nutrition_plans').insert({ client_id: selectedClientId, ...payload }).select().single();
         }
         if (res.error) throw res.error;
-        setPushMsg(`✓ Meal plan pushed to ${client.name}'s portal (applied to all 7 days).`);
+        setPushMsg(`✓ Meal plan pushed to ${client.name}'s portal.`);
       } catch (err) {
         setPushMsg('Error: ' + (err.message || err));
       } finally { setPushing(false); }
     };
 
-    const hasItems = meals.some(m => m.items.length > 0);
+    const dayHasItems = dayMeals.some(m => m.items.length > 0);
+    const hasItems = days.some(d => d.meals.some(m => m.items.length > 0));
 
     return (
       <div className="card" style={{ marginBottom: 18 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
           <div>
             <h3 style={{ fontSize: 18, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.01em' }}>Meal Plan Builder</h3>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>Build a day of meals that fits this target. Add, swap, or remove foods — totals update live.</p>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>Build each day to fit this target. Add, swap, or remove foods and set exact amounts — totals update live.</p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-ghost" style={{ fontSize: 13, padding: '8px 14px' }} onClick={autoFill}>⚡ Auto-fill</button>
-            {hasItems && <button className="btn-ghost" style={{ fontSize: 13, padding: '8px 14px' }} onClick={clearAll}>Clear</button>}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn-ghost" style={{ fontSize: 13, padding: '8px 14px' }} onClick={autoFill}>⚡ Auto-fill day</button>
+            {dayHasItems && <button className="btn-ghost" style={{ fontSize: 13, padding: '8px 14px' }} onClick={copyToAll}>Copy day → all 7</button>}
+            {dayHasItems && <button className="btn-ghost" style={{ fontSize: 13, padding: '8px 14px' }} onClick={clearDay}>Clear day</button>}
           </div>
+        </div>
+
+        {/* Day tabs */}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+          {days.map((d, i) => {
+            let dk = 0; d.meals.forEach(m => m.items.forEach(it => dk += im(it).kcal));
+            const filled = dk > 0;
+            return (
+              <button key={d.id} onClick={() => setAi(i)} style={{
+                fontFamily: 'inherit', cursor: 'pointer', fontSize: 12.5, fontWeight: ai === i ? 600 : 500,
+                padding: '7px 13px', borderRadius: 10, border: 'none', position: 'relative',
+                background: ai === i ? '#0066cc' : 'rgba(255,255,255,0.06)',
+                color: ai === i ? '#fff' : 'rgba(255,255,255,0.6)',
+              }}>
+                {d.day.slice(0, 3)}
+                {filled && <span style={{ marginLeft: 6, fontSize: 10, fontFamily: 'ui-monospace,monospace', color: ai === i ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.4)' }}>{r0(dk)}</span>}
+              </button>
+            );
+          })}
         </div>
 
         {/* Live totals vs target */}
@@ -252,7 +283,7 @@
 
         {/* Meals */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {meals.map(meal => {
+          {dayMeals.map(meal => {
             let mk = 0; meal.items.forEach(it => mk += im(it).kcal);
             return (
               <div key={meal.id} style={{ border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, overflow: 'hidden' }}>
@@ -267,13 +298,13 @@
                       <div key={it.uid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13.5, fontWeight: 500, color: '#f5f5f7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</div>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'ui-monospace,monospace' }}>{r1(it.baseQty * it.servings)} {it.unit} · {r0(m.kcal)}kcal · P{r0(m.p)} C{r0(m.c)} F{r0(m.f)}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'ui-monospace,monospace' }}>{r0(m.kcal)} kcal · P{r0(m.p)} C{r0(m.c)} F{r0(m.f)}</div>
                         </div>
-                        {/* Servings stepper */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                          <button onClick={() => setServings(meal.id, it.uid, r1(it.servings - 0.5))} style={stepBtn}>−</button>
-                          <span style={{ fontSize: 12.5, color: '#f5f5f7', minWidth: 28, textAlign: 'center', fontFamily: 'ui-monospace,monospace' }}>{it.servings}×</span>
-                          <button onClick={() => setServings(meal.id, it.uid, r1(it.servings + 0.5))} style={stepBtn}>+</button>
+                        {/* Editable amount (weight / size) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                          <input type="number" inputMode="decimal" value={r1(it.baseQty * it.servings)}
+                            onChange={e => setAmount(meal.id, it.uid, e.target.value)} style={amtInput} />
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', width: 70, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.unit}</span>
                         </div>
                         <button onClick={() => setPicker({ mealId: meal.id, swapUid: it.uid })} title="Swap" style={iconBtn}>⇄</button>
                         <button onClick={() => removeItem(meal.id, it.uid)} title="Remove" style={{ ...iconBtn, color: 'rgba(255,90,90,0.8)' }}>×</button>
@@ -294,7 +325,7 @@
         <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <h4 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12 }}>Push meal plan to client</h4>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 14, lineHeight: 1.55 }}>
-            Replaces the client's active nutrition plan with this meal plan (applied to all 7 days) and sets their daily macro targets. They'll see it in their portal under Nutrition Plan.
+            Replaces the client's active nutrition plan with this 7-day meal plan and sets their daily macro targets. They'll see it in their portal under Nutrition Plan.
           </p>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <select className="field-input" value={selectedClientId} onChange={e => setSelectedClientId(e.target.value)} style={{ flex: '1 1 240px', minWidth: 240 }}>
@@ -315,6 +346,7 @@
   };
 
   const stepBtn = { width: 24, height: 24, borderRadius: 7, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#f5f5f7', cursor: 'pointer', fontSize: 15, lineHeight: 1, fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
+  const amtInput = { width: 58, padding: '5px 7px', fontSize: 12.5, textAlign: 'right', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 7, background: 'rgba(255,255,255,0.06)', color: '#f5f5f7', outline: 'none', fontFamily: 'ui-monospace,monospace' };
   const iconBtn = { width: 26, height: 26, borderRadius: 7, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 14, lineHeight: 1, fontFamily: 'inherit', flexShrink: 0 };
 
   window.MealPlanner = MealPlanner;

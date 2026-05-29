@@ -7,7 +7,7 @@
    Fields: id, name, cat, qty (number), unit, kcal, p (protein g), c (carbs g), f (fat g)
    ──────────────────────────────────────────────────────────────────────────── */
 (function () {
-  window.FOOD_CATEGORIES = ['Protein', 'Carbs & Grains', 'Vegetables', 'Fruit', 'Dairy & Eggs', 'Fats & Nuts', 'Legumes', 'Snacks & Other'];
+  window.FOOD_CATEGORIES = ['Protein', 'Carbs & Grains', 'Vegetables', 'Fruit', 'Dairy & Eggs', 'Fats & Nuts', 'Legumes', 'Snacks & Other', 'Brands'];
 
   const F = [
     /* ─── Protein ─────────────────────────────────────────────────────── */
@@ -116,6 +116,30 @@
     { name: 'Marinara sauce', cat: 'Snacks & Other', qty: 0.5, unit: 'cup (125g)', kcal: 70, p: 2, c: 13, f: 1.5 },
     { name: 'Salsa', cat: 'Snacks & Other', qty: 2, unit: 'tbsp (32g)', kcal: 10, p: 0, c: 2, f: 0 },
     { name: 'Granola', cat: 'Snacks & Other', qty: 0.5, unit: 'cup (61g)', kcal: 280, p: 7, c: 38, f: 12 },
+
+    /* ─── Brands (popular branded products — label values) ────────────── */
+    { name: 'Quest Bar (Chocolate Chip)', cat: 'Brands', qty: 1, unit: 'bar (60g)', kcal: 200, p: 21, c: 22, f: 8 },
+    { name: 'RXBAR (Chocolate Sea Salt)', cat: 'Brands', qty: 1, unit: 'bar (52g)', kcal: 210, p: 12, c: 24, f: 9 },
+    { name: 'Clif Bar', cat: 'Brands', qty: 1, unit: 'bar (68g)', kcal: 250, p: 9, c: 45, f: 6 },
+    { name: 'Built Bar', cat: 'Brands', qty: 1, unit: 'bar (49g)', kcal: 130, p: 17, c: 18, f: 4 },
+    { name: 'Premier Protein Shake', cat: 'Brands', qty: 1, unit: 'shake (325ml)', kcal: 160, p: 30, c: 4, f: 3 },
+    { name: 'Fairlife Core Power (26g)', cat: 'Brands', qty: 1, unit: 'bottle (414ml)', kcal: 170, p: 26, c: 8, f: 4.5 },
+    { name: 'Muscle Milk Genuine', cat: 'Brands', qty: 1, unit: 'shake (330ml)', kcal: 160, p: 25, c: 9, f: 4 },
+    { name: 'Optimum Nutrition Gold Standard Whey', cat: 'Brands', qty: 1, unit: 'scoop (31g)', kcal: 120, p: 24, c: 3, f: 1.5 },
+    { name: 'Chobani Nonfat Greek Yogurt', cat: 'Brands', qty: 1, unit: 'cup (150g)', kcal: 90, p: 16, c: 6, f: 0 },
+    { name: 'Fage Total 0%', cat: 'Brands', qty: 1, unit: 'cup (170g)', kcal: 90, p: 18, c: 5, f: 0 },
+    { name: 'Oikos Triple Zero', cat: 'Brands', qty: 1, unit: 'cup (150g)', kcal: 90, p: 15, c: 8, f: 0 },
+    { name: 'Two Good Yogurt', cat: 'Brands', qty: 1, unit: 'cup (150g)', kcal: 80, p: 12, c: 3, f: 2 },
+    { name: 'Halo Top (Vanilla)', cat: 'Brands', qty: 0.5, unit: 'cup (66g)', kcal: 90, p: 5, c: 14, f: 3 },
+    { name: 'Kodiak Cakes Mix', cat: 'Brands', qty: 0.5, unit: 'cup dry (53g)', kcal: 190, p: 14, c: 30, f: 3 },
+    { name: 'Quaker Instant Oatmeal (plain)', cat: 'Brands', qty: 1, unit: 'packet (28g)', kcal: 100, p: 4, c: 19, f: 2 },
+    { name: 'Cheerios', cat: 'Brands', qty: 1, unit: 'cup (28g)', kcal: 100, p: 3, c: 20, f: 2 },
+    { name: "Dave's Killer Bread (21 Grain)", cat: 'Brands', qty: 1, unit: 'slice (45g)', kcal: 110, p: 5, c: 22, f: 1.5 },
+    { name: 'Skippy Peanut Butter', cat: 'Brands', qty: 2, unit: 'tbsp (32g)', kcal: 190, p: 7, c: 7, f: 16 },
+    { name: 'Banza Chickpea Pasta', cat: 'Brands', qty: 2, unit: 'oz dry (57g)', kcal: 190, p: 14, c: 32, f: 3.5 },
+    { name: 'Quest Protein Chips', cat: 'Brands', qty: 1, unit: 'bag (32g)', kcal: 140, p: 19, c: 5, f: 4.5 },
+    { name: 'Gatorade', cat: 'Brands', qty: 1, unit: 'bottle (591ml)', kcal: 140, p: 0, c: 36, f: 0 },
+    { name: 'Starbucks Grande Latte (2%)', cat: 'Brands', qty: 1, unit: 'grande (470ml)', kcal: 190, p: 12, c: 19, f: 7 },
   ];
 
   // Stable ids + rounded macro helper
