@@ -41,6 +41,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/assets',  express.static(path.join(__dirname, 'assets')));
 
 app.get('/admin',  (_req, res) => res.sendFile(path.join(__dirname, 'public', 'Admin.html')));
+app.get('/m',      (_req, res) => res.sendFile(path.join(__dirname, 'public', 'Admin-Mobile.html')));
 app.get('/portal', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'ClientPortal.html')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -109,6 +110,16 @@ async function init() {
         meta      = COALESCE(meta, content->'_meta'),
         plan_data = COALESCE(plan_data, content - '_meta')
       WHERE content IS NOT NULL AND content::text <> '{}';
+
+      -- Payments editor: key/value settings store (auto-created so no manual SQL needed).
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key        TEXT PRIMARY KEY,
+        value      JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      INSERT INTO app_settings (key, value)
+      VALUES ('payment_methods', '[]'::jsonb)
+      ON CONFLICT (key) DO NOTHING;
     `);
     console.log('Schema reconciled (flat plan columns ensured).');
   } catch (err) {
