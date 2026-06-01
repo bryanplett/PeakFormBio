@@ -53,7 +53,7 @@
     );
   };
 
-  const MethodCard = ({ m, amount, highlight }) => {
+  const MethodCard = ({ m, amount, highlight, linksEnabled = true }) => {
     const isHandle = m.kind === 'handle' || m.kind === 'crypto';
     const link = global.paymentLink ? global.paymentLink(m, amount) : null;
     return (
@@ -77,8 +77,11 @@
             <CopyBtn value={m.handle} />
             {link && (
               <a href={link} target="_blank" rel="noopener noreferrer"
+                onClick={(e) => { if (!linksEnabled) e.preventDefault(); }}
+                aria-disabled={!linksEnabled}
                 style={{ flexShrink: 0, textDecoration: 'none', fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
-                  padding: '7px 14px', borderRadius: 8, border: 'none', background: '#0066cc', color: '#fff', whiteSpace: 'nowrap' }}>
+                  padding: '7px 14px', borderRadius: 8, border: 'none', background: '#0066cc', color: '#fff', whiteSpace: 'nowrap',
+                  pointerEvents: linksEnabled ? 'auto' : 'none', opacity: linksEnabled ? 1 : 0.4 }}>
                 Open {m.label} ↗
               </a>
             )}
@@ -104,6 +107,7 @@
        businessName string  */
   const PaymentInstructions = ({ amountDue, reference, methods, chosenId, reported, onReported, businessName }) => {
     const cfg = global.PFB_PAYMENT || {};
+    const [ackName, setAckName] = useState(false);
     const list = (methods && methods.length ? methods : global.visiblePaymentMethods(cfg.methods));
     const direct = list.filter(m => m.kind === 'handle' || m.kind === 'crypto');
     const invoice = list.find(m => m.kind === 'invoice');
@@ -148,24 +152,33 @@
           )}
         </div>
 
-        {/* Direct methods */}
-        {!chosenIsInvoice && direct.length > 0 && (
+        {/* Chosen direct method only — they already picked at checkout */}
+        {!chosenIsInvoice && chosen && (chosen.kind === 'handle' || chosen.kind === 'crypto') && (
           <>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Pay with</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Pay with {chosen.label}</div>
+
+            {/* Privacy disclaimer + mandatory acknowledgement (gates the pay button) */}
+            <div style={{ fontSize: 13, color: '#ffd27a', marginBottom: 12, lineHeight: 1.5, background: 'rgba(255,184,77,0.08)', border: '1px solid rgba(255,184,77,0.28)', borderRadius: 10, padding: '11px 13px' }}>
+              <strong style={{ color: '#ffd27a' }}>For your privacy:</strong> put <strong>ONLY your name</strong> in the payment note — do <strong>not</strong> include any product names or details.
+            </div>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.45 }}>
+              <input type="checkbox" checked={ackName} onChange={(e) => setAckName(e.target.checked)}
+                style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
+              <span>I've read this and will put <strong>only my name</strong> in the payment note.</span>
+            </label>
+
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-              {/* chosen first */}
-              {chosen && (chosen.kind === 'handle' || chosen.kind === 'crypto') && <MethodCard m={chosen} amount={amountDue} highlight />}
-              {direct.filter(m => m.id !== chosenId).map(m => <MethodCard key={m.id} m={m} amount={amountDue} />)}
+              <MethodCard m={chosen} amount={amountDue} highlight linksEnabled={ackName} />
             </div>
           </>
         )}
 
         {/* Memo reminder */}
-        {!chosenIsInvoice && reference && (
+        {!chosenIsInvoice && (
           <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: 'rgba(255,159,10,0.07)', border: '1px solid rgba(255,159,10,0.2)', borderRadius: 10, padding: '11px 13px', marginBottom: 16 }}>
             <span style={{ fontSize: 14 }}>📝</span>
             <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.72)', lineHeight: 1.5 }}>
-              Add reference <strong style={{ color: '#fff', fontFamily: 'ui-monospace,monospace' }}>{reference}</strong> to your payment note so we can match it to your order.
+              After you send payment, tap <strong style={{ color: '#fff' }}>“I’ve sent payment”</strong> below so we can match it to your order and ship it out.
             </div>
           </div>
         )}

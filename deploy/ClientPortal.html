@@ -1640,69 +1640,6 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                     return 'Pay directly (Venmo, Zelle, Cash App, PayPal, crypto) or choose card to be invoiced.';
                   })()}
                 </p>
-
-                {/* Live pay-to panel — shows your handle + a tap-to-pay link the moment a method is picked */}
-                {(() => {
-                  const m = paymentMethods.find(x => x.id === paymentMethod);
-                  if (!m) return null;
-                  const handle = m.handle && String(m.handle).trim();
-                  if ((m.kind !== 'handle' && m.kind !== 'crypto') || !handle) return null;
-                  const link = window.paymentLink ? window.paymentLink(m, cartTotal) : null;
-                  const amt = Number.isFinite(cartTotal) && cartTotal > 0 ? `$${cartTotal.toFixed(2)}` : null;
-                  return (
-                    <div data-paybox="" style={{
-                      marginTop: 12, background: 'rgba(41,151,255,0.07)',
-                      border: '1px solid rgba(41,151,255,0.28)', borderRadius: 12, padding: '16px',
-                    }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 10 }}>
-                        {amt ? <>Send {amt} to {m.label}</> : <>Pay with {m.label}</>}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 20, fontWeight: 700, color: '#f5f5f7', fontFamily: 'ui-monospace, Menlo, monospace', wordBreak: 'break-all' }}>
-                          {handle}
-                        </span>
-                        <button type="button"
-                          onClick={(e) => {
-                            const b = e.currentTarget;
-                            const done = () => { const t = b.textContent; b.textContent = 'Copied ✓'; setTimeout(() => { b.textContent = t; }, 1300); };
-                            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(handle).then(done).catch(done);
-                            else done();
-                          }}
-                          style={{ background: 'rgba(255,255,255,0.08)', color: '#f5f5f7', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 9, padding: '7px 13px', fontSize: 13, cursor: 'pointer' }}>
-                          Copy
-                        </button>
-                      </div>
-                      {m.kind === 'crypto' && m.network && (
-                        <div style={{ fontSize: 12.5, color: '#ffb84d', marginTop: 10 }}>
-                          Network: <strong>{m.network}</strong> — send only on this network or funds may be lost.
-                        </div>
-                      )}
-                      {m.hint && (
-                        <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', marginTop: 8, lineHeight: 1.5 }}>{m.hint}</div>
-                      )}
-                      <div style={{ fontSize: 13, color: '#ffd27a', marginTop: 12, lineHeight: 1.5, background: 'rgba(255,184,77,0.08)', border: '1px solid rgba(255,184,77,0.28)', borderRadius: 10, padding: '11px 13px' }}>
-                        <strong style={{ color: '#ffd27a' }}>Important:</strong> For your privacy, put <strong>ONLY your name</strong> in the payment note — do <strong>not</strong> include any product names or details.
-                      </div>
-                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginTop: 12, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.45 }}>
-                        <input type="checkbox"
-                          onChange={(e) => {
-                            const box = e.currentTarget.closest('[data-paybox]');
-                            const a = box && box.querySelector('[data-paylink]');
-                            const on = e.currentTarget.checked;
-                            if (a) { a.style.pointerEvents = on ? 'auto' : 'none'; a.style.opacity = on ? '1' : '0.45'; }
-                          }}
-                          style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
-                        <span>I've read this and will put <strong>only my name</strong> in the payment note.</span>
-                      </label>
-                      {link && (
-                        <a data-paylink="" href={link} target="_blank" rel="noopener noreferrer" className="btn-blue"
-                          style={{ display: 'inline-flex', marginTop: 12, padding: '11px 20px', fontSize: 14.5, textDecoration: 'none', whiteSpace: 'nowrap', pointerEvents: 'none', opacity: 0.45 }}>
-                          Pay with {m.label} →
-                        </a>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
 
               {/* Invoice notice — always visible at checkout */}
