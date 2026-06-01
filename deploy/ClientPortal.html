@@ -12,11 +12,13 @@
 <script src="api-client.js"></script>
 <script src="pricelists.js"></script>
 <script src="inventory-helper.js"></script>
+<script src="payment-config.js"></script>
 <script src="peptide-data.js"></script>
 <script type="text/babel" src="weighin.jsx"></script>
 <script type="text/babel" src="onboarding-quiz.jsx"></script>
 <script type="text/babel" src="age-verification.jsx"></script>
 <script type="text/babel" src="peptide-database.jsx"></script>
+<script type="text/babel" src="payment-instructions.jsx"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -274,6 +276,10 @@ const statusColors = {
   'Delivered':  { bg: 'rgba(52,199,89,0.12)', color: '#1a8a3c' },
   'In Transit': { bg: 'rgba(255,159,10,0.13)', color: '#b86b00' },
   'Processing': { bg: 'rgba(0,102,204,0.10)', color: '#0055b3' },
+  'Awaiting payment': { bg: 'rgba(255,159,10,0.14)', color: '#b86b00' },
+  'Payment review':   { bg: 'rgba(0,102,204,0.10)', color: '#0055b3' },
+  'Invoice sent':     { bg: 'rgba(0,102,204,0.10)', color: '#0055b3' },
+  'Cancelled':        { bg: 'rgba(255,69,58,0.12)', color: '#c0392b' },
 };
 
 // ─── Login ────────────────────────────────────────────────────────────────────
@@ -921,7 +927,34 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const [shippingAddress, setShippingAddress] = React.useState('');
   const [phone, setPhone] = React.useState('');
   // Payment method — required at checkout. Empty string = not yet chosen.
+  // Value is a method id (venmo / paypal / cashapp / card / …).
   const [paymentMethod, setPaymentMethod] = React.useState('');
+  // Buyer-visible payment methods (admin-configured, loaded from server with
+  // a fallback to the baked-in defaults in payment-config.js).
+  const [paymentMethods, setPaymentMethods] = React.useState(
+    () => (window.visiblePaymentMethods ? window.visiblePaymentMethods() : [])
+  );
+  // After an order is placed: { reference, total, methodId, orderIds, reported }
+  const [placedOrder, setPlacedOrder] = React.useState(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!window.loadPaymentMethods) return;
+      const m = await window.loadPaymentMethods(sb);
+      if (!cancelled) setPaymentMethods(window.visiblePaymentMethods(m));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  // Buyer taps "I've sent payment" → flag the order(s) for the seller to verify.
+  const reportPayment = async () => {
+    if (!placedOrder) return;
+    const ids = placedOrder.orderIds || [];
+    for (const id of ids) {
+      try { await sb.from('orders').update({ payment_status: 'reported' }).eq('id', id); }
+      catch (e) { /* payment_status column may not exist yet — non-fatal */ }
+    }
+    setPlacedOrder(p => p ? { ...p, reported: true } : p);
+  };
   // Shipping method — required. Empty string = not yet chosen.
   const [shippingMethod, setShippingMethod] = React.useState('');
   // Coupon code — optional. Validated against the `coupons` Supabase table
@@ -1051,7 +1084,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
             client_id: user.id,
             notes: notes || null,
             status: 'pending',
-            payment_method:   paymentMethod || null,
+          payment_method:   ((paymentMethods.find(m => m.id === paymentMethod) || {}).label) || paymentMethod || null,
             shipping_method:  shippingMethod || null,
             shipping_address: shippingAddress.trim() || userData?.address || null,
             shipping_cost:    Number.isFinite(shippingCost) ? shippingCost : null,
@@ -1093,6 +1126,15 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       console.error('Order insert failed:', err);
     }
 
+    // Compute a payment reference + amount due for the confirmation screen.
+    const chosenM = paymentMethods.find(m => m.id === paymentMethod);
+    const refPrefix = (window.PFB_PAYMENT && window.PFB_PAYMENT.refPrefix) || 'PFB';
+    const refBase = insertedOrders[0] && insertedOrders[0].id;
+    const reference = refBase
+      ? `${refPrefix}-${String(refBase).replace(/-/g, '').slice(0, 6).toUpperCase()}`
+      : `${refPrefix}-${String(Date.now()).slice(-6)}`;
+    const amountDue = Number.isFinite(cartTotal) ? cartTotal : 0;
+
     // 1b. Decrement inventory for each successfully inserted order. Best-
     //     effort: a stock-update failure must NOT block the checkout flow.
     //     The inventory_applied flag prevents double-counting if Admin later
@@ -1112,31 +1154,27 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     try {
       const summary = cart.map(it => `• ${it.label} × ${it.qty}`).join('\n');
       const totalItems = cart.reduce((s, it) => s + it.qty, 0);
-    const token = sb.auth.getToken();
-      await fetch('/api/notifications/order', {
+      await fetch('https://formspree.io/f/mnjwvgan', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
-          items: cart.map(it => ({ label: it.label, qty: it.qty })),
-          total: cartTotal.toFixed(2),
+          _subject: `New Order: ${cart.length} item${cart.length > 1 ? 's' : ''} (${totalItems} total)`,
           client_name: userData?.name && userData.name !== userData?.email ? userData.name : '(no name on file)',
           client_email: userData?.email || 'Unknown',
           client_phone: phone.trim() || userData?.phone || '(no phone on file)',
-          summary: [
-            'Items:', summary,
-            '',
-            `Subtotal: $${subtotalEffective.toFixed(2)}`,
-            `Shipping (${shippingMethod}): $${shippingCost.toFixed(2)}`,
-            couponActive ? `Coupon: ${matchedCoupon.code} (saved $${couponSavings.toFixed(2)})` : '',
-            `Total: $${cartTotal.toFixed(2)}`,
-            '',
-            `Payment method: ${paymentMethod}`,
-            `Shipping address: ${shippingAddress.trim() || userData?.address || '(no address on file)'}`,
-            `Notes: ${notes || '(none)'}`,
-          ].filter(Boolean).join('\n'),
+          shipping_address: shippingAddress.trim() || userData?.address || '(no address on file — please contact client)',
+          order_summary: summary,
+          item_count: cart.length,
+          total_items: totalItems,
+          notes: notes || '(none)',
+          payment_method: (chosenM && chosenM.label) || paymentMethod,
+          order_reference: reference,
+          shipping_method: shippingMethod,
+          shipping_cost: `$${shippingCost.toFixed(2)}`,
+          coupon_code: couponActive ? `${matchedCoupon.code} (${couponLabel}; saved $${couponSavings.toFixed(2)})` : (couponCode.trim() || '(none)'),
+          subtotal: `$${subtotalEffective.toFixed(2)}`,
+          order_total: `$${cartTotal.toFixed(2)}`,
+          submitted_at: new Date().toLocaleString(),
         }),
       });
     } catch (err) {
@@ -1144,19 +1182,28 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     }
 
     // Push each cart line into history
+    const historyStatus = (chosenM && chosenM.kind === 'invoice') ? 'Invoice sent' : 'Awaiting payment';
     cart.forEach((item, i) => {
       onOrderPlaced({
         id: insertedOrders[i]?.id,
         item: item.label,
         qty: item.qty,
         notes,
+        status: historyStatus,
       });
+    });
+    // Record the placed order so the confirmation screen can show payment
+    // instructions (amount + reference + handles + “I've sent payment”).
+    setPlacedOrder({
+      reference,
+      total: amountDue,
+      methodId: paymentMethod,
+      orderIds: insertedOrders.map(o => o && o.id).filter(Boolean),
+      reported: false,
     });
     setCart([]); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode('');
     setSubmitting(false);
     setSuccess(true);
-    // Keep the success card visible long enough to read the invoice message
-    setTimeout(() => setSuccess(false), 9000);
   };
 
   // ─── Coupon + shipping pricing ───────────────────────────────────────
@@ -1578,9 +1625,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                     borderColor: fieldErrors.payment ? 'rgba(255,107,107,0.55)' : undefined,
                   }}>
                   <option value="" disabled>Choose how you'd like to pay…</option>
-                  <option value="Debit/Credit Card (Invoiced)">Debit/Credit Card (Invoiced)</option>
-                  <option value="PayPal">PayPal</option>
-                  <option value="Venmo">Venmo</option>
+                  {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
                 </select>
                 {fieldErrors.payment && (
                   <p style={{ fontSize: 12, color: '#ff8a8a', marginTop: 6, letterSpacing: '-0.1px' }}>
@@ -1588,8 +1633,65 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   </p>
                 )}
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, letterSpacing: '-0.1px' }}>
-                  We'll send invoice + payment instructions for your selected method.
+                  {(() => {
+                    const m = paymentMethods.find(x => x.id === paymentMethod);
+                    if (m && m.kind === 'invoice') return "We'll send an invoice with payment options after you order.";
+                    if (m) return "You'll see exact payment instructions + an order reference on the next screen.";
+                    return 'Pay directly (Venmo, Zelle, Cash App, PayPal, crypto) or choose card to be invoiced.';
+                  })()}
                 </p>
+
+                {/* Live pay-to panel — shows your handle + a tap-to-pay link the moment a method is picked */}
+                {(() => {
+                  const m = paymentMethods.find(x => x.id === paymentMethod);
+                  if (!m) return null;
+                  const handle = m.handle && String(m.handle).trim();
+                  if ((m.kind !== 'handle' && m.kind !== 'crypto') || !handle) return null;
+                  const link = window.paymentLink ? window.paymentLink(m, cartTotal) : null;
+                  const amt = Number.isFinite(cartTotal) && cartTotal > 0 ? `$${cartTotal.toFixed(2)}` : null;
+                  return (
+                    <div style={{
+                      marginTop: 12, background: 'rgba(41,151,255,0.07)',
+                      border: '1px solid rgba(41,151,255,0.28)', borderRadius: 12, padding: '16px',
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 10 }}>
+                        {amt ? <>Send {amt} to {m.label}</> : <>Pay with {m.label}</>}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 20, fontWeight: 700, color: '#f5f5f7', fontFamily: 'ui-monospace, Menlo, monospace', wordBreak: 'break-all' }}>
+                          {handle}
+                        </span>
+                        <button type="button"
+                          onClick={(e) => {
+                            const b = e.currentTarget;
+                            const done = () => { const t = b.textContent; b.textContent = 'Copied ✓'; setTimeout(() => { b.textContent = t; }, 1300); };
+                            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(handle).then(done).catch(done);
+                            else done();
+                          }}
+                          style={{ background: 'rgba(255,255,255,0.08)', color: '#f5f5f7', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 9, padding: '7px 13px', fontSize: 13, cursor: 'pointer' }}>
+                          Copy
+                        </button>
+                        {link && (
+                          <a href={link} target="_blank" rel="noopener noreferrer" className="btn-blue"
+                            style={{ padding: '9px 18px', fontSize: 14, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                            Pay with {m.label} →
+                          </a>
+                        )}
+                      </div>
+                      {m.kind === 'crypto' && m.network && (
+                        <div style={{ fontSize: 12.5, color: '#ffb84d', marginTop: 10 }}>
+                          Network: <strong>{m.network}</strong> — send only on this network or funds may be lost.
+                        </div>
+                      )}
+                      {m.hint && (
+                        <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', marginTop: 8, lineHeight: 1.5 }}>{m.hint}</div>
+                      )}
+                      <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', marginTop: 8, lineHeight: 1.5 }}>
+                        Add your order reference to the payment note so we can match it, then place your order below.
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Invoice notice — always visible at checkout */}
@@ -1606,7 +1708,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                 </div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.78)', lineHeight: 1.55 }}>
                   <strong style={{ color: '#f5f5f7', fontWeight: 600 }}>How payment works.</strong>{' '}
-                  Once we receive your order, you'll be sent an invoice via <strong style={{ color: '#f5f5f7' }}>email and SMS</strong> with payment options. No payment is collected at this step.
+                  {(() => {
+                    const m = paymentMethods.find(x => x.id === paymentMethod);
+                    if (m && m.kind === 'invoice') return <>Once we receive your order, you'll be sent an invoice via <strong style={{ color: '#f5f5f7' }}>email and SMS</strong>. No payment is collected at this step.</>;
+                    return <>When you place the order, you'll get <strong style={{ color: '#f5f5f7' }}>direct payment instructions</strong> with the exact amount and an order reference. Send payment, tap “I've sent payment,” and we'll confirm and ship.</>;
+                  })()}
                 </div>
               </div>
 
@@ -1636,21 +1742,35 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
         )}
 
         {cart.length === 0 && success && (
-          <div className="card" style={{ maxWidth: 760, marginTop: 40, padding: 28 }}>
-            <div style={{
-              background: 'rgba(52,199,89,0.10)', border: '1px solid rgba(52,199,89,0.28)',
-              borderRadius: 12, padding: '16px 18px',
-              display: 'flex', gap: 12, alignItems: 'flex-start',
-            }}>
-              <svg width="22" height="22" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                <circle cx="10" cy="10" r="9" stroke="#34c759" strokeWidth="1.5"/>
-                <path d="M6 10l3 3 5-6" stroke="#34c759" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <div style={{ fontSize: 14, color: '#a6f2bd', lineHeight: 1.55 }}>
-                <strong style={{ color: '#a6f2bd', fontWeight: 600, display: 'block', marginBottom: 4, fontSize: 15 }}>Order received.</strong>
-                An invoice will be sent to you shortly via email and SMS with payment options.
+          <div style={{ maxWidth: 760, marginTop: 40 }}>
+            {placedOrder && window.PaymentInstructions ? (
+              <window.PaymentInstructions
+                amountDue={placedOrder.total}
+                reference={placedOrder.reference}
+                methods={paymentMethods}
+                chosenId={placedOrder.methodId}
+                reported={placedOrder.reported}
+                onReported={reportPayment}
+                businessName={(window.PFB_PAYMENT && window.PFB_PAYMENT.businessName) || 'PeakForm Bio'}
+              />
+            ) : (
+              <div className="card" style={{ padding: 28 }}>
+                <div style={{
+                  background: 'rgba(52,199,89,0.10)', border: '1px solid rgba(52,199,89,0.28)',
+                  borderRadius: 12, padding: '16px 18px',
+                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                }}>
+                  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <circle cx="10" cy="10" r="9" stroke="#34c759" strokeWidth="1.5"/>
+                    <path d="M6 10l3 3 5-6" stroke="#34c759" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <div style={{ fontSize: 14, color: '#a6f2bd', lineHeight: 1.55 }}>
+                    <strong style={{ color: '#a6f2bd', fontWeight: 600, display: 'block', marginBottom: 4, fontSize: 15 }}>Order received.</strong>
+                    We’ll follow up shortly with payment options.
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -1919,6 +2039,7 @@ const PurchaseHistory = ({ orders }) => (
 // ─── Nutrition Plan ───────────────────────────────────────────────────────────
 const NutritionPlan = ({ plan, userId }) => {
   const [activeDay, setActiveDay] = React.useState(0);
+  const [activeWeek, setActiveWeek] = React.useState(0);
   const picksKey = `pfb_meal_picks_${userId || 'anon'}_${plan?.id || 'noplan'}`;
   const [picks, setPicks] = React.useState(() => {
     try { return JSON.parse(localStorage.getItem(picksKey) || '{}'); } catch { return {}; }
@@ -1934,6 +2055,32 @@ const NutritionPlan = ({ plan, userId }) => {
   };
 
   const canChoose = !!plan?.settings?.clientCanChoose;
+
+  // Group flat days into weeks. Builder pushes 2-week plans as "Week 2 · Monday".
+  const parseDayLabel = (label) => {
+    const m = /^Week\s+(\d+)\s*[·:|\-–]\s*(.+)$/i.exec((label || '').trim());
+    if (m) return { week: parseInt(m[1], 10), day: m[2].trim() };
+    return { week: null, day: (label || '').trim() };
+  };
+  const weekGroups = React.useMemo(() => {
+    const groups = []; const map = {};
+    (plan.days || []).forEach((d, i) => {
+      const { week } = parseDayLabel(d && d.day);
+      const key = week || 1;
+      if (!map[key]) { map[key] = { week: key, indices: [] }; groups.push(map[key]); }
+      map[key].indices.push(i);
+    });
+    groups.sort((a, b) => a.week - b.week);
+    return groups;
+  }, [plan.days]);
+  const multiWeek = weekGroups.length > 1;
+  const currentGroup = weekGroups[activeWeek] || weekGroups[0] || { indices: [] };
+  const selectWeek = (wi) => {
+    setActiveWeek(wi);
+    const first = (weekGroups[wi] && weekGroups[wi].indices[0]);
+    if (first != null) setActiveDay(first);
+  };
+
   const macros = [
     { label: 'Calories', value: plan.macros.calories, unit: 'kcal', color: '#0066cc' },
     { label: 'Protein', value: plan.macros.protein, unit: 'g', color: '#34c759' },
@@ -1957,29 +2104,51 @@ const NutritionPlan = ({ plan, userId }) => {
         ))}
       </div>
 
-      {/* Day tabs — only if we have days */}
+      {/* Week selector (only for multi-week plans) + day tabs */}
       {Array.isArray(plan.days) && plan.days.length > 0 ? (
         <React.Fragment>
+          {multiWeek && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+              {weekGroups.map((g, wi) => (
+                <button key={g.week} onClick={() => selectWeek(wi)}
+                  style={{
+                    borderRadius: 12, padding: '9px 20px', fontSize: 13.5, cursor: 'pointer',
+                    fontFamily: 'inherit', fontWeight: 600,
+                    border: `1px solid ${activeWeek === wi ? 'rgba(0,102,204,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                    background: activeWeek === wi ? 'rgba(0,102,204,0.16)' : 'transparent',
+                    color: activeWeek === wi ? '#4a9eff' : 'rgba(255,255,255,0.6)',
+                    transition: 'all 0.12s',
+                  }}>
+                  Week {g.week}
+                </button>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
-            {plan.days.map((d, i) => (
-              <button key={(d && d.day) || i} onClick={() => setActiveDay(i)}
-                style={{
-                  borderRadius: 980, padding: '7px 16px', fontSize: 13, cursor: 'pointer', border: 'none',
-                  fontFamily: 'inherit', fontWeight: activeDay === i ? 600 : 400,
-                  background: activeDay === i ? '#0066cc' : 'rgba(255,255,255,0.07)',
-                  color: activeDay === i ? '#fff' : 'rgba(255,255,255,0.7)',
-                  boxShadow: 'none',
-                  transition: 'all 0.12s',
-                }}>
-                {((d && d.day) || `Day ${i+1}`).slice(0, 3)}
-              </button>
-            ))}
+            {currentGroup.indices.map((i) => {
+              const d = plan.days[i];
+              const dayName = parseDayLabel(d && d.day).day || `Day ${i+1}`;
+              return (
+                <button key={(d && d.day) || i} onClick={() => setActiveDay(i)}
+                  style={{
+                    borderRadius: 980, padding: '7px 16px', fontSize: 13, cursor: 'pointer', border: 'none',
+                    fontFamily: 'inherit', fontWeight: activeDay === i ? 600 : 400,
+                    background: activeDay === i ? '#0066cc' : 'rgba(255,255,255,0.07)',
+                    color: activeDay === i ? '#fff' : 'rgba(255,255,255,0.7)',
+                    boxShadow: 'none',
+                    transition: 'all 0.12s',
+                  }}>
+                  {dayName.slice(0, 3)}
+                </button>
+              );
+            })}
           </div>
 
           {plan.days[activeDay] && (
             <div className="card">
               <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 16, color: '#f5f5f7' }}>
-                {plan.days[activeDay].day || `Day ${activeDay+1}`}
+                {multiWeek && <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>Week {currentGroup.week} · </span>}
+                {parseDayLabel(plan.days[activeDay].day).day || `Day ${activeDay+1}`}
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(plan.days[activeDay].meals || []).map((meal, i) => {
@@ -2149,237 +2318,71 @@ const NutritionPlan = ({ plan, userId }) => {
 };
 
 // ─── Workout Plan ─────────────────────────────────────────────────────────────
-// Helpers for set logging
-const woParseRestSec = (rest) => {
-  if (!rest) return 60;
-  const min = String(rest).match(/(\d+)\s*min/i);
-  if (min) return parseInt(min[1], 10) * 60;
-  const s = String(rest).match(/(\d+)/);
-  return s ? parseInt(s[1], 10) : 60;
-};
-const woMmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.max(0, sec % 60)).padStart(2, '0')}`;
-const woRepHint = (reps) => { const m = String(reps || '').match(/(\d+)/); return m ? m[1] : ''; };
-
-const WoCell = ({ value, onChange, placeholder, readOnly }) => (
-  readOnly ? (
-    <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.55)', padding: '9px 4px' }}>{value || '—'}</div>
-  ) : (
-    <input value={value} onChange={e => onChange(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder={placeholder}
-      style={{
-        width: '100%', textAlign: 'center', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: '#f5f5f7',
-        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 4px', outline: 'none', minWidth: 0,
-      }}
-      onFocus={e => { e.target.style.borderColor = '#2997ff'; e.target.select(); }}
-      onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.12)'} />
-  )
-);
-
-// ─── Workout Plan (with set logging) ─────────────────────────────────────────
-// Clients log Weight + Actual Reps (+ optional RPE / per-set note) against the
-// coach-prescribed Target Reps and check each set done. Saved to `workout_logs`.
-const WO_GRID = '26px 1fr 1fr 1fr 34px 26px';
-
-const WorkoutPlan = ({ plan, sb, userId }) => {
+const WorkoutPlan = ({ plan }) => {
   const [activeDay, setActiveDay] = React.useState(0);
-  const [log, setLog] = React.useState({});            // { [exIdx]: [{weight,reps,rpe,note,done}] }
-  const [noteOpen, setNoteOpen] = React.useState({});  // { 'ei-si': bool }
-  const [startedAt, setStartedAt] = React.useState(null);
-  const [now, setNow] = React.useState(Date.now());
-  const [rest, setRest] = React.useState(null);        // { remaining, total }
-  const [saving, setSaving] = React.useState(false);
-  const [savedMsg, setSavedMsg] = React.useState('');
-
-  const day = plan.days[activeDay] || { day: '', focus: '', exercises: [] };
-
-  // (Re)build a blank log whenever the day changes.
-  React.useEffect(() => {
-    const l = {};
-    (day.exercises || []).forEach((ex, ei) => {
-      const n = parseInt(ex.sets, 10) || 0;
-      l[ei] = Array.from({ length: n }, () => ({ weight: '', reps: '', rpe: '', note: '', done: false }));
-    });
-    setLog(l); setNoteOpen({}); setStartedAt(null); setRest(null); setSavedMsg('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDay]);
-
-  // Ticking clock for elapsed + rest countdown.
-  React.useEffect(() => {
-    const id = setInterval(() => {
-      setNow(Date.now());
-      setRest(r => (r && r.remaining > 0) ? { ...r, remaining: r.remaining - 1 } : (r ? null : r));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const ensureStart = () => setStartedAt(s => s || Date.now());
-  const patch = (ei, si, p) => { ensureStart(); setLog(prev => ({ ...prev, [ei]: prev[ei].map((s, k) => k === si ? { ...s, ...p } : s) })); };
-  const toggleDone = (ei, si) => {
-    const willDo = !log[ei][si].done;
-    patch(ei, si, { done: willDo });
-    if (willDo) { const sec = woParseRestSec(day.exercises[ei].rest); setRest({ remaining: sec, total: sec }); }
-  };
-
-  const allSets = Object.values(log).flat();
-  const doneCount = allSets.filter(s => s.done).length;
-  const totalCount = allSets.length;
-  const volume = allSets.reduce((a, s) => a + (s.done ? (parseFloat(s.weight) || 0) * (parseInt(s.reps, 10) || 0) : 0), 0);
-  const elapsed = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
-
-  const finish = async () => {
-    if (saving || doneCount === 0) return;
-    setSaving(true); setSavedMsg('');
-    const sessionId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
-      : 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-    const finishedAt = new Date().toISOString();
-    const startedISO = startedAt ? new Date(startedAt).toISOString() : finishedAt;
-    const rows = [];
-    (day.exercises || []).forEach((ex, ei) => {
-      (log[ei] || []).forEach((s, si) => {
-        rows.push({
-          client_id: userId, plan_id: plan.id || null, session_id: sessionId,
-          day: day.day, focus: day.focus || null,
-          exercise_index: ei, exercise_name: ex.name, set_number: si + 1,
-          target_reps: ex.reps || null,
-          weight: s.weight !== '' ? parseFloat(s.weight) : null,
-          actual_reps: s.reps !== '' ? parseInt(s.reps, 10) : null,
-          rpe: s.rpe !== '' ? parseFloat(s.rpe) : null,
-          notes: s.note ? s.note.trim() : null,
-          done: !!s.done, started_at: startedISO, finished_at: finishedAt,
-        });
-      });
-    });
-    try {
-      const { error } = await sb.from('workout_logs').insert(rows);
-      if (error) throw new Error(error.message || 'Save failed');
-      setSavedMsg('Workout logged — your coach can see it now.');
-    } catch (e) {
-      setSavedMsg('Could not save: ' + (e.message || e));
-    } finally { setSaving(false); }
-  };
+  const day = plan.days[activeDay];
 
   return (
     <div className="fade-in">
       <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.025em', marginBottom: 4 }}>Workout Plan</h2>
-      <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 22 }}>Goal: {plan.goal} · log your sets as you train</p>
+      <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>Goal: {plan.goal}</p>
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
         {plan.days.map((d, i) => (
           <button key={d.day} onClick={() => setActiveDay(i)}
             style={{
               borderRadius: 980, padding: '7px 16px', fontSize: 13, cursor: 'pointer', border: 'none',
               fontFamily: 'inherit', fontWeight: activeDay === i ? 600 : 400,
               background: activeDay === i ? '#2997ff' : 'rgba(255,255,255,0.07)',
-              color: activeDay === i ? '#fff' : 'rgba(255,255,255,0.7)', transition: 'all 0.12s',
+              color: activeDay === i ? '#fff' : 'rgba(255,255,255,0.7)',
+              boxShadow: 'none',
+              transition: 'all 0.12s',
             }}>
             {d.day.slice(0, 3)}
           </button>
         ))}
       </div>
 
-      {(day.exercises || []).length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>
-          {day.day} — rest day. Recovery is training.
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f5f5f7' }}>{day.day}</h3>
+            <p style={{ fontSize: 14, color: '#0066cc', fontWeight: 500, marginTop: 2 }}>{day.focus}</p>
+          </div>
         </div>
-      ) : (
-        <React.Fragment>
-          {/* Session summary */}
-          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: 18, marginBottom: 16 }}>
-            <div>
-              <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f5f5f7' }}>{day.day}</h3>
-              <p style={{ fontSize: 14, color: '#0066cc', fontWeight: 500, marginTop: 2 }}>{day.focus}</p>
-            </div>
-            <div style={{ display: 'flex', gap: 22 }}>
-              {[['Elapsed', woMmss(elapsed)], ['Sets', `${doneCount}/${totalCount}`], ['Volume', volume.toLocaleString() + ' lb']].map(([k, v]) => (
-                <div key={k} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.6, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 3 }}>{k}</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#f5f5f7', fontVariantNumeric: 'tabular-nums' }}>{v}</div>
-                </div>
-              ))}
-            </div>
+
+        {day.exercises.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(255,255,255,0.4)', fontSize: 15 }}>
+            Rest day. Recovery is training.
           </div>
-
-          {/* Exercises */}
-          {day.exercises.map((ex, ei) => (
-            <div key={ei} className="card" style={{ padding: 18, marginBottom: 14 }}>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 16, fontWeight: 600, color: '#f5f5f7' }}>{ex.name}</div>
-                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)', marginTop: 3 }}>
-                  Target: {ex.sets} sets · {ex.reps} reps{ex.rest ? ` · ${ex.rest} rest` : ''}{ex.tempo ? ` · tempo ${ex.tempo}` : ''}
-                </div>
-                {ex.notes ? <div style={{ fontSize: 12.5, color: '#2997ff', marginTop: 6 }}>Coach note: {ex.notes}</div> : null}
-              </div>
-
-              <div style={{ overflowX: 'auto' }}>
-                <div style={{ minWidth: 360 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: WO_GRID, gap: 8, padding: '0 0 7px',
-                    fontSize: 10, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
-                    borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <span>Set</span><span style={{ textAlign: 'center' }}>Weight</span>
-                    <span style={{ textAlign: 'center' }}>Target Reps</span><span style={{ textAlign: 'center' }}>Actual Reps</span>
-                    <span style={{ textAlign: 'center' }}>Done</span><span />
-                  </div>
-
-                  {(log[ei] || []).map((s, si) => {
-                    const key = ei + '-' + si;
-                    return (
-                      <React.Fragment key={si}>
-                        <div style={{ display: 'grid', gridTemplateColumns: WO_GRID, gap: 8, alignItems: 'center', padding: '7px 0',
-                          background: s.done ? 'rgba(52,199,89,0.08)' : 'transparent' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: s.done ? '#34c759' : 'rgba(255,255,255,0.6)', textAlign: 'center' }}>{si + 1}</span>
-                          <WoCell value={s.weight} onChange={v => patch(ei, si, { weight: v })} placeholder="0" />
-                          <WoCell value={ex.reps} readOnly />
-                          <WoCell value={s.reps} onChange={v => patch(ei, si, { reps: v })} placeholder={woRepHint(ex.reps)} />
-                          <button onClick={() => toggleDone(ei, si)} style={{
-                            width: 34, height: 34, borderRadius: 9, margin: '0 auto', cursor: 'pointer',
-                            border: `1px solid ${s.done ? '#34c759' : 'rgba(255,255,255,0.18)'}`,
-                            background: s.done ? '#34c759' : 'rgba(255,255,255,0.04)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.5L19 6.5" stroke={s.done ? '#06210f' : 'rgba(255,255,255,0.4)'} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                          </button>
-                          <button onClick={() => setNoteOpen(o => ({ ...o, [key]: !o[key] }))} title="Add a note"
-                            style={{ width: 24, height: 24, borderRadius: 6, margin: '0 auto', cursor: 'pointer',
-                              border: 'none', background: 'transparent', color: s.note ? '#2997ff' : 'rgba(255,255,255,0.35)', fontSize: 14 }}>✎</button>
-                        </div>
-                        {noteOpen[key] && (
-                          <div style={{ padding: '4px 0 10px' }}>
-                            <input value={s.note} onChange={e => patch(ei, si, { note: e.target.value })}
-                              placeholder="Note for this set (optional)…"
-                              style={{ width: '100%', fontFamily: 'inherit', fontSize: 13, color: '#f5f5f7',
-                                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 10px', outline: 'none' }} />
-                          </div>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Finish */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
-            <button onClick={finish} disabled={saving || doneCount === 0} className="btn-blue"
-              style={{ opacity: (saving || doneCount === 0) ? 0.5 : 1 }}>
-              {saving ? 'Saving…' : `Finish & log workout${doneCount ? ` · ${doneCount} sets` : ''}`}
-            </button>
-            {savedMsg && <span style={{ fontSize: 13, color: savedMsg.startsWith('Could not') ? '#ff6b6b' : '#34c759' }}>{savedMsg}</span>}
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  {['Exercise', 'Sets', 'Reps', 'Rest'].map(h => (
+                    <th key={h} style={{
+                      padding: '8px 12px', textAlign: 'left',
+                      fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)',
+                      letterSpacing: '0.04em', textTransform: 'uppercase',
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {day.exercises.map((ex, i) => (
+                  <tr key={i} style={{ borderBottom: i < day.exercises.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    <td style={{ padding: '13px 12px', fontSize: 15, fontWeight: 500, color: '#f5f5f7' }}>{ex.name}</td>
+                    <td style={{ padding: '13px 12px', fontSize: 14, color: '#f5f5f7' }}>{ex.sets}</td>
+                    <td style={{ padding: '13px 12px', fontSize: 14, color: '#f5f5f7' }}>{ex.reps}</td>
+                    <td style={{ padding: '13px 12px', fontSize: 14, color: 'rgba(255,255,255,0.45)' }}>{ex.rest}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          {/* Rest timer */}
-          {rest && (
-            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 24, display: 'flex', justifyContent: 'center', zIndex: 500, pointerEvents: 'none' }}>
-              <div style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px',
-                background: 'rgba(20,20,22,0.97)', border: '1px solid rgba(41,151,255,0.4)', borderRadius: 980, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Rest</span>
-                <span style={{ fontSize: 17, fontWeight: 700, color: '#f5f5f7', minWidth: 46, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{woMmss(rest.remaining)}</span>
-                <button onClick={() => setRest(r => ({ ...r, remaining: r.remaining + 15 }))} style={{ background: 'rgba(41,151,255,0.14)', border: '1px solid rgba(41,151,255,0.3)', color: '#2997ff', borderRadius: 980, padding: '5px 11px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>+15s</button>
-                <button onClick={() => setRest(null)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', borderRadius: 980, padding: '5px 11px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Skip</button>
-              </div>
-            </div>
-          )}
-        </React.Fragment>
-      )}
+        )}
+      </div>
     </div>
   );
 };
@@ -2629,14 +2632,27 @@ const Portal = ({ userId, onLogout }) => {
 
         if (profileRes.error) throw profileRes.error;
 
-        // Map Supabase rows → shape the rest of the portal expects
-        const statusMap = { pending: 'Processing', invoiced: 'Processing', paid: 'Processing', shipped: 'In Transit', completed: 'Delivered', cancelled: 'Cancelled' };
+        // Map Supabase rows → shape the rest of the portal expects.
+        // Display reflects BOTH fulfillment (status) and payment (payment_status).
+        const displayStatus = (o) => {
+          const s = o.status || 'pending';
+          if (s === 'shipped') return 'In Transit';
+          if (s === 'completed' || s === 'delivered') return 'Delivered';
+          if (s === 'cancelled') return 'Cancelled';
+          if (s === 'paid') return 'Processing';      // legacy (pre payment_status)
+          if (s === 'invoiced') return 'Invoice sent'; // legacy
+          const pay = o.payment_status;
+          if (pay === 'paid') return 'Processing';
+          if (pay === 'reported') return 'Payment review';
+          if (pay === 'invoiced') return 'Invoice sent';
+          return 'Awaiting payment';
+        };
         const orders = (ordersRes.data || []).map(o => ({
           id: o.id,
           date: o.ordered_at ? o.ordered_at.split('T')[0] : '',
           item: o.product,
           qty: o.quantity,
-          status: statusMap[o.status] || 'Processing',
+          status: displayStatus(o),
         }));
 
         const np = (nutritionRes.data || [])[0];
@@ -2655,7 +2671,6 @@ const Portal = ({ userId, onLogout }) => {
 
         const wp = (workoutRes.data || [])[0];
         const workout = wp ? {
-          id: wp.id,
           goal: wp.title || 'Current Program',
           days: Array.isArray(wp.plan_data) ? wp.plan_data : [],
         } : null;
@@ -2763,7 +2778,7 @@ const Portal = ({ userId, onLogout }) => {
     const newOrder = {
       id: order.id || `tmp-${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
-      status: 'Processing',
+      status: order.status || 'Awaiting payment',
       item: order.item,
       qty: order.qty,
     };
@@ -2878,7 +2893,7 @@ const Portal = ({ userId, onLogout }) => {
       </div>
 
       {/* Main content */}
-     <main style={{ flex: 1, padding: '48px 40px', maxWidth: 960, paddingBottom: 80, background: '#0a0a0a' }}>
+      <main style={{ flex: 1, padding: '48px 40px', maxWidth: 960, paddingBottom: 80, background: '#0a0a0a' }}>
         {/* Onboarding reminder banner */}
         {showOnboardingReminder && (
           <div style={{
@@ -2933,7 +2948,7 @@ const Portal = ({ userId, onLogout }) => {
           ? <NutritionPlan plan={userData.nutrition} userId={userId} />
           : <EmptyState title="Nutrition Plan" message="Your nutrition plan will appear here once your specialist sets it up." />)}
         {activeTab === 'workout'   && (userData.workout
-          ? <WorkoutPlan plan={userData.workout} sb={sb} userId={userId} />
+          ? <WorkoutPlan plan={userData.workout} />
           : <EmptyState title="Workout Plan" message="Your workout plan will appear here once your specialist sets it up." />)}
         {activeTab === 'weighin'   && <WeighIn sb={sb} userId={userId} />}
         {activeTab === 'blood'     && <BloodWork userId={userId} files={userData.bloodwork} onUpload={addFile} />}
