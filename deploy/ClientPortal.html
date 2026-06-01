@@ -1650,7 +1650,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   const link = window.paymentLink ? window.paymentLink(m, cartTotal) : null;
                   const amt = Number.isFinite(cartTotal) && cartTotal > 0 ? `$${cartTotal.toFixed(2)}` : null;
                   return (
-                    <div style={{
+                    <div data-paybox="" style={{
                       marginTop: 12, background: 'rgba(41,151,255,0.07)',
                       border: '1px solid rgba(41,151,255,0.28)', borderRadius: 12, padding: '16px',
                     }}>
@@ -1671,12 +1671,6 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                           style={{ background: 'rgba(255,255,255,0.08)', color: '#f5f5f7', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 9, padding: '7px 13px', fontSize: 13, cursor: 'pointer' }}>
                           Copy
                         </button>
-                        {link && (
-                          <a href={link} target="_blank" rel="noopener noreferrer" className="btn-blue"
-                            style={{ padding: '9px 18px', fontSize: 14, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                            Pay with {m.label} →
-                          </a>
-                        )}
                       </div>
                       {m.kind === 'crypto' && m.network && (
                         <div style={{ fontSize: 12.5, color: '#ffb84d', marginTop: 10 }}>
@@ -1686,9 +1680,26 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                       {m.hint && (
                         <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', marginTop: 8, lineHeight: 1.5 }}>{m.hint}</div>
                       )}
-                      <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', marginTop: 8, lineHeight: 1.5 }}>
-                        Add your order reference to the payment note so we can match it, then place your order below.
+                      <div style={{ fontSize: 13, color: '#ffd27a', marginTop: 12, lineHeight: 1.5, background: 'rgba(255,184,77,0.08)', border: '1px solid rgba(255,184,77,0.28)', borderRadius: 10, padding: '11px 13px' }}>
+                        <strong style={{ color: '#ffd27a' }}>Important:</strong> For your privacy, put <strong>ONLY your name</strong> in the payment note — do <strong>not</strong> include any product names or details.
                       </div>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginTop: 12, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.45 }}>
+                        <input type="checkbox"
+                          onChange={(e) => {
+                            const box = e.currentTarget.closest('[data-paybox]');
+                            const a = box && box.querySelector('[data-paylink]');
+                            const on = e.currentTarget.checked;
+                            if (a) { a.style.pointerEvents = on ? 'auto' : 'none'; a.style.opacity = on ? '1' : '0.45'; }
+                          }}
+                          style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
+                        <span>I've read this and will put <strong>only my name</strong> in the payment note.</span>
+                      </label>
+                      {link && (
+                        <a data-paylink="" href={link} target="_blank" rel="noopener noreferrer" className="btn-blue"
+                          style={{ display: 'inline-flex', marginTop: 12, padding: '11px 20px', fontSize: 14.5, textDecoration: 'none', whiteSpace: 'nowrap', pointerEvents: 'none', opacity: 0.45 }}>
+                          Pay with {m.label} →
+                        </a>
+                      )}
                     </div>
                   );
                 })()}
