@@ -13,6 +13,7 @@
 <script src="pricelists.js"></script>
 <script src="inventory-helper.js"></script>
 <script src="food-db.js"></script>
+<script src="payment-config.js"></script>
 <script type="text/babel" src="weighin.jsx"></script>
 <script type="text/babel" src="workout-editor.jsx"></script>
 <script type="text/babel" src="recipes-db.jsx"></script>
@@ -21,6 +22,8 @@
 <script type="text/babel" src="mp-foodpicker.jsx"></script>
 <script type="text/babel" src="mp-macropanel.jsx"></script>
 <script type="text/babel" src="meal-planner-v2.jsx"></script>
+<script src="payment-instructions.jsx" type="text/babel"></script>
+<script type="text/babel" src="payment-settings.jsx"></script>
 <script type="text/babel" src="workout-builder.jsx"></script>
 <script type="text/babel" src="profile-editor.jsx"></script>
 <script type="text/babel" src="client-invite.jsx"></script>
@@ -117,6 +120,7 @@ const STATUS_COLORS = {
   pending: { bg: 'rgba(255,159,10,0.14)', fg: '#ff9f0a' },
   invoiced: { bg: 'rgba(41,151,255,0.14)', fg: '#2997ff' },
   paid: { bg: 'rgba(52,199,89,0.14)', fg: '#34c759' },
+  reported: { bg: 'rgba(41,151,255,0.14)', fg: '#2997ff' },
   shipped: { bg: 'rgba(191,90,242,0.14)', fg: '#bf5af2' },
   delivered: { bg: 'rgba(255,255,255,0.10)', fg: 'rgba(255,255,255,0.7)' },
   completed: { bg: 'rgba(52,199,89,0.14)', fg: '#34c759' },
@@ -132,7 +136,7 @@ const STATUS_OPTIONS = ['pending', 'invoiced', 'paid', 'shipped', 'delivered', '
 // Migration 2026_payment_status.sql moved 'invoiced'/'paid' off of `status`
 // onto its own `payment_status` column.
 const FULFILLMENT_OPTIONS = ['pending', 'shipped', 'delivered', 'completed', 'cancelled'];
-const PAYMENT_OPTIONS     = ['unpaid', 'invoiced', 'paid'];
+const PAYMENT_OPTIONS     = ['unpaid', 'reported', 'invoiced', 'paid'];
 
 // Read effective fulfillment + payment from an order row, transparently
 // handling legacy rows (where 'invoiced'/'paid' was stored in `status`
@@ -675,165 +679,6 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
 };
 
 // ─── Client Detail ────────────────────────────────────────────────────────────
-// ─── Workout Progress (reads workout_logs) ───────────────────────────────────
-const woFmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { month:'short', day:'numeric' }) : '—';
-const woRepLow = (reps) => { const m = String(reps || '').match(/(\d+)/); return m ? parseInt(m[1], 10) : 0; };
-
-const WorkoutProgress = ({ sb, client }) => {
-  const [rows, setRows] = React.useState(null);
-  const [openId, setOpenId] = React.useState(null);
-  const [exSel, setExSel] = React.useState('');
-
-  React.useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setRows(null);
-      const { data, error } = await sb.from('workout_logs').select('*')
-        .eq('client_id', client.id).order('logged_at', { ascending: false });
-      if (cancelled) return;
-      setRows(error ? [] : (data || []));
-    })();
-    return () => { cancelled = true; };
-  }, [client.id]);
-
-  const sessions = React.useMemo(() => {
-    const byId = {};
-    (rows || []).forEach(r => {
-      const s = byId[r.session_id] || (byId[r.session_id] = { id: r.session_id, day: r.day, focus: r.focus, date: r.finished_at || r.logged_at, rows: [] });
-      s.rows.push(r);
-    });
-    return Object.values(byId).sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [rows]);
-
-  const exNames = React.useMemo(() => [...new Set((rows || []).map(r => r.exercise_name))], [rows]);
-  React.useEffect(() => { if (!exSel && exNames.length) setExSel(exNames[0]); }, [exNames, exSel]);
-
-  if (rows === null) return <div className="card" style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>Loading…</div>;
-  if (rows.length === 0) return <div className="card" style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.45)', fontSize: 14, lineHeight: 1.6 }}>No workouts logged yet. Sessions appear here once {client.name || 'the client'} finishes a workout in the portal.</div>;
-
-  const comp = (s) => { const t = s.rows.length, d = s.rows.filter(r => r.done).length; return t ? d / t : 0; };
-  const vol = (s) => s.rows.reduce((a, r) => a + (r.done ? (parseFloat(r.weight) || 0) * (parseInt(r.actual_reps, 10) || 0) : 0), 0);
-  const adherence = sessions.length ? Math.round(sessions.reduce((a, s) => a + comp(s), 0) / sessions.length * 100) : 0;
-
-  const points = [...sessions].reverse().map(s => {
-    const w = s.rows.filter(r => r.exercise_name === exSel && r.done).map(r => parseFloat(r.weight) || 0).filter(Boolean);
-    return w.length ? { top: Math.max(...w), label: woFmtDate(s.date) } : null;
-  }).filter(Boolean);
-  const delta = points.length >= 2 ? points[points.length - 1].top - points[0].top : 0;
-
-  const Chart = () => {
-    if (points.length < 2) return <div style={{ padding: '24px 0', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Needs 2+ logged sessions of this lift to chart.</div>;
-    const W = 560, H = 140, pad = 26;
-    const xs = points.map((_, i) => pad + (i * (W - 2 * pad)) / (points.length - 1));
-    const vals = points.map(p => p.top); const mn = Math.min(...vals), mx = Math.max(...vals), sp = mx - mn || 1;
-    const y = v => H - pad - ((v - mn) / sp) * (H - 2 * pad);
-    const path = points.map((p, i) => `${i ? 'L' : 'M'}${xs[i].toFixed(1)},${y(p.top).toFixed(1)}`).join(' ');
-    return (
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}>
-        <path d={path} fill="none" stroke="#2997ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((p, i) => (
-          <g key={i}>
-            <circle cx={xs[i]} cy={y(p.top)} r="4" fill="#141416" stroke="#2997ff" strokeWidth="2.5" />
-            <text x={xs[i]} y={y(p.top) - 10} textAnchor="middle" fontSize="11" fontWeight="700" fill="#f5f5f7">{p.top}</text>
-            <text x={xs[i]} y={H - 8} textAnchor="middle" fontSize="9.5" fill="rgba(255,255,255,0.4)">{p.label}</text>
-          </g>
-        ))}
-      </svg>
-    );
-  };
-
-  return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 18 }}>
-        {[['Sessions logged', sessions.length, null],
-          ['Adherence', adherence + '%', adherence >= 80 ? '#34c759' : adherence >= 60 ? '#ff9f0a' : '#ff6b6b'],
-          ['Last workout', woFmtDate(sessions[0].date), null]].map(([k, v, c]) => (
-          <div key={k} className="card" style={{ padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.6, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>{k}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: c || '#f5f5f7' }}>{v}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card" style={{ marginBottom: 18 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600 }}>Weight progression</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {delta !== 0 && <span style={{ fontSize: 12.5, fontWeight: 600, color: delta > 0 ? '#34c759' : '#ff6b6b' }}>{delta > 0 ? '+' : ''}{delta} lb since first log</span>}
-            <select className="field-input" value={exSel} onChange={e => setExSel(e.target.value)} style={{ width: 'auto', padding: '7px 10px', fontSize: 13 }}>
-              {exNames.map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
-        </div>
-        <Chart />
-      </div>
-
-      <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Sessions</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {sessions.map(s => {
-          const c = comp(s); const done = s.rows.filter(r => r.done).length; const total = s.rows.length;
-          const open = openId === s.id;
-          const exMap = {}; s.rows.forEach(r => { (exMap[r.exercise_index] = exMap[r.exercise_index] || { name: r.exercise_name, sets: [] }).sets.push(r); });
-          const exList = Object.values(exMap).map(e => ({ ...e, sets: e.sets.slice().sort((a, b) => a.set_number - b.set_number) }));
-          const cc = c >= 0.8 ? '#34c759' : c >= 0.5 ? '#ff9f0a' : '#ff6b6b';
-          return (
-            <div key={s.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <button onClick={() => setOpenId(open ? null : s.id)} style={{ width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 'none', fontFamily: 'inherit', color: '#f5f5f7', padding: '14px 16px', display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', gap: 14, alignItems: 'center' }}>
-                <div style={{ textAlign: 'center', minWidth: 42 }}>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{woFmtDate(s.date).split(' ')[0]}</div>
-                  <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1 }}>{new Date(s.date).getDate()}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 6 }}>{s.day}{s.focus ? ` · ${s.focus}` : ''}</div>
-                  <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 999, maxWidth: 200 }}><div style={{ width: `${Math.round(c * 100)}%`, height: '100%', background: cc, borderRadius: 999 }} /></div>
-                </div>
-                <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)' }}>{done}/{total} sets · {vol(s).toLocaleString()} lb</span>
-                <span style={{ fontSize: 18, color: 'rgba(255,255,255,0.3)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>›</span>
-              </button>
-              {open && (
-                <div style={{ padding: '4px 16px 16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                  {exList.map((e, ei) => {
-                    const dn = e.sets.filter(r => r.done).length;
-                    return (
-                      <div key={ei} style={{ padding: '12px 0', borderBottom: ei < exList.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, gap: 10 }}>
-                          <span style={{ fontSize: 14, fontWeight: 600 }}>{e.name}</span>
-                          <span style={{ fontSize: 12, color: dn >= e.sets.length ? '#34c759' : '#ff9f0a', fontWeight: 600 }}>{dn}/{e.sets.length} sets · target {e.sets[0].target_reps || '—'}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {e.sets.map((r, si) => {
-                            const hit = r.done && (parseInt(r.actual_reps, 10) || 0) >= woRepLow(r.target_reps);
-                            const bg = !r.done ? 'rgba(255,59,48,0.08)' : hit ? 'rgba(52,199,89,0.1)' : 'rgba(255,159,10,0.1)';
-                            const bd = !r.done ? 'rgba(255,59,48,0.22)' : hit ? 'rgba(52,199,89,0.3)' : 'rgba(255,159,10,0.3)';
-                            return (
-                              <div key={si} style={{ minWidth: 66, padding: '7px 9px', borderRadius: 9, background: bg, border: `1px solid ${bd}`, textAlign: 'center' }}>
-                                <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: 2 }}>SET {r.set_number}</div>
-                                {r.done
-                                  ? <div style={{ fontSize: 13, fontWeight: 700 }}>{r.weight || 0}<span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.45)' }}>lb</span> × {r.actual_reps == null ? '–' : r.actual_reps}</div>
-                                  : <div style={{ fontSize: 12, fontWeight: 600, color: '#ff6b6b' }}>missed</div>}
-                                {(r.rpe != null && r.done) ? <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>RPE {r.rpe}</div> : null}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {e.sets.some(r => r.notes) && (
-                          <div style={{ marginTop: 8, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-                            {e.sets.filter(r => r.notes).map((r, i) => <div key={i}>Set {r.set_number}: “{r.notes}”</div>)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 const ClientDetail = ({ client, onBack, onEdit, onMealPlan }) => {
   const [tab, setTab] = React.useState('profile');
   const [orders, setOrders] = React.useState([]);
@@ -959,7 +804,7 @@ const ClientDetail = ({ client, onBack, onEdit, onMealPlan }) => {
       <div style={{ marginBottom: 24 }} />
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        {['profile','orders','nutrition','workout','progress','weigh-in','bloodwork'].map(t => (
+        {['profile','orders','nutrition','workout','weigh-in','bloodwork'].map(t => (
           <button key={t} onClick={() => setTab(t)}
             style={{ background: 'transparent', border: 'none', color: tab === t ? '#fff' : 'rgba(255,255,255,0.5)',
               padding: '10px 16px', fontSize: 14, fontWeight: tab === t ? 600 : 400, cursor: 'pointer',
@@ -998,10 +843,6 @@ const ClientDetail = ({ client, onBack, onEdit, onMealPlan }) => {
             {saveMsg && <span style={{ fontSize: 13, color: saveMsg.startsWith('Error') ? '#ff453a' : '#34c759' }}>{saveMsg}</span>}
           </div>
         </div>
-      )}
-
-      {tab === 'progress' && (
-        <WorkoutProgress sb={sb} client={client} />
       )}
 
       {tab === 'weigh-in' && (
@@ -1216,6 +1057,7 @@ const App = () => {
   const [editor, setEditor] = React.useState(null); // { client, kind: 'workout'|'nutrition' }
   const [showCalculator, setShowCalculator] = React.useState(false);
   const [showPlanner, setShowPlanner] = React.useState(false);
+  const [showPayments, setShowPayments] = React.useState(false);
   const [plannerClientId, setPlannerClientId] = React.useState(null);
   const [showBuilder, setShowBuilder] = React.useState(false);
   const [showRecipes, setShowRecipes] = React.useState(false);
@@ -1228,6 +1070,7 @@ const App = () => {
     setShowCalculator(false);
     setShowPlanner(false);
     setPlannerClientId(null);
+    setShowPayments(false);
     setShowRecipes(false);
     setShowOrders(false);
     setShowCoupons(false);
@@ -1281,6 +1124,7 @@ const App = () => {
           <button className="btn-ghost" onClick={() => { clearViews(); setShowCalculator(true); }}><span className="label-long">Macros </span>Calculator</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPlanner(true); }}><span className="label-long">Meal </span>Planner</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowRecipes(true); }}>Recipes</button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowPayments(true); }}>Payments</button>
           <span className="admin-email" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{user.email}</span>
           <button className="btn-ghost" onClick={signOut}>Sign Out</button>
         </div>
@@ -1293,6 +1137,8 @@ const App = () => {
           ? <window.StandaloneMealPlanner sb={sb} clients={clients} initialClientId={plannerClientId} onBack={() => { setShowPlanner(false); setPlannerClientId(null); }} />
           : showCalculator
           ? <MacrosCalculator sb={sb} clients={clients} onBack={() => setShowCalculator(false)} />
+          : showPayments && window.PaymentSettings
+          ? <window.PaymentSettings sb={sb} onBack={() => setShowPayments(false)} />
           : showRecipes
           ? <window.RecipesDB sb={sb} onBack={() => setShowRecipes(false)} />
           : showOrders
