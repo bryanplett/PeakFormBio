@@ -9,13 +9,13 @@ const CLIENT_READABLE = new Set([
   'clients', 'orders', 'nutrition_plans', 'workout_plans', 'exercises',
   'recipes', 'ingredients', 'plan_templates', 'weigh_ins', 'weight_goals',
   'coupons', 'bloodwork_files', 'client_notifications', 'age_attestations',
-  'inventory',
+  'inventory', 'app_settings',
 ]);
 
 // Tables that only admins can write to
 const ADMIN_WRITE_ONLY = new Set([
   'admins', 'coupons', 'inventory', 'plan_templates', 'recipes', 'exercises',
-  'nutrition_plans', 'workout_plans',
+  'nutrition_plans', 'workout_plans', 'app_settings',
 ]);
 
 // Columns allowed for filtering (prevent SQL injection via column names)
