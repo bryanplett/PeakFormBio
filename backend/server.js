@@ -110,20 +110,26 @@ async function init() {
         meta      = COALESCE(meta, content->'_meta'),
         plan_data = COALESCE(plan_data, content - '_meta')
       WHERE content IS NOT NULL AND content::text <> '{}';
-
-      -- Payments editor: key/value settings store (auto-created so no manual SQL needed).
-      CREATE TABLE IF NOT EXISTS app_settings (
-        key        TEXT PRIMARY KEY,
-        value      JSONB NOT NULL DEFAULT '{}'::jsonb,
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-      INSERT INTO app_settings (key, value)
-      VALUES ('payment_methods', '[]'::jsonb)
-      ON CONFLICT (key) DO NOTHING;
     `);
     console.log('Schema reconciled (flat plan columns ensured).');
   } catch (err) {
     console.error('Schema reconciliation warning:', err.message);
+  }
+
+  // ── Payments editor table ────────────────────────────────────────────────
+  // Run as its OWN statement so it ALWAYS executes, even if the big schema
+  // block above errors on this particular database. This is what the
+  // Admin → Payments panel reads/writes (key = 'payment_methods').
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (
+      key        TEXT PRIMARY KEY,
+      value      JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );`);
+    await pool.query(`INSERT INTO app_settings (key, value) VALUES ('payment_methods', '[]'::jsonb) ON CONFLICT (key) DO NOTHING;`);
+    console.log('app_settings table ensured.');
+  } catch (err) {
+    console.error('app_settings setup error:', err.message);
   }
 
   const adminEmail = process.env.ADMIN_EMAIL;
