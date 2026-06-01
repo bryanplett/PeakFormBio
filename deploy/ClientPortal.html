@@ -1854,11 +1854,15 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                 }}>3</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, lineHeight: 1.55, color: 'rgba(255,255,255,0.82)' }}>
-                    Need <strong style={{ color: '#f5f5f7' }}>syringes and alcohol wipes</strong>? Add an accessory pack to your order.
+                    Need supplies? Add an <strong style={{ color: '#f5f5f7' }}>accessory pack</strong>: <strong style={{ color: '#f5f5f7' }}>Pack 01</strong> = Syringes &amp; Wipes · <strong style={{ color: '#f5f5f7' }}>Pack 02</strong> = BAC Water · <strong style={{ color: '#f5f5f7' }}>Pack 03</strong> = Syringes, Wipes &amp; BAC Water.
                   </div>
                   {!cartHasAccessoryPack && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                      {['Accessory Pack — 01', 'Accessory Pack — 02', 'Accessory Pack — 03'].map(prefix => {
+                      {[
+                        { prefix: 'Accessory Pack — 01', contents: 'Syringes & Wipes' },
+                        { prefix: 'Accessory Pack — 02', contents: 'BAC Water' },
+                        { prefix: 'Accessory Pack — 03', contents: 'Syringes, Wipes & BAC Water' },
+                      ].map(({ prefix, contents }) => {
                         const label = findOptionLabel(prefix);
                         if (!label) return null;
                         return (
@@ -1874,7 +1878,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                               fontSize: 13, fontWeight: 500, cursor: 'pointer',
                               fontFamily: 'inherit',
                             }}>
-                            + {label.replace(/\s+—\s+\$.+$/, '').replace('Accessory Pack — ', 'Pack ')}{' '}
+                            + {label.replace(/\s+—\s+\$.+$/, '').replace('Accessory Pack — ', 'Pack ')} · {contents}{' '}
                             <span style={{ color: 'rgba(255,255,255,0.5)' }}>{label.match(/\$[\d.]+/)?.[0] || ''}</span>
                           </button>
                         );
