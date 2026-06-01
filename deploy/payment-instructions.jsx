@@ -53,7 +53,7 @@
     );
   };
 
-  const MethodCard = ({ m, amount, highlight, linksEnabled = true }) => {
+  const MethodCard = ({ m, amount, highlight, linksEnabled = true, onPayClick }) => {
     const isHandle = m.kind === 'handle' || m.kind === 'crypto';
     const link = global.paymentLink ? global.paymentLink(m, amount) : null;
     return (
@@ -77,7 +77,7 @@
             <CopyBtn value={m.handle} />
             {link && (
               <a href={link} target="_blank" rel="noopener noreferrer"
-                onClick={(e) => { if (!linksEnabled) e.preventDefault(); }}
+                onClick={(e) => { if (!linksEnabled) { e.preventDefault(); return; } if (onPayClick) onPayClick(); }}
                 aria-disabled={!linksEnabled}
                 style={{ flexShrink: 0, textDecoration: 'none', fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
                   padding: '7px 14px', borderRadius: 8, border: 'none', background: '#0066cc', color: '#fff', whiteSpace: 'nowrap',
@@ -108,6 +108,7 @@
   const PaymentInstructions = ({ amountDue, reference, methods, chosenId, reported, onReported, businessName }) => {
     const cfg = global.PFB_PAYMENT || {};
     const [ackName, setAckName] = useState(false);
+    const [showReturnReminder, setShowReturnReminder] = useState(false);
     const list = (methods && methods.length ? methods : global.visiblePaymentMethods(cfg.methods));
     const direct = list.filter(m => m.kind === 'handle' || m.kind === 'crypto');
     const invoice = list.find(m => m.kind === 'invoice');
@@ -116,6 +117,7 @@
     const chosenIsInvoice = chosen && chosen.kind === 'invoice';
 
     return (
+      <>
       <div className="card" style={{ borderColor: 'rgba(41,151,255,0.25)', background: 'rgba(41,151,255,0.04)' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -168,7 +170,7 @@
             </label>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-              <MethodCard m={chosen} amount={amountDue} highlight linksEnabled={ackName} />
+              <MethodCard m={chosen} amount={amountDue} highlight linksEnabled={ackName} onPayClick={() => setShowReturnReminder(true)} />
             </div>
           </>
         )}
@@ -198,12 +200,45 @@
               </div>
             </div>
           ) : (
-            <button className="btn-blue" onClick={onReported} style={{ width: '100%', padding: '13px 24px', fontSize: 15, fontWeight: 600 }}>
-              I’ve sent payment
-            </button>
+            <>
+              <button className="btn-blue" onClick={onReported} disabled={!ackName}
+                style={{ width: '100%', padding: '13px 24px', fontSize: 15, fontWeight: 600,
+                  opacity: ackName ? 1 : 0.4, cursor: ackName ? 'pointer' : 'not-allowed' }}>
+                I’ve sent payment
+              </button>
+              {!ackName && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 8 }}>
+                  Check the box above to continue.
+                </div>
+              )}
+            </>
           )
         )}
       </div>
+
+      {/* Return reminder — fires when they open the payment app */}
+      {showReturnReminder && (
+        <div onClick={() => setShowReturnReminder(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} className="card"
+            style={{ maxWidth: 380, width: '100%', textAlign: 'center', borderColor: 'rgba(41,151,255,0.3)' }}>
+            <div style={{ fontSize: 34, marginBottom: 10 }}>↩️</div>
+            <h3 style={{ fontSize: 19, fontWeight: 700, color: '#f5f5f7', marginBottom: 8, letterSpacing: '-0.01em' }}>
+              One last step!
+            </h3>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.55, marginBottom: 20 }}>
+              After you finish paying, <strong style={{ color: '#fff' }}>come back to this screen</strong> and tap
+              <strong style={{ color: '#fff' }}> “I’ve sent payment”</strong> so we know to verify it and ship your order.
+            </p>
+            <button className="btn-blue" onClick={() => setShowReturnReminder(false)}
+              style={{ width: '100%', padding: '12px 24px', fontSize: 15, fontWeight: 600 }}>
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+      </>
     );
   };
 
