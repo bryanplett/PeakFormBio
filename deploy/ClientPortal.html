@@ -19,6 +19,18 @@
 <script type="text/babel" src="age-verification.jsx"></script>
 <script type="text/babel" src="peptide-database.jsx"></script>
 <script type="text/babel" src="payment-instructions.jsx"></script>
+<!-- ── Workout Tracker (athlete) — components ───────────────────────────────── -->
+<script src="exercise-db.js"></script>
+<script type="text/babel" src="wt-musclemap.jsx"></script>
+<script type="text/babel" src="wt-ui.jsx"></script>
+<script type="text/babel" src="wt-active.jsx"></script>
+<script type="text/babel" src="wt-library.jsx"></script>
+<script type="text/babel" src="wt-screens.jsx"></script>
+<script type="text/babel" src="wt-app.jsx"></script>
+<style>
+  @keyframes wtFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes wtSlideUp { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+</style>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -2600,11 +2612,12 @@ const Portal = ({ userId, onLogout }) => {
         const profileId = profileRow.id;
 
         step = 'load-related-data';
-        const [ordersRes, nutritionRes, workoutRes, bloodworkRes] = await Promise.all([
+        const [ordersRes, nutritionRes, workoutRes, bloodworkRes, sessionsRes] = await Promise.all([
           sb.from('orders').select('*').eq('client_id', profileId).order('ordered_at', { ascending: false }),
           sb.from('nutrition_plans').select('*').eq('client_id', profileId).eq('active', true).order('created_at', { ascending: false }).limit(1),
           sb.from('workout_plans').select('*').eq('client_id', profileId).eq('active', true).order('created_at', { ascending: false }).limit(1),
           sb.from('bloodwork_files').select('*').eq('client_id', profileId).order('uploaded_at', { ascending: false }),
+          sb.from('workout_sessions').select('*').eq('client_id', profileId).order('date', { ascending: false }),
         ]);
         if (cancelled) return;
 
@@ -2654,6 +2667,11 @@ const Portal = ({ userId, onLogout }) => {
           goal: wp.title || 'Current Program',
           days: Array.isArray(wp.plan_data) ? wp.plan_data : [],
         } : null;
+        // Raw plan_data + logged sessions for the athlete workout tracker.
+        const workoutPlanRaw = wp
+          ? { goal: wp.goal || wp.title, title: wp.title, plan_data: Array.isArray(wp.plan_data) ? wp.plan_data : [] }
+          : { plan_data: [] };
+        const workoutSessions = (sessionsRes.data || []).map(r => ({ ...(r.data || {}), id: r.id }));
 
         const bloodwork = (bloodworkRes.data || []).map(b => b.filename);
 
@@ -2665,7 +2683,7 @@ const Portal = ({ userId, onLogout }) => {
           address: profileRes.data.address,
           profile: profileRes.data,
           onboardedAt: profileRes.data.onboarded_at || null,
-          orders, nutrition, workout, bloodwork,
+          orders, nutrition, workout, workoutPlanRaw, workoutSessions, bloodwork,
         });
       } catch (err) {
         console.error('Load failed at step:', step, err);
@@ -2767,6 +2785,29 @@ const Portal = ({ userId, onLogout }) => {
 
   const addFile = (name) => {
     setUserData(d => ({ ...d, bloodwork: [name, ...d.bloodwork] }));
+  };
+
+  // Persist a finished workout from the tracker, then reflect it in state.
+  const saveWorkoutSession = async (session) => {
+    setUserData(d => ({ ...d, workoutSessions: [session, ...(d.workoutSessions || [])] }));
+    try {
+      const { data, error } = await sb.from('workout_sessions').insert({
+        client_id:       userData.id,
+        date:            session.date,
+        title:           session.title,
+        duration_sec:    session.durationSec,
+        total_volume_lb: session.totalVolumeLb,
+        pr_count:        (session.prs || []).length,
+        data:            session,
+      }).single();
+      if (error) throw error;
+      if (data && data.id) setUserData(d => ({
+        ...d,
+        workoutSessions: (d.workoutSessions || []).map(s => (s === session ? { ...session, id: data.id } : s)),
+      }));
+    } catch (err) {
+      console.error('Failed to save workout session:', err);
+    }
   };
 
   return (
@@ -2927,9 +2968,19 @@ const Portal = ({ userId, onLogout }) => {
         {activeTab === 'nutrition' && (userData.nutrition
           ? <NutritionPlan plan={userData.nutrition} userId={userId} />
           : <EmptyState title="Nutrition Plan" message="Your nutrition plan will appear here once your specialist sets it up." />)}
-        {activeTab === 'workout'   && (userData.workout
-          ? <WorkoutPlan plan={userData.workout} />
-          : <EmptyState title="Workout Plan" message="Your workout plan will appear here once your specialist sets it up." />)}
+        {activeTab === 'workout'   && (window.WorkoutTracker
+          ? <div style={{ position: 'relative', height: 'calc(100vh - 200px)', minHeight: 560,
+              borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(0,0,0,0.10)', background: '#0a0a0a' }}>
+              <window.WorkoutTracker
+                plan={userData.workoutPlanRaw || { plan_data: [] }}
+                sessions={userData.workoutSessions || []}
+                athlete={{ name: userData.name, goal: userData.workout && userData.workout.goal }}
+                onSaveSession={saveWorkoutSession}
+                config={{ accent: '#2997ff', unit: 'lb', showRpe: true }} />
+            </div>
+          : (userData.workout
+            ? <WorkoutPlan plan={userData.workout} />
+            : <EmptyState title="Workout Plan" message="Your workout plan will appear here once your specialist sets it up." />))}
         {activeTab === 'weighin'   && <WeighIn sb={sb} userId={userId} />}
         {activeTab === 'blood'     && <BloodWork userId={userId} files={userData.bloodwork} onUpload={addFile} />}
         {activeTab === 'peptides'  && (window.PeptideDatabase ? <window.PeptideDatabase /> : <EmptyState title="Peptide Library" message="The peptide library is loading." />)}
