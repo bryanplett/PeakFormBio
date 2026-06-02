@@ -163,3 +163,114 @@ window.getPricelistOptions = function() {
     value: key, label: pl.name,
   }));
 };
+
+// ─── Runtime (DB-backed) pricelist ───────────────────────────────────────────
+// The object above (window.PRICELISTS) is the BAKED-IN default that ships with
+// the code. The admin can override it at runtime by editing the pricelist in
+// Admin → Pricelist, which saves to the `app_settings` table (key='pricelist').
+//
+// On load, both Admin and ClientPortal call window.loadPricelists(sb). If an
+// admin-saved version exists in the DB it replaces window.PRICELISTS (so every
+// helper above automatically returns the live prices); otherwise the baked-in
+// defaults are used. This mirrors how payment methods work (app_settings /
+// key='payment_methods'), so it needs the same 2026_app_settings.sql table.
+
+// Frozen deep-copy of the shipped defaults, so "Reset to defaults" in the editor
+// and the fallback path always have a clean copy to return to.
+window.PRICELISTS_DEFAULT = JSON.parse(JSON.stringify(window.PRICELISTS));
+
+// Basic shape check so a malformed/empty DB row never blanks out the catalog.
+function _validPricelists(v) {
+  if (!v || typeof v !== 'object') return false;
+  return Object.keys(v).some(k =>
+    v[k] && Array.isArray(v[k].products) && v[k].products.length > 0);
+}
+
+// Load the admin-saved pricelist from the DB and make it the active one.
+// Returns the active pricelists object (DB version if present, else defaults).
+// Never throws — on any error it leaves the baked-in defaults in place.
+window.loadPricelists = async function(sb) {
+  if (!sb) return window.PRICELISTS;
+  try {
+    const { data, error } = await sb.from('app_settings')
+      .select('*').eq('key', 'pricelist').maybeSingle();
+    if (error || !data || !_validPricelists(data.value)) return window.PRICELISTS;
+    // Replace the active object IN PLACE-style (reassign) so all helpers that
+    // read window.PRICELISTS pick up the live version immediately.
+    window.PRICELISTS = data.value;
+    return window.PRICELISTS;
+  } catch (_err) {
+    return window.PRICELISTS;
+  }
+};
+
+// Persist an edited pricelists object to the DB (admin only). Also updates the
+// in-memory copy so the rest of the page reflects the change without a reload.
+// Returns { error } — null on success.
+window.savePricelists = async function(sb, pricelists) {
+  if (!sb) return { error: { message: 'No backend connection.' } };
+  if (!_validPricelists(pricelists)) {
+    return { error: { message: 'Pricelist looks empty — every tier needs at least one product.' } };
+  }
+  const res = await sb.from('app_settings')
+    .upsert({ key: 'pricelist', value: pricelists, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    .select().single();
+  if (!res.error) window.PRICELISTS = pricelists;
+  return { error: res.error || null };
+};
+
+// ─── Per-client price overrides ──────────────────────────────────────────────
+// A single app_settings row (key='price_overrides') holds a map of
+//   { [clientId]: { [productName]: priceNumber } }
+// When a client has an override for a product, that price wins over their tier
+// price. Stored admin-write-only; read by the portal to price that client's
+// catalog. Falls back to {} (no overrides) when the row is absent.
+window.PRICE_OVERRIDES = {};
+
+window.loadPriceOverrides = async function(sb) {
+  if (!sb) return window.PRICE_OVERRIDES;
+  try {
+    const { data, error } = await sb.from('app_settings')
+      .select('*').eq('key', 'price_overrides').maybeSingle();
+    if (error || !data || !data.value || typeof data.value !== 'object') return window.PRICE_OVERRIDES;
+    window.PRICE_OVERRIDES = data.value;
+    return window.PRICE_OVERRIDES;
+  } catch (_err) {
+    return window.PRICE_OVERRIDES;
+  }
+};
+
+window.savePriceOverrides = async function(sb, overrides) {
+  if (!sb) return { error: { message: 'No backend connection.' } };
+  const clean = overrides && typeof overrides === 'object' ? overrides : {};
+  const res = await sb.from('app_settings')
+    .upsert({ key: 'price_overrides', value: clean, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    .select().single();
+  if (!res.error) window.PRICE_OVERRIDES = clean;
+  return { error: res.error || null };
+};
+
+// The base (tier) price for a product, ignoring overrides. Null if not in tier.
+window.getBasePrice = function(tierKey, productName) {
+  const pl = window.getPricelist(tierKey);
+  const p = (pl.products || []).find(x => x.name === productName);
+  return p ? p.price : null;
+};
+
+// The effective price for a specific client: their override if present, else
+// their tier price. Null if the product isn't on their tier.
+window.getClientPrice = function(clientId, tierKey, productName) {
+  const ov = window.PRICE_OVERRIDES[clientId];
+  if (ov && ov[productName] != null && !isNaN(Number(ov[productName]))) return Number(ov[productName]);
+  return window.getBasePrice(tierKey, productName);
+};
+
+// Labels ("Name — $price") for a client, applying their overrides. Used by the
+// portal so the cart, totals, and saved order all reflect the custom prices.
+window.getPricelistAsLabelsForClient = function(clientId, tierKey) {
+  const pl = window.getPricelist(tierKey);
+  return pl.products.map(p => {
+    const price = window.getClientPrice(clientId, tierKey, p.name);
+    return `${p.name} — $${price}`;
+  });
+};

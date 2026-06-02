@@ -950,6 +950,19 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   );
   // After an order is placed: { reference, total, methodId, orderIds, reported }
   const [placedOrder, setPlacedOrder] = React.useState(null);
+  // Pricelist: load the admin-saved version from the DB on mount (falls back to
+  // the baked-in defaults in pricelists.js). plReady flips once it resolves so
+  // the catalog recomputes with live prices.
+  const [plReady, setPlReady] = React.useState(false);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (window.loadPricelists) { try { await window.loadPricelists(sb); } catch (e) {} }
+      if (window.loadPriceOverrides) { try { await window.loadPriceOverrides(sb); } catch (e) {} }
+      if (!cancelled) setPlReady(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -997,7 +1010,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const productOptions = React.useMemo(() => {
     const key = userData?.profile?.pricelist || 'standard';
     let list;
-    if (typeof window.getPricelistAsLabels === 'function') {
+    if (userData?.id && typeof window.getPricelistAsLabelsForClient === 'function') {
+      // Apply this client's per-product price overrides (set by the coach in
+      // Admin → Pricelist). Falls through to tier prices for anything not overridden.
+      list = window.getPricelistAsLabelsForClient(userData.id, key);
+    } else if (typeof window.getPricelistAsLabels === 'function') {
       list = window.getPricelistAsLabels(key);
     } else {
       list = PRODUCTS;
@@ -1006,7 +1023,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     // product photo. Items without a photo fall back to the styled vial
     // placeholder (PortalVial), so nothing is hidden from the catalog.
     return list;
-  }, [userData?.profile?.pricelist]);
+  }, [userData?.profile?.pricelist, userData?.id, plReady]);
 
   const addToCart = (label) => {
     setCart(prev => {

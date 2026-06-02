@@ -615,6 +615,7 @@ select.field-input option { background: #1a1a1c; color: var(--ink); }
 <script type="text/babel" src="meal-planner-v2.jsx"></script>
 <script type="text/babel" src="payment-instructions.jsx"></script>
 <script type="text/babel" src="payment-settings.jsx"></script>
+<script type="text/babel" src="pricelist-manager.jsx"></script>
 <script type="text/babel" src="workout-builder.jsx"></script>
 <script type="text/babel" src="profile-editor.jsx"></script>
 <script type="text/babel" src="client-invite.jsx"></script>
@@ -1617,6 +1618,7 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
 
   const TOOLS = [
     { key: 'inventory',   name: 'Inventory',       icon: 'inventory' },
+    { key: 'pricelist',   name: 'Pricelist',       icon: 'dollar' },
     { key: 'coupons',     name: 'Coupons',         icon: 'tag' },
     { key: 'payments',    name: 'Payments',        icon: 'card' },
     { key: 'mealplanner', name: 'Meal Planner',    icon: 'food' },
@@ -1627,6 +1629,7 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
 
   const TOOL_TITLES = {
     inventory: 'Inventory', coupons: 'Coupons', payments: 'Payments',
+    pricelist: 'Pricelist',
     mealplanner: 'Meal Planner', macros: 'Macros Calculator',
     builder: 'Workout Builder', recipes: 'Recipes',
   };
@@ -1636,6 +1639,7 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
     if (tool === 'inventory' && window.InventoryManager) body = <window.InventoryManager sb={sb} onBack={onClose} />;
     else if (tool === 'coupons' && window.CouponsManager) body = <window.CouponsManager sb={sb} onBack={onClose} />;
     else if (tool === 'payments' && window.PaymentSettings) body = <window.PaymentSettings sb={sb} onBack={onClose} />;
+    else if (tool === 'pricelist' && window.PricelistManager) body = <window.PricelistManager sb={sb} clients={clients} onBack={onClose} />;
     else if (tool === 'mealplanner' && window.StandaloneMealPlanner) body = <window.StandaloneMealPlanner sb={sb} clients={clients} onBack={onClose} />;
     else if (tool === 'macros' && window.MacrosCalculator) body = <window.MacrosCalculator sb={sb} clients={clients} onBack={onClose} />;
     else if (tool === 'builder' && window.WorkoutBuilder) body = <window.WorkoutBuilder sb={sb} clients={clients} onBack={onClose} />;
@@ -1799,6 +1803,7 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
 
     React.useEffect(() => {
       (async () => {
+        if (window.loadPricelists) { try { await window.loadPricelists(sb); } catch (e) {} }
         const { data: { session } } = await sb.auth.getSession();
         if (session && session.user && session.user.role === 'admin') {
           setUser(session.user);

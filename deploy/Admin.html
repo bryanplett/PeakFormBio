@@ -24,6 +24,7 @@
 <script type="text/babel" src="meal-planner-v2.jsx"></script>
 <script src="payment-instructions.jsx" type="text/babel"></script>
 <script type="text/babel" src="payment-settings.jsx"></script>
+<script type="text/babel" src="pricelist-manager.jsx"></script>
 <script type="text/babel" src="workout-builder.jsx"></script>
 <script type="text/babel" src="profile-editor.jsx"></script>
 <script type="text/babel" src="client-invite.jsx"></script>
@@ -1058,6 +1059,7 @@ const App = () => {
   const [showCalculator, setShowCalculator] = React.useState(false);
   const [showPlanner, setShowPlanner] = React.useState(false);
   const [showPayments, setShowPayments] = React.useState(false);
+  const [showPricelist, setShowPricelist] = React.useState(false);
   const [plannerClientId, setPlannerClientId] = React.useState(null);
   const [showBuilder, setShowBuilder] = React.useState(false);
   const [showRecipes, setShowRecipes] = React.useState(false);
@@ -1071,6 +1073,7 @@ const App = () => {
     setShowPlanner(false);
     setPlannerClientId(null);
     setShowPayments(false);
+    setShowPricelist(false);
     setShowRecipes(false);
     setShowOrders(false);
     setShowCoupons(false);
@@ -1086,6 +1089,7 @@ const App = () => {
 
   React.useEffect(() => {
     (async () => {
+      if (window.loadPricelists) { try { await window.loadPricelists(sb); } catch (e) {} }
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user && session.user.role === 'admin') {
         setUser(session.user);
@@ -1124,6 +1128,7 @@ const App = () => {
           <button className="btn-ghost" onClick={() => { clearViews(); setShowCalculator(true); }}><span className="label-long">Macros </span>Calculator</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPlanner(true); }}><span className="label-long">Meal </span>Planner</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowRecipes(true); }}>Recipes</button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowPricelist(true); }}>Pricelist</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPayments(true); }}>Payments</button>
           <span className="admin-email" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{user.email}</span>
           <button className="btn-ghost" onClick={signOut}>Sign Out</button>
@@ -1139,6 +1144,8 @@ const App = () => {
           ? <MacrosCalculator sb={sb} clients={clients} onBack={() => setShowCalculator(false)} />
           : showPayments && window.PaymentSettings
           ? <window.PaymentSettings sb={sb} onBack={() => setShowPayments(false)} />
+          : showPricelist && window.PricelistManager
+          ? <window.PricelistManager sb={sb} clients={clients} onBack={() => setShowPricelist(false)} />
           : showRecipes
           ? <window.RecipesDB sb={sb} onBack={() => setShowRecipes(false)} />
           : showOrders
