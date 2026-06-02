@@ -366,9 +366,11 @@ const CATEGORY_MAP = [
   },
   {
     id: 'growth', title: 'Growth Hormone / Recovery / Muscle', tint: '#34c759',
-    matches: ['cjc', 'ipamorelin', 'tesamorelin', 'ghrp', 'igf', 'bpc', 'tb-500', 'tb 500', 'wolverine', 'hair growth helper'],
+    matches: ['cjc', 'ipamorelin', 'ipa', 'tesamorelin', 'ghrp', 'igf', 'bpc', 'tb-500', 'tb 500', 'wolverine', 'hair growth helper', 'hgh'],
     blurbs: {
       'hair growth helper': 'Supports follicle health and hair regrowth. Choose your strength below.',
+      hgh: 'Human growth hormone supporting recovery, lean mass, and body composition.',
+      ipa: 'Selective GH secretagogue (Ipamorelin) with minimal cortisol impact.',
       cjc: 'GHRH analog supporting endogenous GH pulses and recovery.',
       ipamorelin: 'Selective GH secretagogue with minimal cortisol impact.',
       tesamorelin: 'GHRH analog for visceral fat reduction.',
@@ -431,10 +433,21 @@ const CATEGORY_MAP = [
     },
   },
   {
+    id: 'wellness', title: 'Injectables / Wellness', tint: '#ffd60a',
+    matches: ['lipo-c', 'lipo c', 'supershred', 'b12', 'glutathione'],
+    blurbs: {
+      'lipo-c': 'Lipotropic blend (methionine, inositol, choline + B vitamins) supporting fat metabolism and energy.',
+      'supershred': 'Advanced lipotropic formula combining fat-mobilizing compounds for body-composition support.',
+      'b12': 'Methylcobalamin B12 — supports energy, metabolism, and neurological function.',
+      'glutathione': 'Master antioxidant supporting detoxification, immune health, and skin clarity.',
+    },
+  },
+  {
     id: 'accessories', title: 'Accessories', tint: '#8e8e93',
-    matches: ['accessory pack'],
+    matches: ['accessory pack', 'bac water'],
     blurbs: {
       'accessory pack': 'Add the supplies you need to your order. Each pack price is listed below.',
+      'bac water': 'Bacteriostatic water for reconstituting lyophilized peptides.',
       'pack \u2014 01':    'Syringes and alcohol wipes.',
       'pack \u2014 02':    'BAC water.',
       'pack \u2014 03':    'Syringes, alcohol wipes, and BAC water.',
@@ -989,13 +1002,10 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     } else {
       list = PRODUCTS;
     }
-    // Only show products that have a matching card on the public catalog
-    // (i.e. ones with a photo). Semaglutide / Tirzepatide / Retatrutide are
-    // portal-only — no photos, but explicitly allowed through.
-    // Accessory packs are also portal-only — they share a single card with
-    // a variant selector and don't need an individual photo.
-    const portalOnlyAllow = /\b(semaglutide|tirzepatide|retatrutide|accessory pack)\b/i;
-    return list.filter(label => getProductPhoto(label) || portalOnlyAllow.test(label));
+    // Show every product on the client's pricelist — whether or not it has a
+    // product photo. Items without a photo fall back to the styled vial
+    // placeholder (PortalVial), so nothing is hidden from the catalog.
+    return list;
   }, [userData?.profile?.pricelist]);
 
   const addToCart = (label) => {
