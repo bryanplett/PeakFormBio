@@ -15,7 +15,6 @@ window.PRICELISTS = {
       // Consulting Services
       { name: 'Nutrition Plan — 1 Month',                       price: 350, category: 'Consulting' },
       { name: 'Workout Plan — 12 weeks',                        price: 250, category: 'Consulting' },
-      { name: 'Hormone / Bloodwork Consultation — 1 Month',     price: 250, category: 'Consulting' },
       { name: 'Nutrition / Workout / Hormone Bundle — 1 Month', price: 600, category: 'Consulting' },
       // Peptides
       { name: 'Selank — 10mg',         price: 150, category: 'Peptides' },
@@ -84,7 +83,6 @@ window.PRICELISTS = {
       // Consulting Services
       { name: 'Nutrition Plan — 1 Month',                       price: 195, category: 'Consulting' },
       { name: 'Workout Plan — 12 weeks',                        price: 150, category: 'Consulting' },
-      { name: 'Hormone / Bloodwork Consultation — 1 Month',     price: 150, category: 'Consulting' },
       { name: 'Nutrition / Workout / Hormone Bundle — 1 Month', price: 395, category: 'Consulting' },
       // Peptides
       { name: 'Selank — 10mg',         price:  50, category: 'Peptides' },
