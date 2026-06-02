@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PeakFormBio — Coach · Workouts</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<!-- Their own Supabase-shaped client (talks to /api). Same origin = shares the admin's auth token. -->
+<script src="api-client.js"></script>
+<script src="exercise-db.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: #0a0a0a; color: #f5f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  @keyframes wtFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes wtSlideUp { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  .gate { max-width: 460px; margin: 14vh auto; text-align: center; padding: 30px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="wt-musclemap.jsx"></script>
+<script type="text/babel" src="wt-ui.jsx"></script>
+<script type="text/babel" src="wt-app.jsx"></script>
+<script type="text/babel" src="wt-coach.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+const sb = window.createApiClient();
+
+function CoachPage() {
+  const [authed, setAuthed] = useState(null);   // null = checking
+  const [clients, setClients] = useState([]);
+  const [activeId, setActiveId] = useState(null);
+  const [byClient, setByClient] = useState({});  // id -> { sessions, plan, athlete }
+  const [loading, setLoading] = useState(false);
+
+  // auth check + roster
+  useEffect(() => {
+    (async () => {
+      const { data } = await sb.auth.getSession();
+      if (!data || !data.session) { setAuthed(false); return; }
+      setAuthed(true);
+      const res = await sb.from('clients').select('id,name,email').order('name', { ascending: true });
+      const list = (res.data || []).map(c => ({ id: c.id, name: c.name || c.email, status: '' }));
+      setClients(list);
+      if (list[0]) setActiveId(list[0].id);
+    })();
+  }, []);
+
+  // load a client's data on selection (cached)
+  useEffect(() => {
+    if (!activeId || byClient[activeId]) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [planRes, sessRes] = await Promise.all([
+        sb.from('workout_plans').select('*').eq('client_id', activeId).eq('active', true).order('created_at', { ascending: false }).limit(1),
+        sb.from('workout_sessions').select('*').eq('client_id', activeId).order('date', { ascending: false }),
+      ]);
+      if (cancelled) return;
+      const wp = (planRes.data || [])[0];
+      const plan = wp ? { goal: wp.goal || wp.title, title: wp.title, plan_data: Array.isArray(wp.plan_data) ? wp.plan_data : [] } : { plan_data: [] };
+      const sessions = (sessRes.data || []).map(r => ({ ...(r.data || {}), id: r.id }));
+      const cl = clients.find(c => c.id === activeId) || {};
+      setByClient(prev => ({ ...prev, [activeId]: { sessions, plan, athlete: { name: cl.name, goal: plan.goal } } }));
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [activeId, clients]);
+
+  if (authed === null) return <div className="gate" style={{ color: 'rgba(255,255,255,0.5)' }}>Loading…</div>;
+  if (authed === false) return (
+    <div className="gate">
+      <h2 style={{ fontWeight: 700, marginBottom: 8 }}>Sign in required</h2>
+      <p style={{ color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+        Open the Admin console and sign in, then return to this page. Your session is shared automatically.
+      </p>
+      <a href="Admin.html" style={{ color: '#2997ff', fontWeight: 600 }}>Go to Admin →</a>
+    </div>
+  );
+
+  const cur = (activeId && byClient[activeId]) || { sessions: [], plan: { plan_data: [] }, athlete: {} };
+
+  return (
+    <window.CoachAdmin
+      clients={clients}
+      activeId={activeId}
+      onSelect={setActiveId}
+      sessions={cur.sessions}
+      plan={cur.plan}
+      athlete={cur.athlete} />
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<CoachPage />);
+</script>
+</body>
+</html>
