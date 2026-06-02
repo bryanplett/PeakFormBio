@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Workout Tracker — Preview</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="exercise-db.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: #060606; color: #f5f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  @keyframes wtFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes wtSlideUp { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  input { font-family: inherit; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  .preview-banner { background: rgba(41,151,255,0.09); border-bottom: 1px solid rgba(41,151,255,0.25);
+    padding: 10px 20px; font-size: 12.5px; color: #6db8ff; line-height: 1.5; }
+  .topbar { display: flex; align-items: center; gap: 8px; padding: 12px 20px 0; max-width: 880px; margin: 0 auto; }
+  .ptab { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 13.5px; font-weight: 600;
+    padding: 9px 14px; border-radius: 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+  .ptab.is-active { color: #fff; background: rgba(255,255,255,0.08); }
+  .stage { display: flex; justify-content: center; align-items: flex-start; padding: 22px 16px 60px; min-height: 70vh; }
+
+  /* coach admin look */
+  .adwrap { max-width: 760px; margin: 0 auto; padding: 8px 20px 60px; }
+  .card { background: #161617; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; }
+  .gear { position: fixed; right: 18px; bottom: 18px; z-index: 50; width: 50px; height: 50px; border-radius: 50%;
+    background: #1c1c1e; border: 1px solid rgba(255,255,255,0.14); color: #f5f5f7; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  .twpanel { position: fixed; right: 18px; bottom: 78px; z-index: 51; width: 260px; background: #1c1c1e;
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 16px; padding: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.55); }
+  .twrow { margin-bottom: 14px; }
+  .twlabel { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 8px; }
+  .sw { width: 26px; height: 26px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; }
+  .sw.on { border-color: #fff; }
+  .segbtn { flex: 1; padding: 7px; border: none; border-radius: 8px; font-family: inherit; font-size: 13px;
+    font-weight: 600; cursor: pointer; background: transparent; color: rgba(255,255,255,0.6); }
+  .segbtn.on { background: #0066cc; color: #fff; }
+</style>
+</head>
+<body>
+<div class="preview-banner">
+  <b>PREVIEW — Workout Tracker.</b> The <b>athlete app</b> is what your client uses at the gym: pick the coach-assigned day or start
+  an empty workout, log sets with previous-session numbers + tap-to-complete, auto rest timer, and the exercise database with how-to
+  guides. The <b>coach view</b> shows what gets logged back. Data saves to this browser only.
+</div>
+<div class="topbar">
+  <button class="ptab is-active" id="tab-athlete">📱 Athlete app</button>
+  <button class="ptab" id="tab-coach">🗂 Coach view</button>
+  <button class="ptab" id="reset" style="margin-left:auto; font-size:12px;">Reset demo data</button>
+</div>
+<div id="root"></div>
+<button class="gear" id="gear" title="Tweaks">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+</button>
+<div class="twpanel" id="twpanel" style="display:none;"></div>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="wt-musclemap.jsx"></script>
+<script type="text/babel" src="wt-ui.jsx"></script>
+<script type="text/babel" src="wt-active.jsx"></script>
+<script type="text/babel" src="wt-library.jsx"></script>
+<script type="text/babel" src="wt-screens.jsx"></script>
+<script type="text/babel" src="wt-app.jsx"></script>
+<script type="text/babel" src="wt-coach.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ─── seed: coach-assigned plan (workout_plans.plan_data shape) ──────────────────
+const PLAN = {
+  id: 'wp-demo', title: 'Hypertrophy · 5-Day Split', goal: 'Hypertrophy', active: true,
+  plan_data: [
+    { day: 'Monday', focus: 'Push · Chest, Shoulders, Triceps', restDay: false, exercises: [
+      { name: 'Barbell Bench Press', sets: '4', reps: '6–8', rest: '2 min', notes: 'Leave 1–2 reps in reserve.' },
+      { name: 'Incline Dumbbell Press', sets: '3', reps: '8–10', rest: '90s' },
+      { name: 'Overhead Press', sets: '3', reps: '6–8', rest: '2 min' },
+      { name: 'Lateral Raise', sets: '3', reps: '12–15', rest: '60s' },
+      { name: 'Tricep Pushdown', sets: '3', reps: '10–12', rest: '60s' },
+    ]},
+    { day: 'Tuesday', focus: 'Pull · Back, Biceps', restDay: false, exercises: [
+      { name: 'Barbell Row', sets: '4', reps: '6–8', rest: '2 min' },
+      { name: 'Lat Pulldown', sets: '3', reps: '8–10', rest: '90s' },
+      { name: 'Seated Cable Row', sets: '3', reps: '10–12', rest: '90s' },
+      { name: 'Face Pull', sets: '3', reps: '15–20', rest: '45s' },
+      { name: 'Barbell Curl', sets: '3', reps: '8–10', rest: '60s' },
+    ]},
+    { day: 'Wednesday', focus: 'Rest Day', restDay: true, restMessage: 'Active recovery — walk, mobility, sleep. Recovery is where growth happens.', exercises: [] },
+    { day: 'Thursday', focus: 'Legs · Quad Focus', restDay: false, exercises: [
+      { name: 'Back Squat', sets: '4', reps: '5–8', rest: '3 min', notes: 'Below parallel, brace hard.' },
+      { name: 'Romanian Deadlift', sets: '3', reps: '8–10', rest: '2 min' },
+      { name: 'Leg Press', sets: '3', reps: '10–12', rest: '90s' },
+      { name: 'Hamstring Curl', sets: '3', reps: '12–15', rest: '60s' },
+      { name: 'Standing Calf Raise', sets: '4', reps: '12–15', rest: '45s' },
+    ]},
+    { day: 'Friday', focus: 'Upper · Volume', restDay: false, exercises: [
+      { name: 'Dumbbell Bench Press', sets: '3', reps: '8–10', rest: '90s' },
+      { name: 'Seated Cable Row', sets: '3', reps: '10–12', rest: '90s' },
+      { name: 'Dumbbell Shoulder Press', sets: '3', reps: '8–10', rest: '90s' },
+      { name: 'Hammer Curl', sets: '3', reps: '10–12', rest: '60s' },
+      { name: 'Overhead Tricep Extension', sets: '3', reps: '10–12', rest: '60s' },
+    ]},
+    { day: 'Saturday', focus: 'Lower · Posterior', restDay: false, exercises: [
+      { name: 'Conventional Deadlift', sets: '3', reps: '4–6', rest: '3 min' },
+      { name: 'Hip Thrust', sets: '3', reps: '8–10', rest: '90s' },
+      { name: 'Walking Lunges', sets: '3', reps: '10–12', rest: '90s' },
+      { name: 'Leg Extension', sets: '3', reps: '12–15', rest: '60s' },
+      { name: 'Cable Crunch', sets: '3', reps: '12–15', rest: '45s' },
+    ]},
+    { day: 'Sunday', focus: 'Rest Day', restDay: true, restMessage: 'Full rest. Eat, hydrate, get 8 hours of sleep.', exercises: [] },
+  ],
+};
+
+const ATHLETE = { name: 'Ava Bennett', goal: 'Hypertrophy' };
+
+// ─── seed: logged history (last 5 weeks) ─────────────────────────────────────────
+const CYCLE = [
+  { title: 'Push · Chest, Shoulders, Triceps', items: [
+    ['Barbell Bench Press', 175, 7], ['Incline Dumbbell Press', 60, 9], ['Overhead Press', 95, 7],
+    ['Lateral Raise', 20, 14], ['Tricep Pushdown', 60, 12] ] },
+  { title: 'Pull · Back, Biceps', items: [
+    ['Barbell Row', 165, 8], ['Lat Pulldown', 150, 10], ['Seated Cable Row', 150, 11],
+    ['Face Pull', 50, 16], ['Barbell Curl', 75, 9] ] },
+  { title: 'Legs · Quad Focus', items: [
+    ['Back Squat', 235, 6], ['Romanian Deadlift', 195, 9], ['Leg Press', 360, 12],
+    ['Hamstring Curl', 90, 13], ['Standing Calf Raise', 160, 14] ] },
+  { title: 'Upper · Volume', items: [
+    ['Dumbbell Bench Press', 75, 9], ['Seated Cable Row', 150, 11], ['Dumbbell Shoulder Press', 50, 9],
+    ['Hammer Curl', 35, 11], ['Overhead Tricep Extension', 60, 11] ] },
+  { title: 'Lower · Posterior', items: [
+    ['Conventional Deadlift', 285, 5], ['Hip Thrust', 255, 9], ['Walking Lunges', 60, 11],
+    ['Leg Extension', 130, 14], ['Cable Crunch', 60, 14] ] },
+];
+const r5 = (n) => Math.max(5, Math.round(n / 5) * 5);
+
+function buildSeed() {
+  const out = [];
+  let ci = 0;
+  for (let daysAgo = 70; daysAgo >= 2; daysAgo--) {
+    const d = new Date(); d.setHours(18, 30, 0, 0); d.setDate(d.getDate() - daysAgo);
+    const dow = d.getDay();
+    if (![1, 2, 4, 5, 6].includes(dow)) continue;     // Mon, Tue, Thu, Fri, Sat
+    const day = CYCLE[ci % CYCLE.length]; ci++;
+    // plateau-based progression: weight steps up every ~2 weeks, not every session,
+    // so PRs stay occasional and realistic rather than firing every set.
+    const weeksAgo = Math.floor((daysAgo - 2) / 7);
+    const plateau = Math.min(3, Math.floor(weeksAgo / 2.5));  // top plateau held ~3 weeks
+    const f = [1.00, 0.94, 0.88, 0.83][plateau];
+    const exercises = day.items.map(([name, top, reps]) => {
+      const w3 = r5(top * f);
+      const sets = [
+        { weightLb: r5(w3 * 0.82), reps: reps + 2, pr: false },
+        { weightLb: r5(w3 * 0.91), reps: reps + 1, pr: false },
+        { weightLb: w3, reps: reps, pr: false },
+      ];
+      return { name, sets };
+    });
+    const totalVolumeLb = exercises.reduce((a, b) => a + b.sets.reduce((x, s) => x + s.weightLb * s.reps, 0), 0);
+    out.push({ id: 'seed-' + daysAgo, date: d.toISOString(), title: day.title,
+      durationSec: 3000 + (ci % 4) * 360, totalVolumeLb, prs: [], exercises });
+  }
+  // compute PRs ascending
+  const asc = [...out].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const best = {};
+  asc.forEach(s => {
+    s.prs = [];
+    s.exercises.forEach(b => {
+      b.sets.forEach(st => {
+        const e = window.WTUtil.e1rm(st.weightLb, st.reps);
+        if (e > (best[b.name] || 0) + 0.5) {
+          best[b.name] = e; st.pr = true;
+          if (!s.prs.find(p => p.name === b.name)) s.prs.push({ name: b.name, weightLb: st.weightLb, reps: st.reps });
+        }
+      });
+    });
+  });
+  return out;
+}
+
+const SEED_KEY = 'pfb_wt_sessions_v1';
+function loadSessions() {
+  try { const v = JSON.parse(localStorage.getItem(SEED_KEY)); if (v && v.length) return v; } catch {}
+  const seed = buildSeed(); localStorage.setItem(SEED_KEY, JSON.stringify(seed)); return seed;
+}
+
+// ─── config (tweaks) ──────────────────────────────────────────────────────────────
+const ACCENTS = [
+  { name: 'Action Blue', hex: '#2997ff' },
+  { name: 'Volt', hex: '#9ae600' },
+  { name: 'Coral', hex: '#ff6b53' },
+  { name: 'Violet', hex: '#bf7bff' },
+];
+function loadConfig() {
+  try { return { accent: '#2997ff', unit: 'lb', showRpe: true, ...(JSON.parse(localStorage.getItem('pfb_wt_cfg')) || {}) }; }
+  catch { return { accent: '#2997ff', unit: 'lb', showRpe: true }; }
+}
+
+// ─── client roster (demo) ─────────────────────────────────────────────────────────
+const CLIENTS = [
+  { id: 'ava', name: 'Ava Bennett', status: 'Active · today' },
+  { id: 'marco', name: 'Marco Diaz', status: 'Invited' },
+  { id: 'priya', name: 'Priya Shah', status: 'No sessions yet' },
+  { id: 'liam', name: 'Liam Foster', status: 'No sessions yet' },
+];
+
+// ─── root harness ─────────────────────────────────────────────────────────────────
+function Harness() {
+  const [view, setView] = useState('athlete');
+  const [sessions, setSessions] = useState(loadSessions);
+  const [cfg, setCfg] = useState(loadConfig);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => { localStorage.setItem('pfb_wt_cfg', JSON.stringify(cfg)); }, [cfg]);
+  useEffect(() => {
+    const fit = () => {
+      const availH = window.innerHeight - 190, availW = window.innerWidth - 40;
+      setScale(Math.min(1, availH / 874, availW / 402));
+    };
+    fit(); window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit);
+  }, []);
+
+  const saveSession = (s) => {
+    setSessions(prev => { const next = [...prev, s]; localStorage.setItem(SEED_KEY, JSON.stringify(next)); return next; });
+  };
+
+  // wire external chrome
+  useEffect(() => {
+    const a = document.getElementById('tab-athlete'), c = document.getElementById('tab-coach');
+    a.classList.toggle('is-active', view === 'athlete'); c.classList.toggle('is-active', view === 'coach');
+    document.getElementById('gear').style.display = view === 'athlete' ? 'flex' : 'none';
+    if (view !== 'athlete') document.getElementById('twpanel').style.display = 'none';
+  }, [view]);
+
+  useEffect(() => {
+    window.__setView = setView;
+    window.__cfg = cfg; window.__setCfg = setCfg;
+  });
+
+  if (view === 'coach') return <window.CoachAdmin sessions={sessions} plan={PLAN} athlete={ATHLETE} clients={CLIENTS} />;
+
+  return (
+    <div className="stage">
+      <div style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        <window.IOSDevice dark width={402} height={874}>
+          <window.WorkoutTracker plan={PLAN} sessions={sessions} athlete={ATHLETE}
+            onSaveSession={saveSession} config={cfg} />
+        </window.IOSDevice>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<Harness />);
+
+// external chrome handlers
+document.getElementById('tab-athlete').onclick = () => window.__setView('athlete');
+document.getElementById('tab-coach').onclick = () => window.__setView('coach');
+document.getElementById('reset').onclick = () => {
+  localStorage.removeItem(SEED_KEY); localStorage.removeItem('pfb_wt_active');
+  location.reload();
+};
+
+// ─── tweaks panel (vanilla, reads/writes window.__cfg) ──────────────────────────────
+const gear = document.getElementById('gear'), panel = document.getElementById('twpanel');
+gear.onclick = () => { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; renderPanel(); };
+function renderPanel() {
+  const cfg = window.__cfg || { accent: '#2997ff', unit: 'lb', showRpe: true };
+  panel.innerHTML = `
+    <div style="font-size:14px;font-weight:700;margin-bottom:14px;">Tweaks</div>
+    <div class="twrow"><div class="twlabel">Accent</div><div style="display:flex;gap:9px;" id="tw-acc"></div></div>
+    <div class="twrow"><div class="twlabel">Units</div>
+      <div style="display:flex;background:rgba(255,255,255,0.06);border-radius:9px;padding:3px;gap:3px;" id="tw-unit"></div></div>
+    <div class="twrow" style="margin-bottom:0;"><div class="twlabel">RPE column</div>
+      <div style="display:flex;background:rgba(255,255,255,0.06);border-radius:9px;padding:3px;gap:3px;" id="tw-rpe"></div></div>`;
+  const accWrap = panel.querySelector('#tw-acc');
+  ACCENTS.forEach(a => {
+    const b = document.createElement('div'); b.className = 'sw' + (cfg.accent === a.hex ? ' on' : '');
+    b.style.background = a.hex; b.title = a.name;
+    b.onclick = () => { window.__setCfg({ ...window.__cfg, accent: a.hex }); setTimeout(renderPanel, 0); };
+    accWrap.appendChild(b);
+  });
+  const mk = (host, opts, key) => opts.forEach(([val, label]) => {
+    const b = document.createElement('button'); b.className = 'segbtn' + (cfg[key] === val ? ' on' : '');
+    b.textContent = label; b.style.background = cfg[key] === val ? cfg.accent : 'transparent';
+    b.onclick = () => { window.__setCfg({ ...window.__cfg, [key]: val }); setTimeout(renderPanel, 0); };
+    host.appendChild(b);
+  });
+  mk(panel.querySelector('#tw-unit'), [['lb', 'lb'], ['kg', 'kg']], 'unit');
+  mk(panel.querySelector('#tw-rpe'), [[true, 'On'], [false, 'Off']], 'showRpe');
+}
+</script>
+</body>
+</html>
