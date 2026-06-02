@@ -49,6 +49,8 @@ window.PRICELISTS = {
       { name: 'Tesamorelin — 10mg',    price:  80, category: 'Peptides' },
       { name: 'Wolverine — 10mg',      price: 125, category: 'Peptides' },
       { name: 'GHK-Cu — 50mg',         price:  55, category: 'Peptides' },
+      { name: 'Hair Growth Helper — 10IU', price:  45, category: 'Peptides' },
+      { name: 'Hair Growth Helper — 36IU', price:  85, category: 'Peptides' },
       // Injectables / Wellness
       { name: 'Lipo-C',                price:  100, category: 'Wellness' },
       { name: 'Supershred',            price:  100, category: 'Wellness' },
@@ -116,6 +118,8 @@ window.PRICELISTS = {
       { name: 'Tesamorelin — 10mg',    price:  75, category: 'Peptides' },
       { name: 'Wolverine — 10mg',      price:  65, category: 'Peptides' },
       { name: 'GHK-Cu — 50mg',         price:  35, category: 'Peptides' },
+      { name: 'Hair Growth Helper — 10IU', price:  45, category: 'Peptides' },
+      { name: 'Hair Growth Helper — 36IU', price:  85, category: 'Peptides' },
       // Injectables / Wellness
       { name: 'Lipo-C',                price:  55, category: 'Wellness' },
       { name: 'Supershred',            price:  55, category: 'Wellness' },
