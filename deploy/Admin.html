@@ -539,6 +539,51 @@ const Login = ({ onSignedIn }) => {
   );
 };
 
+// ─── Client email export ───────────────────────────────────────────────────────
+// Builds a Google Contacts / Gmail–ready CSV of every client that has a valid
+// email and triggers a download. Pure client-side — uses the clients already
+// loaded into the admin, so no backend call or migration is needed.
+//
+// To use the file: Google Contacts → Import → select this CSV. The contacts can
+// then be added to a label/group and dropped into Bcc when composing in Gmail.
+function exportClientsCsv(clients) {
+  // Keep only rows with a plausible email, de-duped by lowercased address.
+  const seen = new Set();
+  const rows = (clients || []).filter(c => {
+    const e = (c.email || '').trim().toLowerCase();
+    if (!e || !e.includes('@') || seen.has(e)) return false;
+    seen.add(e);
+    return true;
+  });
+
+  // CSV field escaping per RFC 4180 — wrap in quotes if it contains a comma,
+  // quote, or newline, and double any embedded quotes.
+  const esc = (v) => {
+    const s = String(v == null ? '' : v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  // Google Contacts recognizes these exact column headers.
+  const header = ['Name', 'E-mail 1 - Value', 'Phone 1 - Value'];
+  const lines = [header.join(',')];
+  for (const c of rows) {
+    lines.push([esc(c.name || c.email), esc(c.email), esc(c.phone || '')].join(','));
+  }
+  // \r\n line endings + a UTF-8 BOM so Excel/Sheets read it cleanly too.
+  const csv = '\uFEFF' + lines.join('\r\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'peakform-clients-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return rows.length;
+}
+
 // ─── Clients List ─────────────────────────────────────────────────────────────
 const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
   const [showAdd, setShowAdd] = React.useState(false);
@@ -546,6 +591,7 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [savingPricelist, setSavingPricelist] = React.useState(null); // client id mid-save
+  const [exportMsg, setExportMsg] = React.useState('');
 
   // Available pricelist tiers (standard, wholesale, …). Falls back to a
   // hard-coded pair if pricelists.js hasn't loaded for any reason.
@@ -581,9 +627,19 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
 
   return (
     <div className="fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, gap: 12, flexWrap: 'wrap' }}>
         <h2 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.025em' }}>Clients</h2>
-        <button className="btn-blue" onClick={() => setShowAdd(s => !s)}>{showAdd ? 'Done' : '+ Onboard Client'}</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {exportMsg && <span style={{ fontSize: 13, color: exportMsg.startsWith('No') ? 'rgba(255,255,255,0.5)' : '#34c759' }}>{exportMsg}</span>}
+          <button className="btn-ghost"
+            title="Download all client emails as a Gmail / Google Contacts–ready CSV"
+            onClick={() => {
+              const n = exportClientsCsv(clients);
+              setExportMsg(n ? ('Downloaded ' + n + ' email' + (n === 1 ? '' : 's') + '.') : 'No client emails to export.');
+              setTimeout(() => setExportMsg(''), 4000);
+            }}>Export Emails (CSV)</button>
+          <button className="btn-blue" onClick={() => setShowAdd(s => !s)}>{showAdd ? 'Done' : '+ Onboard Client'}</button>
+        </div>
       </div>
 
       {showAdd && window.ClientInvite && (
