@@ -302,20 +302,11 @@ const IconCheck = () =>
 const PromoBanner = () => {
   const item = (
     <span className="promo-item">
-      <span className="promo-pct">25% OFF</span>
-      <span>All Growth Hormone Releasing Peptides</span>
+      <span className="promo-pct">PEAK BREAK</span>
+      <span style={{ textTransform: 'none', letterSpacing: '0.01em', fontWeight: 500, fontSize: 13 }}>
+        Peak Form is on a Peak Break! Shipping will resume <strong style={{ fontWeight: 700 }}>6/10/2026</strong>. Thank you for your support, and keep performing at your peak!
+      </span>
       <span className="promo-dot" />
-      <span>CJC-1295</span>
-      <span className="promo-dot" />
-      <span>Ipamorelin</span>
-      <span className="promo-dot" />
-      <span>GHRP-2</span>
-      <span className="promo-dot" />
-      <span>GHRP-6</span>
-      <span className="promo-dot" />
-      <span>Tesamorelin</span>
-      <span className="promo-dot" />
-      <span>Limited time</span>
     </span>
   );
   const run = Array.from({ length: 6 }, (_, i) => <React.Fragment key={i}>{item}</React.Fragment>);
