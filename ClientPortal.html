@@ -1009,71 +1009,83 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     setSubmitting(true);
 
     const insertedOrders = [];
-    // 1. Insert one order row per cart line in Supabase.
-    //    Real schema is (product, quantity, ordered_at). We try those first and fall
-    //    back to (item, qty) in case the schema ever gets renamed.
-    try {
-      const { data: { user } } = await sb.auth.getUser();
-      if (user) {
-        for (const item of cart) {
-          // Per-order details captured at checkout. Until the 2026_order_details
-          // migration was added, all of these were collected on the form and
-          // then thrown away — admin only saw product/qty/notes. Now persisted.
-          const orderDetails = {
-            client_id: user.id,
-            notes: notes || null,
-            status: 'pending',
-            payment_method:   paymentMethod || null,
-            shipping_method:  shippingMethod || null,
-            shipping_address: shippingAddress.trim() || userData?.address || null,
-            shipping_cost:    Number.isFinite(shippingCost) ? shippingCost : null,
-            phone_at_order:   phone.trim() || userData?.phone || null,
-            coupon_code:      couponActive ? matchedCoupon.code : (couponCode.trim() || null),
-          };
-          const tryInsert = (lineCols) =>
-            sb.from('orders').insert({ ...orderDetails, ...lineCols }).select().single();
+    let savedCount = 0;        // how many cart lines actually persisted to the DB
+    let lastSaveError = null;  // last DB error, surfaced to admin + console for diagnosis
 
-          // 1st try: current schema (product/quantity) + new detail columns.
-          let { data, error } = await tryInsert({ product: item.label, quantity: item.qty });
-          // 2nd try: legacy line-item column names (item/qty).
-          if (error && /column .* does not exist/i.test(error.message || '')) {
-            const retry = await tryInsert({ item: item.label, qty: item.qty });
-            data = retry.data; error = retry.error;
-          }
-          // 3rd try: order_details migration not yet applied — fall back to a
-          // minimal insert so checkout still works. Admin will see product/qty
-          // only for these orders, same as before.
-          if (error && /column .* does not exist/i.test(error.message || '')) {
-            const minimal = { client_id: user.id, notes: notes || null, status: 'pending' };
-            let r = await sb.from('orders')
-              .insert({ ...minimal, product: item.label, quantity: item.qty })
-              .select().single();
-            if (r.error && /column .* does not exist/i.test(r.error.message || '')) {
-              r = await sb.from('orders')
-                .insert({ ...minimal, item: item.label, qty: item.qty })
-                .select().single();
-            }
-            data = r.data; error = r.error;
-          }
-          if (error) throw error;
-          insertedOrders.push(data);
+    // 1. Save one order row per cart line. This MUST land in the DB for the order
+    //    to appear in the admin. Each line tries a series of progressively safer
+    //    rows — so a missing column, an unlinked/expired account, or any other
+    //    constraint can never cause an order to be SILENTLY lost. The final
+    //    attempt drops client_id entirely and keeps the buyer's identity in the
+    //    notes, so the order still shows up in admin even when it can't be linked
+    //    to a client profile.
+    let user = null;
+    try { ({ data: { user } } = await sb.auth.getUser()); } catch (e) { user = null; }
+
+    // Buyer identity, captured as plain text so the order is always identifiable.
+    const buyerName  = (userData?.name && userData.name !== userData?.email) ? userData.name : (userData?.email || 'Unknown');
+    const buyerEmail = userData?.email || 'Unknown';
+    const buyerPhone = phone.trim() || userData?.phone || '';
+    const buyerTag   = `[buyer: ${buyerName} · ${buyerEmail}${buyerPhone ? ' · ' + buyerPhone : ''}]`;
+
+    for (const item of cart) {
+      const notesPlain = notes || null;
+      const notesWithBuyer = [notes || null, buyerTag].filter(Boolean).join('  ');
+
+      // Full detail row (current schema). Used first; later attempts strip down.
+      const full = {
+        client_id: user?.id || null,
+        notes: notesPlain,
+        status: 'pending',
+        payment_method:   paymentMethod || null,
+        shipping_method:  shippingMethod || null,
+        shipping_address: shippingAddress.trim() || userData?.address || null,
+        shipping_cost:    Number.isFinite(shippingCost) ? shippingCost : null,
+        phone_at_order:   buyerPhone || null,
+        coupon_code:      couponActive ? matchedCoupon.code : (couponCode.trim() || null),
+      };
+
+      // Ordered fallbacks. We do NOT gate these on the error text — ANY failure
+      // moves to the next, simpler attempt. The last two drop client_id so a bad
+      // account link (e.g. order tied to a non-client id) can't reject the row.
+      const attempts = [
+        { ...full, product: item.label, quantity: item.qty },
+        { ...full, item: item.label, qty: item.qty },
+        { client_id: user?.id || null, notes: notesWithBuyer, status: 'pending', product: item.label, quantity: item.qty },
+        { client_id: null, notes: notesWithBuyer, status: 'pending', product: item.label, quantity: item.qty },
+        { client_id: null, notes: notesWithBuyer, status: 'pending', item: item.label, qty: item.qty },
+      ];
+
+      let saved = null;
+      for (const row of attempts) {
+        try {
+          const { data, error } = await sb.from('orders').insert(row).select().single();
+          if (!error && data) { saved = data; break; }
+          if (error) lastSaveError = error.message || String(error);
+        } catch (e) {
+          lastSaveError = e.message || String(e);
         }
-      } else {
-        console.warn('Order placed without a signed-in user; skipping DB insert.');
       }
-    } catch (err) {
-      console.error('Order insert failed:', err);
+      if (saved) { insertedOrders.push(saved); savedCount++; }
+      else { insertedOrders.push(null); console.error('Order line could not be saved:', item.label, lastSaveError); }
     }
 
     // 2. Email/SMS notification via Formspree — single message with full cart
     try {
       const summary = cart.map(it => `• ${it.label} × ${it.qty}`).join('\n');
       const totalItems = cart.reduce((s, it) => s + it.qty, 0);
+      const savedStatus = savedCount === cart.length
+        ? `✅ Saved to admin (${savedCount}/${cart.length})`
+        : savedCount > 0
+          ? `⚠️ PARTIALLY saved (${savedCount}/${cart.length}) — check admin, add missing lines manually`
+          : `❌ NOT saved to admin — this order is NOT in your dashboard. Fulfill from this email and add it manually.`;
       await fetch('https://formspree.io/f/mnjwvgan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
           _subject: `New Order: ${cart.length} item${cart.length > 1 ? 's' : ''} (${totalItems} total)`,
+          saved_to_admin: savedStatus,
+          order_ids: insertedOrders.filter(Boolean).map(o => o.id).join(', ') || '(none)',
           client_name: userData?.name && userData.name !== userData?.email ? userData.name : '(no name on file)',
           client_email: userData?.email || 'Unknown',
           client_phone: phone.trim() || userData?.phone || '(no phone on file)',
