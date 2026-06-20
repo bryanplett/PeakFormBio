@@ -153,7 +153,7 @@ const Nav = ({ onSchedule }) => {
   return (
     <>
       <nav style={{
-        position: 'fixed', top: 36, left: 0, right: 0, zIndex: 500,
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 500,
         background: scrolled ? 'rgba(0,0,0,0.90)' : '#000',
         backdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
@@ -980,34 +980,6 @@ const ConsultationModal = ({ onClose }) => {
 };
 
 // ─── Scrolling Banner ─────────────────────────────────────────────────────────
-const ShippingBanner = () => {
-  const item = (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 14, padding: '0 26px', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 500, letterSpacing: '0.01em', color: '#fff' }}>
-      <span style={{ fontWeight: 800, fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', background: 'rgba(0,0,0,0.22)', border: '1px solid rgba(255,255,255,0.30)', padding: '2.5px 9px', borderRadius: 980 }}>Peak Break</span>
-      <span>Peak Form is on a Peak Break! Shipping will resume <strong style={{ fontWeight: 700 }}>6/10/2026</strong>. Thank you for your support, and keep performing at your peak!</span>
-      <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.55)', flexShrink: 0 }} />
-    </span>
-  );
-  const run = Array.from({ length: 6 }, (_, i) => <React.Fragment key={i}>{item}</React.Fragment>);
-  return (
-    <div role="region" aria-label="Shipping announcement"
-      style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 550, height: 36, overflow: 'hidden',
-        background: 'linear-gradient(90deg, #0066cc 0%, #2997ff 50%, #0066cc 100%)',
-        borderBottom: '1px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center' }}>
-      <style>{`
-        @keyframes peakBreakMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .peakbreak-track { display: flex; width: max-content; animation: peakBreakMarquee 44s linear infinite; will-change: transform; }
-        .peakbreak-track:hover { animation-play-state: paused; }
-        @media (prefers-reduced-motion: reduce) { .peakbreak-track { animation: none; } }
-      `}</style>
-      <div className="peakbreak-track">
-        {run}
-        {run}
-      </div>
-    </div>
-  );
-};
-
 const ScrollingBanner = () => {
   const words = ['DISCIPLINE', 'CONSISTENCY', 'DISCIPLINE'];
   const items = [...words, ...words, ...words, ...words];
@@ -1120,10 +1092,9 @@ const App = () => {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      <ShippingBanner />
       <Nav onSchedule={openModal} />
 
-      <div style={{ paddingTop: 88 }}>
+      <div style={{ paddingTop: 52 }}>
         <Hero onSchedule={openModal} />
         <ScrollingBanner />
         <PillarTile {...pillars[0]} onSchedule={openModal} />
