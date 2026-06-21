@@ -25,6 +25,32 @@ app.use('/api/storage', storageRouter);
 app.use('/api/rpc',     rpcRouter);
 app.use('/api/notifications', notificationsRouter);
 app.get('/api/health',  (_req, res) => res.json({ ok: true }));
+
+// ── Public catalog feed (NO AUTH) ────────────────────────────────────────────
+// Powers the public marketing site's category grid. Returns ONLY public product
+// base-names + their category (no prices, no portal-only items, no client data),
+// read live from the admin-editable pricelist. Safe to expose unauthenticated.
+app.get('/api/public/catalog', async (_req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT value FROM app_settings WHERE key = 'pricelist'");
+    const pricelists = rows[0] && rows[0].value;
+    if (!pricelists || typeof pricelists !== 'object') return res.json({ products: [] });
+    const tier = pricelists.standard || Object.values(pricelists)[0] || { products: [] };
+    const out = [];
+    const seen = new Set();
+    for (const p of (tier.products || [])) {
+      if (!p || p.public === false) continue;            // portal-only
+      const base = String(p.name || '').split(/[—–]/)[0].trim();  // strip strength
+      const key = base.toLowerCase();
+      if (!base || seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name: base, category: p.category || '' });
+    }
+    res.json({ products: out });
+  } catch (err) {
+    res.json({ products: [], error: err.message });      // never break the public page
+  }
+});
 // ── Serve frontend pages ────────────────────────────────────────────────────
 const PUBLIC_FILES = [
   'index.html',
