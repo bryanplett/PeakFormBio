@@ -1,111 +1,37 @@
 // catalog.jsx — PeakForm Bio Product Catalog (public site)
-// Renders categorized product reveal cards. Excludes Semaglutide, Tirzepatide,
-// Retatrutide from public display (they remain available in the client portal).
+// Data-driven: builds the catalog from the shared category list (categories.js)
+// + the product pricelist (pricelists.js), then overlays the LIVE public feed
+// (/api/public/catalog) so category edits made in Admin reflect here. Falls back
+// to the bundled pricelist if the feed is unavailable or not yet migrated.
 // Exports: ProductCatalog
 
-const CATALOG = [
-  {
-    id: 'metabolic',
-    title: 'Metabolic / Weight Management',
-    tint: '#ff9f0a',
-    blurb: 'Compounds that support metabolic health, appetite regulation, and body composition.',
-    products: [
-      // Semaglutide, Tirzepatide, Retatrutide, Cagrilintide hidden on public site (client portal only)
-      { name: '5 Amino 1MQ', strength: '50mg', category: 'Metabolic', blurb: 'Targets NNMT to support fat metabolism and metabolic flexibility.', photo: 'assets/product-5amino1mq.png' },
-      { name: 'KLOW', strength: '80mg', category: 'Metabolic', blurb: 'Multi-peptide blend formulated for metabolic and recovery support.', photo: 'assets/product-klow.png' },
-      { name: 'L-Carnitine', strength: 'injection', category: 'Metabolic', blurb: 'Supports cellular energy production, metabolic waste removal, and muscle preservation.', photo: 'assets/product-lcarnitine.png' },
-    ],
-  },
-  {
-    id: 'growth',
-    title: 'Growth Hormone / Recovery / Muscle',
-    tint: '#34c759',
-    blurb: 'Peptides that support endogenous growth hormone, lean tissue, and recovery.',
-    products: [
-      { name: 'CJC-1295', strength: '10mg', category: 'Growth', blurb: 'GHRH analog supporting endogenous GH pulses and recovery.', photo: 'assets/product-cjc1295.png' },
-      { name: 'Ipamorelin', strength: '10mg', category: 'Growth', blurb: 'Selective GH secretagogue with minimal cortisol impact.', photo: 'assets/product-ipamorelin.png' },
-      { name: 'CJC-1295 + Ipamorelin', strength: '10mg', category: 'Growth', blurb: 'Synergistic blend for sustained GH support and recovery.', photo: 'assets/product-cjc1295-ipamorelin.png' },
-      { name: 'Tesamorelin', strength: '10mg', category: 'Growth', blurb: 'GHRH analog for visceral fat reduction and metabolic health.', photo: 'assets/product-tesamorelin.png' },
-      { name: 'GHRP-2', strength: '10mg', category: 'Growth', blurb: 'Growth hormone releasing peptide supporting GH and IGF-1.', photo: 'assets/product-ghrp2.png' },
-      { name: 'GHRP-6', strength: '10mg', category: 'Growth', blurb: 'GH secretagogue with appetite-stimulating properties.', photo: 'assets/product-ghrp6.png' },
-      { name: 'IGF-LR3', strength: '1mg', category: 'Growth', blurb: 'Long-acting IGF-1 analog for tissue repair and lean muscle support.', photo: 'assets/product-igflr3.png' },
-      { name: 'BPC-157', strength: '10mg', category: 'Recovery', blurb: 'Body protection compound — accelerates tissue repair, reduces inflammation.', photo: 'assets/product-bpc157.png' },
-      { name: 'TB-500', strength: '10mg', category: 'Recovery', blurb: 'Thymosin beta-4 fragment for cellular regeneration and flexibility.', photo: 'assets/product-tb500.png' },
-      { name: 'Wolverine', strength: '10mg', category: 'Recovery', blurb: 'Recovery-focused peptide blend for connective tissue and inflammation.', photo: 'assets/product-wolverine.png' },
-    ],
-  },
-  {
-    id: 'longevity',
-    title: 'Longevity / Cellular Health / Mitochondrial',
-    tint: '#bf5af2',
-    blurb: 'Compounds targeting cellular energetics, mitochondrial function, and healthspan.',
-    products: [
-      { name: 'NAD+', strength: '500mg', category: 'Longevity', blurb: 'Foundational coenzyme for cellular energy and DNA repair. Supports accelerated fat loss, energy & focus, metabolism, and muscle preservation.', photo: 'assets/product-nad.png' },
-      { name: 'SS-31', strength: '10mg', category: 'Mitochondrial', blurb: 'Cardiolipin-binding peptide that protects and optimizes mitochondria. Improves mitochondrial function, reduces oxidative stress, and supports neuroprotection.', photo: 'assets/product-ss31.png' },
-      { name: 'MOTS-c', strength: '10mg', category: 'Mitochondrial', blurb: 'Mitochondrial-derived peptide supporting metabolic health, insulin sensitivity, physical performance, and cellular longevity.', photo: 'assets/product-motsc.png' },
-      { name: 'Mito Magic', strength: 'blend', category: 'Mitochondrial', blurb: 'NAD+ / MOTS-c / 5 Amino 1MQ blend for amplified energy, metabolic support, cellular longevity, and fat loss.', photo: 'assets/product-mitomagic.png' },
-      { name: 'Epithalon', strength: '10mg', category: 'Longevity', blurb: 'Telomerase activator studied for telomere extension, improved sleep and pineal function, anti-aging, and immune support.', photo: 'assets/product-epithalon.png' },
-    ],
-  },
-  {
-    id: 'cognitive',
-    title: 'Cognitive / Mood / Sleep',
-    tint: '#2997ff',
-    blurb: 'Peptides supporting cognition, mood regulation, and restorative sleep.',
-    products: [
-      { name: 'Selank', strength: '10mg', category: 'Cognitive', blurb: 'Anxiolytic peptide supporting anxiety and stress reduction, cognitive enhancement, and mood stabilization.', photo: 'assets/product-selank.png' },
-      { name: 'Semax', strength: '10mg', category: 'Cognitive', blurb: 'Nootropic peptide supporting cognitive enhancement, mental health, stress reduction, and neuroprotection.', photo: 'assets/product-semax.png' },
-      { name: 'Semax / Selank Blend', strength: '10mg', category: 'Cognitive', blurb: 'Combined formula for increased mental energy and productivity, enhanced cognitive function, and reduced anxiety and stress.', photo: 'assets/product-semax-selank.png' },
-      { name: 'DSIP', strength: '10mg', category: 'Sleep', blurb: 'Delta sleep-inducing peptide supporting endocrine system regulation, sleep optimization, and stress & anxiety reduction.', photo: 'assets/product-dsip.png' },
-    ],
-  },
-  {
-    id: 'beauty',
-    title: 'Skin / Beauty / Anti-Aging',
-    tint: '#ff375f',
-    blurb: 'Topical and systemic peptides for skin health, repair, and aesthetic outcomes.',
-    products: [
-      { name: 'GHK-Cu', strength: '50mg', category: 'Beauty', blurb: 'Copper peptide for collagen synthesis, skin repair, and anti-aging.', photo: 'assets/product-ghkcu.png' },
-      { name: 'KLOW', strength: '80mg', category: 'Beauty', blurb: 'Multi-peptide blend for accelerated tissue repair, inflammation reduction, and skin rejuvenation.', photo: 'assets/product-klow.png' },
-      { name: 'SNAP-8', strength: '10mg', category: 'Beauty', blurb: 'Topical peptide that softens expression lines — a non-invasive alternative for skin elasticity and firmness.', photo: 'assets/product-snap8.png' },
-      { name: 'KPV', strength: '10mg', category: 'Beauty', blurb: 'Anti-inflammatory tripeptide for skin conditions, healing, and immune support.', photo: 'assets/product-kpv.png' },
-    ],
-  },
-  {
-    id: 'hormonal',
-    title: 'Hormonal / Sexual Wellness',
-    tint: '#ff6482',
-    blurb: 'Compounds for hormonal balance and sexual wellness.',
-    products: [
-      { name: 'HCG', strength: '5000iu', category: 'Hormonal', blurb: 'Human chorionic gonadotropin for TRT support, testosterone & fertility support, and fertility enhancement.', photo: 'assets/product-hcg.png' },
-      { name: 'PT-141', strength: '10mg', category: 'Sexual Wellness', blurb: 'Melanocortin agonist supporting sexual desire, function, and performance — versatile for both partners.', photo: 'assets/product-pt141.png' },
-    ],
-  },
-  {
-    id: 'wellness',
-    title: 'Injectables / Wellness',
-    tint: '#ffd60a',
-    blurb: 'Lipotropic and wellness injectables supporting fat metabolism, energy, detoxification, and recovery.',
-    products: [
-      { name: 'Lipo-C', strength: 'injection', category: 'Wellness', blurb: 'Lipotropic blend (methionine, inositol, choline + B vitamins) supporting fat metabolism and energy.', photo: 'assets/product-lipoc.png' },
-      { name: 'Supershred', strength: 'injection', category: 'Wellness', blurb: 'Advanced lipotropic formula combining fat-mobilizing compounds for accelerated body composition support.', photo: 'assets/product-supershred.png' },
-      { name: 'B12', strength: 'injection', category: 'Wellness', blurb: 'Methylcobalamin B12 — supports energy, metabolism, red blood cell production, and neurological function.', photo: 'assets/product-b12.png' },
-      { name: 'Glutathione', strength: '1200mg', category: 'Wellness', blurb: 'Master antioxidant supporting detoxification, immune health, and skin clarity.', photo: 'assets/product-glutathione.png' },
-    ],
-  },
-  {
-    id: 'programs',
-    title: 'Programs / Services',
-    tint: '#5ac8fa',
-    blurb: 'Personalized coaching plans built on bloodwork, lifestyle, and goals.',
-    products: [
-      { name: 'Nutrition Plan', strength: '30 days', category: 'Service', blurb: 'Custom calorie & macro calculations, 7-day meal plan, and habit framework — built from your stats, goals, and activity level.', photo: 'assets/program-nutrition.png', photoPosition: '14% center' },
-      { name: 'Workout Plan', strength: '12 weeks', category: 'Service', blurb: 'Periodized training protocol — volume, intensity, and progression engineered around your goals, schedule, and biomechanics.', photo: 'assets/program-workout.png', photoPosition: '14% center' },
-    ],
-  },
-];
+// ── Build [{id,title,tint,blurb,products:[{name,photo}]}] from a product list ──
+function buildCatalogData(products) {
+  const cats = window.CATALOG_CATEGORIES || [];
+  const buckets = {};
+  cats.forEach(c => { buckets[c.title] = { id: c.id, title: c.title, tint: c.tint, blurb: c.blurb, products: [] }; });
+  const seen = new Set();
+  (products || []).forEach(p => {
+    if (p.public === false) return;                 // portal-only
+    const bucket = buckets[p.category];
+    if (!bucket) return;                            // unknown category → skip
+    const base = window.baseProductName ? window.baseProductName(p.name) : p.name;
+    const key = bucket.id + '|' + base.toLowerCase();
+    if (seen.has(key)) return;                      // dedupe strength variants
+    seen.add(key);
+    bucket.products.push({ name: base, photo: window.getProductPhoto ? window.getProductPhoto(base) : null });
+  });
+  return cats.map(c => buckets[c.title]).filter(b => b.products.length);
+}
 
-// ─── Placeholder visual (CSS vial). Will be replaced by uploaded photos. ────
+// Bundled fallback: products from the baked-in pricelist (standard tier).
+function bundledProducts() {
+  const PL = window.PRICELISTS || {};
+  const tier = PL.standard || Object.values(PL)[0] || { products: [] };
+  return tier.products || [];
+}
+
+// ─── Placeholder visual (CSS vial) — used only when a product has no photo. ──
 const VialMark = ({ name, strength, tint, size = 140 }) => (
   <div style={{
     width: size, height: size * 1.5, position: 'relative',
@@ -174,7 +100,7 @@ const RevealCard = ({ product, tint, onSchedule }) => {
       {product.photo ? (
         <img
           src={product.photo}
-          alt={`${product.name} ${product.strength}`}
+          alt={product.strength ? `${product.name} ${product.strength}` : product.name}
           style={{
             width: '100%', height: '100%', objectFit: 'cover', display: 'block',
             transform: hover ? 'scale(1.04)' : 'scale(1)',
@@ -183,7 +109,7 @@ const RevealCard = ({ product, tint, onSchedule }) => {
         />
       ) : (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <VialMark name={product.name} strength={product.strength} tint={tint} size={120} />
+          <VialMark name={product.name} strength={product.strength || ''} tint={tint} size={120} />
         </div>
       )}
       {/* Inquire reveal */}
@@ -241,6 +167,29 @@ const CategorySection = ({ category, onSchedule }) => (
 
 // ─── Catalog component ──────────────────────────────────────────────────────
 const ProductCatalog = ({ onSchedule }) => {
+  const [catalog, setCatalog] = React.useState(() => buildCatalogData(bundledProducts()));
+
+  // Overlay the LIVE public feed so Admin category edits show here. The feed
+  // returns public products only ([{ name, category }]). We adopt it only when
+  // it maps cleanly onto the canonical categories, so a not-yet-migrated
+  // pricelist can never blank out the page.
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch('/api/public/catalog', { headers: { 'Accept': 'application/json' } })
+      .then(r => (r && r.ok) ? r.json() : null)
+      .then(data => {
+        if (cancelled || !data || !Array.isArray(data.products) || !data.products.length) return;
+        const feed = data.products.map(p => ({ name: p.name, category: p.category, public: true }));
+        const known = feed.filter(p => window.getCategoryMeta && window.getCategoryMeta(p.category));
+        if (known.length && known.length >= feed.length * 0.6) {
+          const next = buildCatalogData(known);
+          if (next.length) setCatalog(next);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <section id="catalog" style={{
       background: '#0a0a0a',
@@ -263,7 +212,7 @@ const ProductCatalog = ({ onSchedule }) => {
           }}>Hover any product to learn more. Every protocol is prescribed based on your bloodwork, goals, and a consultation — never off-the-shelf.</p>
         </div>
 
-        {CATALOG.map(cat => <CategorySection key={cat.id} category={cat} onSchedule={onSchedule} />)}
+        {catalog.map(cat => <CategorySection key={cat.id} category={cat} onSchedule={onSchedule} />)}
       </div>
     </section>
   );

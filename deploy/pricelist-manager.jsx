@@ -25,7 +25,7 @@
     tierKeys.forEach(tier => {
       (pricelists[tier]?.products || []).forEach(p => {
         if (!map.has(p.name)) {
-          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', prices: {} });
+          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, prices: {} });
           order.push(p.name);
         }
         const row = map.get(p.name);
@@ -45,7 +45,7 @@
         if (raw === '' || raw == null || isNaN(Number(raw))) return;
         const name = (row.name || '').trim();
         if (!name) return;
-        out[tier].products.push({ name, price: Number(raw), category: (row.category || '').trim() || 'Other' });
+        out[tier].products.push({ name, price: Number(raw), category: (row.category || '').trim() || 'Other', ...(row.public === false ? { public: false } : {}) });
       });
     });
     return out;
@@ -131,7 +131,7 @@
       setRows(rs => rs.map(r => r._id === id ? { ...r, prices: { ...r.prices, [tier]: val } } : r));
     const removeRow = (id) => setRows(rs => rs.filter(r => r._id !== id));
     const addRow = (category) => {
-      const blank = { _id: _rowSeq++, name: '', category: category || 'Peptides', prices: {} };
+      const blank = { _id: _rowSeq++, name: '', category: category || ((window.CATEGORY_TITLES && window.CATEGORY_TITLES[0]) || 'Wellness'), public: true, prices: {} };
       tierKeys.forEach(t => { blank.prices[t] = ''; });
       setRows(rs => [...rs, blank]);
       setMsg('');
@@ -274,9 +274,9 @@
 
             {/* ── BASE MODE ─────────────────────────────────────────────────── */}
             {mode === 'base' && <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px 100px 100px 34px', gap: 10, alignItems: 'center',
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 56px 100px 100px 34px', gap: 10, alignItems: 'center',
                 padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
-                <span>Product</span><span>Category</span>
+                <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span>
                 <span style={{ textAlign: 'right' }}>{meta[tierKeys[0]]?.name || 'Standard'}</span>
                 <span style={{ textAlign: 'right' }}>{meta[tierKeys[1]]?.name || 'Wholesale'}</span>
                 <span></span>
@@ -290,9 +290,15 @@
                     </div>
                     <div className="card" style={{ padding: 8, display: 'grid', gap: 4 }}>
                       {group.items.map(r => (
-                        <div key={r._id} style={{ display: 'grid', gridTemplateColumns: '1fr 150px 100px 100px 34px', gap: 10, alignItems: 'center', padding: '2px 6px' }}>
+                        <div key={r._id} style={{ display: 'grid', gridTemplateColumns: '1fr 180px 56px 100px 100px 34px', gap: 10, alignItems: 'center', padding: '2px 6px' }}>
                           <input value={r.name} onChange={e => patchRow(r._id, { name: e.target.value })} placeholder="Product name…" className="field-input" style={cell} />
-                          <input value={r.category} onChange={e => patchRow(r._id, { category: e.target.value })} list="pl-categories" className="field-input" style={cell} />
+                          <select value={r.category} onChange={e => patchRow(r._id, { category: e.target.value })} className="field-input" style={{ ...cell, cursor: 'pointer' }}>
+                            {!(window.CATEGORY_TITLES || []).includes(r.category) && <option value={r.category}>{r.category || '— category —'}</option>}
+                            {(window.CATEGORY_TITLES || []).map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <label title="Show on public website" style={{ display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={r.public !== false} onChange={e => patchRow(r._id, { public: e.target.checked })} />
+                          </label>
                           <div style={{ justifySelf: 'end' }}>{priceField(r.prices[tierKeys[0]], v => patchPrice(r._id, tierKeys[0], v), '—')}</div>
                           <div style={{ justifySelf: 'end' }}>{priceField(r.prices[tierKeys[1]], v => patchPrice(r._id, tierKeys[1], v), '—')}</div>
                           <button onClick={() => removeRow(r._id)} title="Remove product"

@@ -11,6 +11,7 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script src="api-client.js"></script>
 <script src="pricelists.js"></script>
+<script src="categories.js"></script>
 <script src="inventory-helper.js"></script>
 <script src="payment-config.js"></script>
 <script src="peptide-data.js"></script>
@@ -433,7 +434,7 @@ const CATEGORY_MAP = [
     },
   },
   {
-    id: 'wellness', title: 'Injectables / Wellness', tint: '#ffd60a',
+    id: 'wellness', title: 'Wellness', tint: '#ffd60a',
     matches: ['lipo-c', 'lipo c', 'supershred', 'b12', 'glutathione'],
     blurbs: {
       'lipo-c': 'Lipotropic blend (methionine, inositol, choline + B vitamins) supporting fat metabolism and energy.',
@@ -455,12 +456,39 @@ const CATEGORY_MAP = [
   },
 ];
 
+// Resolve a product label to its explicit pricelist category title (Admin-set),
+// e.g. "Ipamorelin — 10mg — $125" → "Growth Hormone / Recovery / Muscle".
+const _labelToProductName = (label) =>
+  String(label || '').replace(/\s*[—–]\s*\$[\d.,]+\s*$/, '').trim();
+const lookupCategoryTitle = (label) => {
+  const target = _labelToProductName(label);
+  const PL = window.PRICELISTS || {};
+  for (const k of Object.keys(PL)) {
+    const prods = (PL[k] && PL[k].products) || [];
+    const hit = prods.find(p => p && p.name === target);
+    if (hit && hit.category) return hit.category;
+  }
+  return null;
+};
+const blurbForCategory = (lower, id) => {
+  const cat = CATEGORY_MAP.find(c => c.id === id);
+  if (!cat || !cat.blurbs) return '';
+  let blurb = '';
+  for (const key of Object.keys(cat.blurbs)) if (key && lower.includes(key)) blurb = cat.blurbs[key];
+  return blurb;
+};
 const categorize = (label) => {
   const lower = label.toLowerCase();
+  // 1) Prefer the explicit category set on the product in Admin → Pricelist.
+  const title = lookupCategoryTitle(label);
+  if (title) {
+    const meta = window.getCategoryMeta && window.getCategoryMeta(title);
+    if (meta) return { categoryId: meta.id, blurb: blurbForCategory(lower, meta.id) };
+  }
+  // 2) Fallback: legacy substring matching.
   for (const cat of CATEGORY_MAP) {
     for (const m of cat.matches) {
       if (lower.includes(m)) {
-        // Find matching blurb (longest match wins)
         let blurb = '';
         for (const key of Object.keys(cat.blurbs)) {
           if (lower.includes(key) && key.length > 0) blurb = cat.blurbs[key];
@@ -859,7 +887,8 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect }) => {
       buckets.metabolic.items.sort((a, b) => rank(a) - rank(b));
     }
 
-    return Object.values(buckets).filter(b => b.items.length > 0);
+    const order = (window.CATALOG_CATEGORIES || CATEGORY_MAP).map(c => c.id).concat(['other']);
+    return order.map(id => buckets[id]).filter(b => b && b.items.length > 0);
   }, [productOptions]);
 
   return (
