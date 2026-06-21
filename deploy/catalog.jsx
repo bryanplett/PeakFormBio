@@ -10,13 +10,9 @@ const CATALOG = [
     tint: '#ff9f0a',
     blurb: 'Compounds that support metabolic health, appetite regulation, and body composition.',
     products: [
-      // Semaglutide, Tirzepatide, Retatrutide intentionally hidden on public site
-      { name: 'Cagrilintide', strength: '10mg', category: 'Metabolic', blurb: 'Long-acting amylin analog supporting satiety and weight management.', photo: 'assets/product-cagrilintide.png' },
+      // Semaglutide, Tirzepatide, Retatrutide, Cagrilintide hidden on public site (client portal only)
       { name: '5 Amino 1MQ', strength: '50mg', category: 'Metabolic', blurb: 'Targets NNMT to support fat metabolism and metabolic flexibility.', photo: 'assets/product-5amino1mq.png' },
       { name: 'KLOW', strength: '80mg', category: 'Metabolic', blurb: 'Multi-peptide blend formulated for metabolic and recovery support.', photo: 'assets/product-klow.png' },
-      { name: 'Lipo-C', strength: 'injection', category: 'Metabolic', blurb: 'Lipotropic blend (methionine, inositol, choline + B vitamins) supporting fat metabolism and energy.', photo: 'assets/product-lipoc.png' },
-      { name: 'Supershred', strength: 'injection', category: 'Metabolic', blurb: 'Advanced lipotropic formula combining fat-mobilizing compounds for accelerated body composition support.', photo: 'assets/product-supershred.png' },
-      { name: 'B12', strength: 'injection', category: 'Wellness', blurb: 'Methylcobalamin B12 — supports energy, metabolism, red blood cell production, and neurological function.', photo: 'assets/product-b12.png' },
       { name: 'L-Carnitine', strength: 'injection', category: 'Metabolic', blurb: 'Supports cellular energy production, metabolic waste removal, and muscle preservation.', photo: 'assets/product-lcarnitine.png' },
     ],
   },
@@ -86,15 +82,15 @@ const CATALOG = [
     ],
   },
   {
-    id: 'accessory',
-    title: 'Accessory / Supplies',
-    tint: '#8e8e93',
-    blurb: 'Reconstitution supplies and curated accessory packs for safe, convenient research use.',
+    id: 'wellness',
+    title: 'Injectables / Wellness',
+    tint: '#ffd60a',
+    blurb: 'Lipotropic and wellness injectables supporting fat metabolism, energy, detoxification, and recovery.',
     products: [
-      { name: 'Bacteriostatic Water (BAC)', strength: '30ml', category: 'Accessory', blurb: '0.9% benzyl alcohol bacteriostatic water — suppresses bacterial growth and extends reconstituted shelf life up to 28 days.', photo: 'assets/product-bacwater.png' },
-      { name: 'Accessory Pack 1', strength: 'kit', category: 'Accessory', blurb: 'Starter accessory pack.' },
-      { name: 'Accessory Pack 2', strength: 'kit', category: 'Accessory', blurb: 'Standard accessory pack.' },
-      { name: 'Accessory Pack 3', strength: 'kit', category: 'Accessory', blurb: 'Complete accessory pack.' },
+      { name: 'Lipo-C', strength: 'injection', category: 'Wellness', blurb: 'Lipotropic blend (methionine, inositol, choline + B vitamins) supporting fat metabolism and energy.', photo: 'assets/product-lipoc.png' },
+      { name: 'Supershred', strength: 'injection', category: 'Wellness', blurb: 'Advanced lipotropic formula combining fat-mobilizing compounds for accelerated body composition support.', photo: 'assets/product-supershred.png' },
+      { name: 'B12', strength: 'injection', category: 'Wellness', blurb: 'Methylcobalamin B12 — supports energy, metabolism, red blood cell production, and neurological function.', photo: 'assets/product-b12.png' },
+      { name: 'Glutathione', strength: '1200mg', category: 'Wellness', blurb: 'Master antioxidant supporting detoxification, immune health, and skin clarity.', photo: 'assets/product-glutathione.png' },
     ],
   },
   {

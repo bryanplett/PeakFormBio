@@ -235,8 +235,8 @@ const PRODUCTS = [
   'GHRP-2 — 10mg — $150',
   'GHRP-6 — 10mg — $150',
   'HCG — 5000IU — $150',
-  'CJC/IPA — 5+5mg — $175',
-  'IPA — 10mg — $125',
+  'CJC-1295 + Ipamorelin — 5+5mg — $175',
+  'Ipamorelin — 10mg — $125',
   'IGF LR3 — 1mg — $200',
   'Cagrilintide — 10mg — $150',
   'KLOW — 80mg — $200',
@@ -353,7 +353,7 @@ const LoginScreen = ({ onLogin }) => {
 const CATEGORY_MAP = [
   {
     id: 'metabolic', title: 'Metabolic / Weight Management', tint: '#ff9f0a',
-    matches: ['retatrutide', 'tirzepatide', 'semaglutide', 'cagrilintide', '5 amino', 'klow'],
+    matches: ['retatrutide', 'tirzepatide', 'semaglutide', 'cagrilintide', '5 amino', 'klow', 'l-carnitine', 'carnitine'],
     blurbs: {
       retatrutide: 'Triple agonist (GLP-1/GIP/glucagon) for advanced metabolic support.',
       tirzepatide: 'Dual GIP/GLP-1 receptor agonist for weight management.',
@@ -361,13 +361,13 @@ const CATEGORY_MAP = [
       cagrilintide: 'Long-acting amylin analog supporting satiety.',
       '5 amino': 'Targets NNMT to support fat metabolism and metabolic flexibility.',
       klow: 'Multi-peptide blend for metabolic and recovery support.',
+      'l-carnitine': 'Supports cellular energy production, metabolic waste removal, and muscle preservation.',
     },
   },
   {
     id: 'growth', title: 'Growth Hormone / Recovery / Muscle', tint: '#34c759',
-    matches: ['cjc', 'ipamorelin', 'ipa', 'tesamorelin', 'ghrp', 'igf', 'bpc', 'tb-500', 'tb 500', 'wolverine', 'hair growth helper', 'hgh'],
+    matches: ['cjc', 'ipamorelin', 'ipa', 'tesamorelin', 'ghrp', 'igf', 'bpc', 'tb-500', 'tb 500', 'wolverine', 'hgh'],
     blurbs: {
-      'hair growth helper': 'Supports follicle health and hair regrowth. Choose your strength below.',
       hgh: 'Human growth hormone supporting recovery, lean mass, and body composition.',
       ipa: 'Selective GH secretagogue (Ipamorelin) with minimal cortisol impact.',
       cjc: 'GHRH analog supporting endogenous GH pulses and recovery.',
@@ -530,6 +530,10 @@ const PRODUCT_PHOTOS = [
   { match: 'l-carnitine',  src: 'assets/product-lcarnitine.png' },
   { match: 'carnitine',    src: 'assets/product-lcarnitine.png' },
   { match: 'glutathione',  src: 'assets/product-glutathione.png' },
+  { match: 'lipo-c',       src: 'assets/product-lipoc.png' },
+  { match: 'lipo c',       src: 'assets/product-lipoc.png' },
+  { match: 'supershred',   src: 'assets/product-supershred.png' },
+  { match: 'b12',          src: 'assets/product-b12.png' },
   { match: 'bacteriostatic', src: 'assets/product-bacwater.png' },
   { match: 'bac water',    src: 'assets/product-bacwater.png' },
   { match: 'nutrition plan', src: 'assets/program-nutrition.png' },
