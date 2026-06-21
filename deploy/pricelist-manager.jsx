@@ -19,6 +19,22 @@
 
   let _rowSeq = 1;
 
+  // Responsive layout for editor rows — keeps the Product name full-width and
+  // visible on phones (fixed columns otherwise crush it to zero width).
+  if (typeof document !== 'undefined' && !document.getElementById('plm-responsive-styles')) {
+    const _st = document.createElement('style');
+    _st.id = 'plm-responsive-styles';
+    _st.textContent =
+      '.plm-head,.plm-row{display:grid;grid-template-columns:1fr 180px 56px 100px 100px 34px;gap:10px;align-items:center;}' +
+      '@media (max-width:760px){' +
+      '.plm-head{display:none;}' +
+      '.plm-row{grid-template-columns:1fr 1fr;gap:8px 10px;padding:10px 6px !important;border-bottom:1px solid rgba(255,255,255,0.06);}' +
+      '.plm-row .plm-name{grid-column:1 / -1;}' +
+      '.plm-row .plm-cat{grid-column:1 / -1;}' +
+      '}';
+    document.head.appendChild(_st);
+  }
+
   function mergeRows(pricelists, tierKeys) {
     const map = new Map();
     const order = [];
@@ -274,7 +290,7 @@
 
             {/* ── BASE MODE ─────────────────────────────────────────────────── */}
             {mode === 'base' && <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 56px 100px 100px 34px', gap: 10, alignItems: 'center',
+              <div className="plm-head" style={{
                 padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
                 <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span>
                 <span style={{ textAlign: 'right' }}>{meta[tierKeys[0]]?.name || 'Standard'}</span>
@@ -290,9 +306,9 @@
                     </div>
                     <div className="card" style={{ padding: 8, display: 'grid', gap: 4 }}>
                       {group.items.map(r => (
-                        <div key={r._id} style={{ display: 'grid', gridTemplateColumns: '1fr 180px 56px 100px 100px 34px', gap: 10, alignItems: 'center', padding: '2px 6px' }}>
-                          <input value={r.name} onChange={e => patchRow(r._id, { name: e.target.value })} placeholder="Product name…" className="field-input" style={cell} />
-                          <select value={r.category} onChange={e => patchRow(r._id, { category: e.target.value })} className="field-input" style={{ ...cell, cursor: 'pointer' }}>
+                        <div key={r._id} className="plm-row" style={{ padding: '2px 6px' }}>
+                          <input value={r.name} onChange={e => patchRow(r._id, { name: e.target.value })} placeholder="Product name…" className="field-input plm-name" style={cell} />
+                          <select value={r.category} onChange={e => patchRow(r._id, { category: e.target.value })} className="field-input plm-cat" style={{ ...cell, cursor: 'pointer' }}>
                             {!(window.CATEGORY_TITLES || []).includes(r.category) && <option value={r.category}>{r.category || '— category —'}</option>}
                             {(window.CATEGORY_TITLES || []).map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
