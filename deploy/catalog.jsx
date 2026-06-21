@@ -14,9 +14,10 @@ const CATALOG = [
       { name: 'Cagrilintide', strength: '10mg', category: 'Metabolic', blurb: 'Long-acting amylin analog supporting satiety and weight management.', photo: 'assets/product-cagrilintide.png' },
       { name: '5 Amino 1MQ', strength: '50mg', category: 'Metabolic', blurb: 'Targets NNMT to support fat metabolism and metabolic flexibility.', photo: 'assets/product-5amino1mq.png' },
       { name: 'KLOW', strength: '80mg', category: 'Metabolic', blurb: 'Multi-peptide blend formulated for metabolic and recovery support.', photo: 'assets/product-klow.png' },
-      { name: 'Lipo-C', strength: 'injection', category: 'Metabolic', blurb: 'Lipotropic blend (methionine, inositol, choline + B vitamins) supporting fat metabolism and energy.' },
-      { name: 'Supershred', strength: 'injection', category: 'Metabolic', blurb: 'Advanced lipotropic formula combining fat-mobilizing compounds for accelerated body composition support.' },
-      { name: 'B12', strength: 'injection', category: 'Wellness', blurb: 'Methylcobalamin B12 — supports energy, metabolism, red blood cell production, and neurological function.' },
+      { name: 'Lipo-C', strength: 'injection', category: 'Metabolic', blurb: 'Lipotropic blend (methionine, inositol, choline + B vitamins) supporting fat metabolism and energy.', photo: 'assets/product-lipoc.png' },
+      { name: 'Supershred', strength: 'injection', category: 'Metabolic', blurb: 'Advanced lipotropic formula combining fat-mobilizing compounds for accelerated body composition support.', photo: 'assets/product-supershred.png' },
+      { name: 'B12', strength: 'injection', category: 'Wellness', blurb: 'Methylcobalamin B12 — supports energy, metabolism, red blood cell production, and neurological function.', photo: 'assets/product-b12.png' },
+      { name: 'L-Carnitine', strength: 'injection', category: 'Metabolic', blurb: 'Supports cellular energy production, metabolic waste removal, and muscle preservation.', photo: 'assets/product-lcarnitine.png' },
     ],
   },
   {
@@ -46,6 +47,7 @@ const CATALOG = [
       { name: 'NAD+', strength: '500mg', category: 'Longevity', blurb: 'Foundational coenzyme for cellular energy and DNA repair. Supports accelerated fat loss, energy & focus, metabolism, and muscle preservation.', photo: 'assets/product-nad.png' },
       { name: 'SS-31', strength: '10mg', category: 'Mitochondrial', blurb: 'Cardiolipin-binding peptide that protects and optimizes mitochondria. Improves mitochondrial function, reduces oxidative stress, and supports neuroprotection.', photo: 'assets/product-ss31.png' },
       { name: 'MOTS-c', strength: '10mg', category: 'Mitochondrial', blurb: 'Mitochondrial-derived peptide supporting metabolic health, insulin sensitivity, physical performance, and cellular longevity.', photo: 'assets/product-motsc.png' },
+      { name: 'Mito Magic', strength: 'blend', category: 'Mitochondrial', blurb: 'NAD+ / MOTS-c / 5 Amino 1MQ blend for amplified energy, metabolic support, cellular longevity, and fat loss.', photo: 'assets/product-mitomagic.png' },
       { name: 'Epithalon', strength: '10mg', category: 'Longevity', blurb: 'Telomerase activator studied for telomere extension, improved sleep and pineal function, anti-aging, and immune support.', photo: 'assets/product-epithalon.png' },
     ],
   },
@@ -81,6 +83,18 @@ const CATALOG = [
     products: [
       { name: 'HCG', strength: '5000iu', category: 'Hormonal', blurb: 'Human chorionic gonadotropin for TRT support, testosterone & fertility support, and fertility enhancement.', photo: 'assets/product-hcg.png' },
       { name: 'PT-141', strength: '10mg', category: 'Sexual Wellness', blurb: 'Melanocortin agonist supporting sexual desire, function, and performance — versatile for both partners.', photo: 'assets/product-pt141.png' },
+    ],
+  },
+  {
+    id: 'accessory',
+    title: 'Accessory / Supplies',
+    tint: '#8e8e93',
+    blurb: 'Reconstitution supplies and curated accessory packs for safe, convenient research use.',
+    products: [
+      { name: 'Bacteriostatic Water (BAC)', strength: '30ml', category: 'Accessory', blurb: '0.9% benzyl alcohol bacteriostatic water — suppresses bacterial growth and extends reconstituted shelf life up to 28 days.', photo: 'assets/product-bacwater.png' },
+      { name: 'Accessory Pack 1', strength: 'kit', category: 'Accessory', blurb: 'Starter accessory pack.' },
+      { name: 'Accessory Pack 2', strength: 'kit', category: 'Accessory', blurb: 'Standard accessory pack.' },
+      { name: 'Accessory Pack 3', strength: 'kit', category: 'Accessory', blurb: 'Complete accessory pack.' },
     ],
   },
   {
@@ -141,94 +155,59 @@ const VialMark = ({ name, strength, tint, size = 140 }) => (
   </div>
 );
 
-// ─── Option 3 reveal card ───────────────────────────────────────────────────
+// ─── Self-contained product card (full Canva art, no crop) ──────────────────
 const RevealCard = ({ product, tint, onSchedule }) => {
   const [hover, setHover] = React.useState(false);
-  const panelRef = React.useRef(null);
-  const [panelHeight, setPanelHeight] = React.useState(0);
-
-  // Measure the slide-up panel so we can offset it consistently across all cards.
-  React.useLayoutEffect(() => {
-    if (panelRef.current) {
-      setPanelHeight(panelRef.current.scrollHeight);
-    }
-  }, [product.blurb, product.name]);
-
-  // Fixed card height keeps proportions identical across all cards.
-  const CARD_HEIGHT = 460;
-  // How much of the panel peeks at rest (header strip with category/name/strength).
-  const PEEK_HEIGHT = 96;
-  // Distance to slide down when not hovered.
-  const slideOffset = Math.max(panelHeight - PEEK_HEIGHT, 0);
-
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
         position: 'relative',
-        width: '100%', height: CARD_HEIGHT,
-        borderRadius: 24,
-        background: `linear-gradient(180deg, #1a1a1c 0%, #0f0f10 100%)`,
-        border: `1px solid ${hover ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}`,
+        aspectRatio: '1 / 1',
+        borderRadius: 20,
+        background: '#0f0f10',
+        border: `1px solid ${hover ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)'}`,
         cursor: 'pointer', overflow: 'hidden',
-        transition: 'border-color 0.3s',
+        transform: hover ? 'translateY(-6px)' : 'translateY(0)',
+        boxShadow: hover
+          ? `0 24px 60px -16px ${tint}55, 0 8px 24px rgba(0,0,0,0.5)`
+          : '0 2px 10px rgba(0,0,0,0.4)',
+        transition: 'transform 0.45s cubic-bezier(0.22,1,0.36,1), box-shadow 0.45s, border-color 0.3s',
       }}>
-      {/* Aura */}
+      {product.photo ? (
+        <img
+          src={product.photo}
+          alt={`${product.name} ${product.strength}`}
+          style={{
+            width: '100%', height: '100%', objectFit: 'cover', display: 'block',
+            transform: hover ? 'scale(1.04)' : 'scale(1)',
+            transition: 'transform 0.6s cubic-bezier(0.22,1,0.36,1)',
+          }}
+        />
+      ) : (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <VialMark name={product.name} strength={product.strength} tint={tint} size={120} />
+        </div>
+      )}
+      {/* Inquire reveal */}
       <div style={{
-        position: 'absolute', inset: '20% 15%',
-        background: `radial-gradient(circle, ${tint}55 0%, transparent 70%)`,
-        opacity: hover ? 0.7 : 0,
-        transition: 'opacity 0.4s',
-        filter: 'blur(20px)',
-        pointerEvents: 'none',
-      }} />
-      {/* Vial */}
-      <div style={{
-        position: 'absolute', top: product.photo ? '4%' : '14%', left: '50%',
-        transform: `translate(-50%, ${hover ? '-20px' : '0'}) rotate(${hover ? '-3deg' : '0deg'})`,
-        transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        padding: '44px 16px 18px',
+        display: 'flex', justifyContent: 'center',
+        background: 'linear-gradient(180deg, rgba(8,10,18,0) 0%, rgba(8,10,18,0.72) 100%)',
+        opacity: hover ? 1 : 0,
+        transform: hover ? 'translateY(0)' : 'translateY(8px)',
+        transition: 'opacity 0.3s, transform 0.3s',
+        pointerEvents: hover ? 'auto' : 'none',
       }}>
-        {product.photo ? (
-          <img
-            src={product.photo}
-            alt={`${product.name} ${product.strength} vial`}
-            style={{
-              width: 220, height: 220, objectFit: 'cover',
-              objectPosition: product.photoPosition || '32% center',
-              borderRadius: 16,
-              display: 'block',
-              filter: hover ? 'brightness(1.05)' : 'brightness(0.95)',
-              transition: 'filter 0.4s',
-            }}
-          />
-        ) : (
-          <VialMark name={product.name} strength={product.strength} tint={tint} size={140} />
-        )}
-      </div>
-      {/* Slide-up panel */}
-      <div
-        ref={panelRef}
-        style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0,
-          background: 'linear-gradient(180deg, rgba(20,20,22,0) 0%, rgba(20,20,22,0.96) 30%, rgba(20,20,22,1) 100%)',
-          padding: '48px 22px 22px',
-          transform: hover ? 'translateY(0)' : `translateY(${slideOffset}px)`,
-          transition: 'transform 0.5s cubic-bezier(0.22, 1, 0.36, 1)',
-        }}>
-        <p style={{ fontSize: 11, letterSpacing: 1.5, color: tint, textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>{product.category}</p>
-        <h3 style={{ fontSize: 20, fontWeight: 600, color: '#f5f5f7', marginBottom: 4, letterSpacing: '-0.01em' }}>{product.name}</h3>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 14 }}>{product.strength}</p>
-        <p style={{
-          fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, marginBottom: 16,
-          opacity: hover ? 1 : 0, transition: 'opacity 0.3s 0.15s',
-        }}>{product.blurb}</p>
-        <button onClick={onSchedule} style={{
-          background: 'transparent', color: '#fff',
-          border: '1px solid rgba(255,255,255,0.25)',
-          borderRadius: 980, padding: '7px 16px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-          opacity: hover ? 1 : 0, transition: 'opacity 0.3s 0.2s',
-          fontFamily: 'inherit',
+        <button onClick={(e) => { e.stopPropagation(); onSchedule && onSchedule(); }} style={{
+          background: 'rgba(255,255,255,0.12)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.35)',
+          borderRadius: 980, padding: '9px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          fontFamily: 'inherit', letterSpacing: 0.2,
         }}>Inquire</button>
       </div>
     </div>
