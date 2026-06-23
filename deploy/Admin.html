@@ -137,7 +137,7 @@ const STATUS_OPTIONS = ['pending', 'invoiced', 'paid', 'shipped', 'delivered', '
 // Split status: one dropdown for fulfillment, one for payment.
 // Migration 2026_payment_status.sql moved 'invoiced'/'paid' off of `status`
 // onto its own `payment_status` column.
-const FULFILLMENT_OPTIONS = ['pending', 'shipped', 'delivered', 'completed', 'cancelled'];
+const FULFILLMENT_OPTIONS = ['pending', 'shipped', 'Packed SJ', 'Packed MH', 'completed', 'cancelled'];
 const PAYMENT_OPTIONS     = ['unpaid', 'reported', 'invoiced', 'paid'];
 
 // Read effective fulfillment + payment from an order row, transparently
