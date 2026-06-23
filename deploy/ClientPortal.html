@@ -1612,14 +1612,14 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
                   Shipping Address{' '}
-                  {isPickup
+                  {(shippingMethod === 'Pickup San Jose' || shippingMethod === 'Pickup Morgan Hill')
                     ? <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>(not needed for pickup)</span>
                     : <span style={{ color: '#ff6b6b', fontWeight: 600 }}>*</span>}
                 </label>
                 <textarea
                   className="field-input"
                   rows="2"
-                  placeholder={isPickup ? 'Optional — leave blank for pickup' : 'Street, city, state, ZIP / postal code, country'}
+                  placeholder={(shippingMethod === 'Pickup San Jose' || shippingMethod === 'Pickup Morgan Hill') ? 'Optional — leave blank for pickup' : 'Street, city, state, ZIP / postal code, country'}
                   value={shippingAddress}
                   onChange={e => {
                     setShippingAddress(e.target.value);
