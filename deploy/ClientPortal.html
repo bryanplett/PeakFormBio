@@ -1117,7 +1117,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     // Validate required shipping fields. We trim and require both — unless
     // the client is picking up / dropping off in person, in which case a
     // shipping address isn't applicable.
-    const isPickup = shippingMethod === 'Pick up / Drop Off';
+    const isPickup = shippingMethod === 'Pickup San Jose' || shippingMethod === 'Pickup Morgan Hill';
     const trimmedAddress = shippingAddress.trim();
     const trimmedPhone = phone.trim();
     const errs = {};
@@ -1324,7 +1324,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const SHIPPING_OPTIONS = [
     { value: 'Regular Shipping ($7)',   cost: 7,  label: 'Regular Shipping — $7' },
     { value: 'Priority Shipping ($15)', cost: 15, label: 'Priority Shipping — $15' },
-    { value: 'Pick up / Drop Off',      cost: 0,  label: 'Pick up / Drop Off' },
+    { value: 'Pickup San Jose',         cost: 0,  label: 'Pickup San Jose' },
+    { value: 'Pickup Morgan Hill',       cost: 0,  label: 'Pickup Morgan Hill' },
   ];
   const shippingCost = SHIPPING_OPTIONS.find(o => o.value === shippingMethod)?.cost ?? 0;
 
@@ -1611,14 +1612,14 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
                   Shipping Address{' '}
-                  {shippingMethod === 'Pick up / Drop Off'
+                  {isPickup
                     ? <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>(not needed for pickup)</span>
                     : <span style={{ color: '#ff6b6b', fontWeight: 600 }}>*</span>}
                 </label>
                 <textarea
                   className="field-input"
                   rows="2"
-                  placeholder={shippingMethod === 'Pick up / Drop Off' ? 'Optional — leave blank for pickup' : 'Street, city, state, ZIP / postal code, country'}
+                  placeholder={isPickup ? 'Optional — leave blank for pickup' : 'Street, city, state, ZIP / postal code, country'}
                   value={shippingAddress}
                   onChange={e => {
                     setShippingAddress(e.target.value);
