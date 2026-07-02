@@ -287,6 +287,8 @@ function GroupBuyPage() {
     setReported(true);
     sessionStorage.setItem('pfb_gb_reported', '1');
   };
+
+  const save = (s, f, m) => {
     sessionStorage.setItem('pfb_gb_step', s);
     sessionStorage.setItem('pfb_gb_form', JSON.stringify(f));
     if (m !== undefined) sessionStorage.setItem('pfb_gb_method', m);
