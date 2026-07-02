@@ -11,6 +11,7 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="payment-config.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -26,8 +27,7 @@
     display: inline-flex; align-items: center; justify-content: center;
     background: #0066cc; color: #fff; border: none; border-radius: 980px;
     padding: 14px 28px; font-size: 17px; font-weight: 400;
-    cursor: pointer; line-height: 1; transition: background 0.15s, transform 0.1s;
-    font-family: inherit;
+    cursor: pointer; line-height: 1; transition: background 0.15s, transform 0.1s; font-family: inherit;
   }
   .btn-primary:hover { background: #0057b3; }
   .btn-primary:active { transform: scale(0.96); }
@@ -49,7 +49,6 @@
   }
   .form-input:focus { border-color: #2997ff; box-shadow: 0 0 0 3px rgba(41,151,255,0.15); }
   .form-input::placeholder { color: rgba(255,255,255,0.28); }
-  /* Used by PaymentInstructions */
   .card {
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.09);
@@ -71,68 +70,62 @@
 </head>
 <body>
 <div id="root"></div>
-<script src="payment-config.js"></script>
 <script type="text/babel" src="payment-instructions.jsx"></script>
 <script type="text/babel">
 
-/* ══════════════════════════════════════════════════════════════════
- * GROUP BUY PAYMENT METHODS — isolated from main portal
- * ══════════════════════════════════════════════════════════════════ */
 const GB_METHODS = [
-  { id: 'venmo',    label: 'Venmo',    kind: 'handle', handle: '@Pepsoc',               hint: 'Send as "Friends & Family" if prompted.', enabled: true },
+  { id: 'venmo',    label: 'Venmo',    kind: 'handle', handle: '@Pepsoc',               hint: 'Send as Friends and Family if prompted.', enabled: true },
   { id: 'cashapp',  label: 'Cash App', kind: 'handle', handle: '$santacruzstyle',       hint: '', enabled: true },
-  { id: 'paypal',   label: 'PayPal',   kind: 'handle', handle: '@bryanplett',           hint: 'Use "Friends & Family" to avoid fees.', enabled: true },
+  { id: 'paypal',   label: 'PayPal',   kind: 'handle', handle: '@bryanplett',           hint: 'Use Friends and Family to avoid fees.', enabled: true },
   { id: 'bitcoin',  label: 'Bitcoin',  kind: 'crypto',  network: 'BTC',          handle: 'bc1qna0z3mj42ha00cn7uh0zaw3yvn24dluh6qn8u2', hint: 'Send only Bitcoin (BTC) to this address.', enabled: true },
   { id: 'usdt_sol', label: 'USDT',     kind: 'crypto',  network: 'Solana (SPL)', handle: '6KZy1tJnBG7YASdCFCtETyXtS8KQLMPaj7hbH5NTwjTn', hint: 'Send only on the Solana network.', enabled: true },
   { id: 'pyusd_sol',label: 'PYUSD',    kind: 'crypto',  network: 'Solana (SPL)', handle: '6KZy1tJnBG7YASdCFCtETyXtS8KQLMPaj7hbH5NTwjTn', hint: 'Send only on the Solana network.', enabled: true },
 ];
 
-/* ══════════════════════════════════════════════════════════════════
- * PRODUCT — update per cycle
- * ══════════════════════════════════════════════════════════════════ */
 const PRODUCT = {
   name:        'Retatrutide',
-  subtitle:    '10-Vial Kit · 5mg / vial',
+  subtitle:    '10-Vial Kit 5mg/vial',
   desc:        'Research-grade. Priority shipping on every order.',
-  priceEarly:  85,   // pre-test-results price
-  priceFull:   90,   // post-test-results price
+  priceEarly:  85,
+  priceFull:   90,
   shipping:    15,
   maxPerOrder: 10,
 };
 
-/* Defaults — overridden by Admin → Group Buy settings (localStorage) */
 const GB_DEFAULTS = {
   password:      'PFBVIP2026',
   testResultsIn: false,
   openDate:      '2026-07-01',
   closeDate:     '2026-07-10',
 };
-/* ════════════════════════════════════════════════════════════════ */
 
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect } = React;
 
 function getSettings() {
   try {
     const s = JSON.parse(localStorage.getItem('pfb_gb_settings') || '{}');
-    return { ...GB_DEFAULTS, ...s };
-  } catch { return { ...GB_DEFAULTS }; }
+    return Object.assign({}, GB_DEFAULTS, s);
+  } catch (e) { return Object.assign({}, GB_DEFAULTS); }
 }
 
-// ─── Countdown ────────────────────────────────────────────────────────────────
 function useCountdown(isoDateStr) {
   const target = new Date(isoDateStr + 'T23:59:59').getTime();
   const calc = () => {
     const diff = target - Date.now();
     if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0, expired: true };
-    return { d: Math.floor(diff / 86400000), h: Math.floor((diff % 86400000) / 3600000),
-             m: Math.floor((diff % 3600000) / 60000), s: Math.floor((diff % 60000) / 1000), expired: false };
+    return {
+      d: Math.floor(diff / 86400000),
+      h: Math.floor((diff % 86400000) / 3600000),
+      m: Math.floor((diff % 3600000) / 60000),
+      s: Math.floor((diff % 60000) / 1000),
+      expired: false
+    };
   };
   const [t, setT] = useState(calc);
   useEffect(() => { const id = setInterval(() => setT(calc()), 1000); return () => clearInterval(id); }, [isoDateStr]);
   return t;
 }
 
-// ─── Password Gate ────────────────────────────────────────────────────────────
 function PasswordGate({ onAuth }) {
   const [val, setVal] = useState('');
   const [err, setErr] = useState(false);
@@ -140,8 +133,8 @@ function PasswordGate({ onAuth }) {
 
   const submit = (e) => {
     e.preventDefault();
-    const settings = getSettings();
-    if (val.trim().toUpperCase() === settings.password.toUpperCase()) {
+    const s = getSettings();
+    if (val.trim().toUpperCase() === s.password.toUpperCase()) {
       sessionStorage.setItem('pfb_gb_auth', '1');
       onAuth();
     } else {
@@ -156,7 +149,7 @@ function PasswordGate({ onAuth }) {
       justifyContent: 'center', background: '#0a0a0a', padding: 24 }}>
       <form onSubmit={submit} style={{ width: '100%', maxWidth: 360, textAlign: 'center' }}
         className={shaking ? 'shake' : ''}>
-        <img src="../1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
+        <img src="/1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
           style={{ width: 160, marginBottom: 44 }} />
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase',
           color: '#2997ff', marginBottom: 10 }}>Vendor Access Only</p>
@@ -180,7 +173,6 @@ function PasswordGate({ onAuth }) {
   );
 }
 
-// ─── Countdown Block ──────────────────────────────────────────────────────────
 function CountdownBlock({ closeDate }) {
   const { d, h, m, s, expired } = useCountdown(closeDate);
   if (expired) return null;
@@ -202,7 +194,6 @@ function CountdownBlock({ closeDate }) {
   );
 }
 
-// ─── Method Selector ──────────────────────────────────────────────────────────
 function MethodSelector({ methods, chosen, onChange }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -210,12 +201,12 @@ function MethodSelector({ methods, chosen, onChange }) {
         <button key={m.id} type="button" onClick={() => onChange(m.id)} style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '14px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-          border: `1px solid ${chosen === m.id ? 'rgba(41,151,255,0.6)' : 'rgba(255,255,255,0.09)'}`,
+          border: chosen === m.id ? '1px solid rgba(41,151,255,0.6)' : '1px solid rgba(255,255,255,0.09)',
           background: chosen === m.id ? 'rgba(41,151,255,0.08)' : 'rgba(255,255,255,0.03)',
           fontFamily: 'inherit', transition: 'all 0.15s',
         }}>
           <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-            border: `2px solid ${chosen === m.id ? '#2997ff' : 'rgba(255,255,255,0.25)'}`,
+            border: chosen === m.id ? '2px solid #2997ff' : '2px solid rgba(255,255,255,0.25)',
             background: chosen === m.id ? '#2997ff' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {chosen === m.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
@@ -234,26 +225,23 @@ function MethodSelector({ methods, chosen, onChange }) {
   );
 }
 
-// ─── Group Buy Page ───────────────────────────────────────────────────────────
 function GroupBuyPage() {
   const settings = getSettings();
   const now = new Date();
-  const openDate = new Date(settings.openDate + 'T00:00:00');
+  const openDate  = new Date(settings.openDate  + 'T00:00:00');
   const closeDate = new Date(settings.closeDate + 'T23:59:59');
-  const isOpen = now >= openDate && now <= closeDate;
+  const isOpen  = now >= openDate && now <= closeDate;
   const isClosed = now > closeDate;
-  const notYet = now < openDate;
-
-  const price = settings.testResultsIn ? PRODUCT.priceFull : PRODUCT.priceEarly;
+  const notYet  = now < openDate;
+  const price   = settings.testResultsIn ? PRODUCT.priceFull : PRODUCT.priceEarly;
 
   const [step, setStep] = useState(() => Number(sessionStorage.getItem('pfb_gb_step') || 1));
   const [form, setForm] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('pfb_gb_form') || '{"name":"","email":"","phone":"","qty":1}'); }
-    catch { return { name: '', email: '', phone: '', qty: 1 }; }
+    catch (e) { return { name: '', email: '', phone: '', qty: 1 }; }
   });
   const [chosenMethod, setChosenMethod] = useState(() => sessionStorage.getItem('pfb_gb_method') || '');
   const [reported, setReported] = useState(() => sessionStorage.getItem('pfb_gb_reported') === '1');
-  const [methods, setMethods] = useState([]);
   const [orderRef] = useState(() => {
     const saved = sessionStorage.getItem('pfb_gb_ref');
     if (saved) return saved;
@@ -262,65 +250,48 @@ function GroupBuyPage() {
     return ref;
   });
 
-  useEffect(() => {
-    setMethods(GB_METHODS.filter(m => m.enabled && m.handle));
-  }, []);
-
-  const handleReported = async () => {
-    // Submit order to backend
-    try {
-      await fetch('/api/notifications/groupbuy-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          qty: form.qty,
-          product: `${PRODUCT.name} ${PRODUCT.subtitle}`,
-          payment_method: chosenMethod,
-          order_ref: orderRef,
-          total: grandTotal,
-        }),
-      });
-    } catch (e) {
-      console.warn('Order submission failed:', e.message);
-    }
-    setReported(true);
-    sessionStorage.setItem('pfb_gb_reported', '1');
-  };
-
   const save = (s, f, m) => {
     sessionStorage.setItem('pfb_gb_step', s);
     sessionStorage.setItem('pfb_gb_form', JSON.stringify(f));
     if (m !== undefined) sessionStorage.setItem('pfb_gb_method', m);
   };
 
-  const kitTotal = price * form.qty;
+  const handleReported = async () => {
+    try {
+      await fetch('/api/notifications/groupbuy-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name, email: form.email, phone: form.phone,
+          qty: form.qty, product: PRODUCT.name + ' ' + PRODUCT.subtitle,
+          payment_method: chosenMethod, order_ref: orderRef, total: grandTotal,
+        }),
+      });
+    } catch (e) { console.warn('Order submission failed:', e.message); }
+    setReported(true);
+    sessionStorage.setItem('pfb_gb_reported', '1');
+  };
+
+  const kitTotal   = price * form.qty;
   const grandTotal = kitTotal + PRODUCT.shipping;
 
-  const formatDate = (str) => new Date(str + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  const fmtDate = (str) => new Date(str + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0a' }}>
 
-      {/* Nav */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 500,
         background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(20px)',
         height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 28px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <img src="../1_5058098532557259934/PNG/VH/PFB_VH (7).png" alt="PeakForm Bio" style={{ height: 15 }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase',
-            color: '#2997ff', background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.28)',
-            borderRadius: 999, padding: '4px 10px' }}>Vendor Group Buy</span>
-        </div>
+        <img src="/1_5058098532557259934/PNG/VH/PFB_VH (7).png" alt="PeakForm Bio" style={{ height: 15 }} />
+        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase',
+          color: '#2997ff', background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.28)',
+          borderRadius: 999, padding: '4px 10px' }}>Vendor Group Buy</span>
       </nav>
 
-      {/* Hero */}
-      <div style={{ position: 'relative', paddingTop: 52, minHeight: 520,
-        display: 'flex', alignItems: 'flex-end' }}>
-        <img src="../uploads/istockphoto-470062516-612x612.jpg" alt=""
+      <div style={{ position: 'relative', paddingTop: 52, minHeight: 520, display: 'flex', alignItems: 'flex-end' }}>
+        <img src="/uploads/istockphoto-470062516-612x612.jpg" alt=""
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%',
             objectFit: 'cover', objectPosition: 'center 30%' }} />
         <div style={{ position: 'absolute', inset: 0,
@@ -329,61 +300,51 @@ function GroupBuyPage() {
         <div style={{ position: 'relative', zIndex: 2, width: '100%',
           maxWidth: 680, margin: '0 auto', padding: '0 24px 56px', textAlign: 'center' }}>
 
-          {/* Status badge */}
           {isOpen && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 20,
               background: 'rgba(52,199,89,0.12)', border: '1px solid rgba(52,199,89,0.32)',
               borderRadius: 999, padding: '6px 14px' }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#30d158' }} />
               <span style={{ fontSize: 12, fontWeight: 600, color: '#30d158', letterSpacing: '0.06em' }}>
-                OPEN · {formatDate(settings.openDate)} – {formatDate(settings.closeDate)}
+                OPEN {fmtDate(settings.openDate).toUpperCase()} - {fmtDate(settings.closeDate).toUpperCase()}
               </span>
             </div>
           )}
-          {isClosed && (
-            <div style={{ display: 'inline-block', marginBottom: 20,
-              background: 'rgba(255,69,58,0.12)', border: '1px solid rgba(255,69,58,0.32)',
-              borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 600,
-              color: '#ff453a', letterSpacing: '0.06em' }}>CLOSED</div>
-          )}
-          {notYet && (
-            <div style={{ display: 'inline-block', marginBottom: 20,
-              background: 'rgba(255,159,10,0.12)', border: '1px solid rgba(255,159,10,0.32)',
-              borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 600,
-              color: '#ff9f0a', letterSpacing: '0.06em' }}>OPENS {formatDate(settings.openDate).toUpperCase()}</div>
-          )}
+          {isClosed && <div style={{ display: 'inline-block', marginBottom: 20,
+            background: 'rgba(255,69,58,0.12)', border: '1px solid rgba(255,69,58,0.32)',
+            borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 600, color: '#ff453a' }}>CLOSED</div>}
+          {notYet && <div style={{ display: 'inline-block', marginBottom: 20,
+            background: 'rgba(255,159,10,0.12)', border: '1px solid rgba(255,159,10,0.32)',
+            borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 600, color: '#ff9f0a' }}>
+            OPENS {fmtDate(settings.openDate).toUpperCase()}</div>}
 
-          <h1 style={{ fontSize: 'clamp(40px, 7vw, 68px)', fontWeight: 700, color: '#fff',
+          <h1 style={{ fontSize: 'clamp(40px,7vw,68px)', fontWeight: 700, color: '#fff',
             letterSpacing: '-0.035em', lineHeight: 1.02, marginBottom: 8 }}>{PRODUCT.name}</h1>
           <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', marginBottom: 28 }}>{PRODUCT.subtitle}</p>
 
-          {/* Pricing tiers */}
-          <div style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap',
-            justifyContent: 'center', marginBottom: 28 }}>
-            <div style={{
-              borderRadius: 16, padding: '14px 22px', textAlign: 'center',
+          <div style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 28 }}>
+            <div style={{ borderRadius: 16, padding: '14px 22px', textAlign: 'center',
               background: !settings.testResultsIn ? 'rgba(41,151,255,0.14)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${!settings.testResultsIn ? 'rgba(41,151,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
-            }}>
+              border: !settings.testResultsIn ? '1px solid rgba(41,151,255,0.5)' : '1px solid rgba(255,255,255,0.08)' }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
                 color: !settings.testResultsIn ? '#2997ff' : 'rgba(255,255,255,0.3)', marginBottom: 4 }}>
-                {!settings.testResultsIn ? '✦ Early Bird' : 'Early Bird'}
+                {!settings.testResultsIn ? 'Early Bird' : 'Early Bird'}
               </div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: !settings.testResultsIn ? '#fff' : 'rgba(255,255,255,0.35)',
-                letterSpacing: '-0.02em', textDecoration: settings.testResultsIn ? 'line-through' : 'none' }}>
+              <div style={{ fontSize: 28, fontWeight: 700,
+                color: !settings.testResultsIn ? '#fff' : 'rgba(255,255,255,0.35)',
+                letterSpacing: '-0.02em',
+                textDecoration: settings.testResultsIn ? 'line-through' : 'none' }}>
                 ${PRODUCT.priceEarly}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>pre-test results</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 18 }}>→</div>
-            <div style={{
-              borderRadius: 16, padding: '14px 22px', textAlign: 'center',
+            <div style={{ display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 18 }}>to</div>
+            <div style={{ borderRadius: 16, padding: '14px 22px', textAlign: 'center',
               background: settings.testResultsIn ? 'rgba(41,151,255,0.14)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${settings.testResultsIn ? 'rgba(41,151,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
-            }}>
+              border: settings.testResultsIn ? '1px solid rgba(41,151,255,0.5)' : '1px solid rgba(255,255,255,0.08)' }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
                 color: settings.testResultsIn ? '#2997ff' : 'rgba(255,255,255,0.3)', marginBottom: 4 }}>
-                {settings.testResultsIn ? '✦ Active' : 'Standard'}
+                {settings.testResultsIn ? 'Active' : 'Standard'}
               </div>
               <div style={{ fontSize: 28, fontWeight: 700,
                 color: settings.testResultsIn ? '#fff' : 'rgba(255,255,255,0.35)', letterSpacing: '-0.02em' }}>
@@ -393,14 +354,12 @@ function GroupBuyPage() {
             </div>
           </div>
 
-          {/* Test status note */}
           {!settings.testResultsIn && (
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 28, lineHeight: 1.55 }}>
               A sample has been sent for testing. Order before results return and lock in ${PRODUCT.priceEarly}/kit.
             </p>
           )}
 
-          {/* Countdown */}
           {isOpen && (
             <div>
               <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
@@ -411,58 +370,49 @@ function GroupBuyPage() {
         </div>
       </div>
 
-      {/* Order section */}
       {isOpen ? (
         <div style={{ maxWidth: 520, margin: '0 auto', padding: '40px 20px 100px' }}>
-
-          {/* Step bar */}
           <div style={{ display: 'flex', gap: 5, marginBottom: 32 }}>
-            {[1, 2, 3].map((s) => (
+            {[1,2,3].map((s) => (
               <div key={s} style={{ height: 3, flex: 1, borderRadius: 2,
                 background: s <= step ? '#0066cc' : 'rgba(255,255,255,0.10)',
                 transition: 'background 0.3s' }} />
             ))}
           </div>
 
-          {/* ── Step 1: Order details ── */}
           {step === 1 && (
             <div className="fade-up">
-              <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7',
-                letterSpacing: '-0.02em', marginBottom: 6 }}>Your order</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em', marginBottom: 6 }}>Your order</h2>
               <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>
-                Current price: <strong style={{ color: '#fff' }}>${price}/kit</strong>
-                {!settings.testResultsIn && <span style={{ color: '#2997ff' }}> — early bird</span>}
+                Price: <strong style={{ color: '#fff' }}>${price}/kit</strong>
+                {!settings.testResultsIn && <span style={{ color: '#2997ff' }}> - early bird</span>}
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)',
-                    display: 'block', marginBottom: 8 }}>Full Name</label>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 }}>Full Name</label>
                   <input className="form-input" type="text" placeholder="Alex Johnson"
-                    value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} />
+                    value={form.name} onChange={(e) => setForm(f => Object.assign({}, f, { name: e.target.value }))} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)',
-                    display: 'block', marginBottom: 8 }}>Email</label>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 }}>Email</label>
                   <input className="form-input" type="email" placeholder="you@business.com"
-                    value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
+                    value={form.email} onChange={(e) => setForm(f => Object.assign({}, f, { email: e.target.value }))} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)',
-                    display: 'block', marginBottom: 8 }}>Phone Number</label>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 }}>Phone Number</label>
                   <input className="form-input" type="tel" placeholder="+1 (555) 000-0000"
-                    value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+                    value={form.phone} onChange={(e) => setForm(f => Object.assign({}, f, { phone: e.target.value }))} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)',
-                    display: 'block', marginBottom: 8 }}>Kits</label>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 }}>Kits</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <button type="button" onClick={() => setForm(f => ({ ...f, qty: Math.max(1, f.qty - 1) }))}
+                    <button type="button" onClick={() => setForm(f => Object.assign({}, f, { qty: Math.max(1, f.qty - 1) }))}
                       style={{ width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
                         background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 22, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>−</button>
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>-</button>
                     <span style={{ fontSize: 24, fontWeight: 700, color: '#fff', minWidth: 30, textAlign: 'center' }}>{form.qty}</span>
-                    <button type="button" onClick={() => setForm(f => ({ ...f, qty: Math.min(PRODUCT.maxPerOrder, f.qty + 1) }))}
+                    <button type="button" onClick={() => setForm(f => Object.assign({}, f, { qty: Math.min(PRODUCT.maxPerOrder, f.qty + 1) }))}
                       style={{ width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
                         background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 22, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>+</button>
@@ -471,11 +421,10 @@ function GroupBuyPage() {
                 </div>
               </div>
 
-              {/* Summary */}
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: 14, padding: '16px 18px', marginBottom: 24 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>{PRODUCT.name} × {form.qty}</span>
+                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>{PRODUCT.name} x {form.qty}</span>
                   <span style={{ fontSize: 14, color: '#f5f5f7' }}>${kitTotal}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -497,16 +446,14 @@ function GroupBuyPage() {
             </div>
           )}
 
-          {/* ── Step 2: Payment method ── */}
           {step === 2 && (
             <div className="fade-up">
-              <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7',
-                letterSpacing: '-0.02em', marginBottom: 6 }}>Payment method</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em', marginBottom: 6 }}>Payment method</h2>
               <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>
                 Ref: <code style={{ fontFamily: 'monospace', color: '#2997ff' }}>{orderRef}</code>
                 <span style={{ marginLeft: 10, color: 'rgba(255,255,255,0.4)' }}>Total: ${grandTotal}</span>
               </p>
-              <MethodSelector methods={methods} chosen={chosenMethod} onChange={setChosenMethod} />
+              <MethodSelector methods={GB_METHODS} chosen={chosenMethod} onChange={setChosenMethod} />
               <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
                 <button className="btn-ghost" onClick={() => { setStep(1); save(1, form, chosenMethod); }}>Back</button>
                 <button className="btn-primary" disabled={!chosenMethod}
@@ -516,23 +463,20 @@ function GroupBuyPage() {
             </div>
           )}
 
-          {/* ── Step 3: Payment instructions ── */}
           {step === 3 && (
             <div className="fade-up">
-              <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7',
-                letterSpacing: '-0.02em', marginBottom: 16 }}>Send payment</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em', marginBottom: 16 }}>Send payment</h2>
 
-              {/* ⚠ Critical note alert */}
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start',
                 background: 'rgba(255,69,58,0.10)', border: '1px solid rgba(255,69,58,0.45)',
                 borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>!</span>
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: '#ff6961', marginBottom: 4 }}>Payment note — read carefully</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: '#ff6961', marginBottom: 4 }}>Payment note - read carefully</p>
                   <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
                     Put <strong style={{ color: '#fff' }}>absolutely nothing in the notes</strong> other than your order number
                     (<code style={{ fontFamily: 'monospace', color: '#2997ff' }}>{orderRef}</code>).
-                    No product names, no descriptions — just the order number.
+                    No product names, no descriptions - just the order number.
                   </p>
                 </div>
               </div>
@@ -540,7 +484,7 @@ function GroupBuyPage() {
               <PaymentInstructions
                 amountDue={grandTotal}
                 reference={orderRef}
-                methods={methods}
+                methods={GB_METHODS}
                 chosenId={chosenMethod}
                 reported={reported}
                 onReported={handleReported}
@@ -548,7 +492,7 @@ function GroupBuyPage() {
               />
               {!reported && (
                 <button className="btn-ghost" onClick={() => { setStep(2); save(2, form, chosenMethod); }}
-                  style={{ marginTop: 14, width: '100%' }}>← Change payment method</button>
+                  style={{ marginTop: 14, width: '100%' }}>Back to payment method</button>
               )}
             </div>
           )}
@@ -556,8 +500,9 @@ function GroupBuyPage() {
       ) : (
         <div style={{ textAlign: 'center', padding: '60px 24px 100px' }}>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)' }}>
-            {isClosed ? 'This group buy has closed. Check back for the next cycle.' :
-             `This group buy opens ${formatDate(settings.openDate)}.`}
+            {isClosed
+              ? 'This group buy has closed. Check back for the next cycle.'
+              : 'This group buy opens ' + fmtDate(settings.openDate) + '.'}
           </p>
         </div>
       )}
@@ -565,14 +510,13 @@ function GroupBuyPage() {
   );
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────────
 function App() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('pfb_gb_auth') === '1');
-  if (!authed) return <PasswordGate onAuth={() => setAuthed(true)} />;
-  return <GroupBuyPage />;
+  if (!authed) return React.createElement(PasswordGate, { onAuth: () => setAuthed(true) });
+  return React.createElement(GroupBuyPage, null);
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 </script>
 </body>
 </html>
