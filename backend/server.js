@@ -154,7 +154,10 @@ app.get('/api/admin/groupbuy-settings', async (req, res) => {
 app.use((req, res, next) => {
   const host = (req.headers.host || req.hostname || '').replace(/:\d+$/, '');
   if (host === 'pfbgb.com' || host === 'www.pfbgb.com') {
-    return res.sendFile(path.join(__dirname, 'public', 'groupbuy.html'));
+    // Only intercept root page requests — let assets, API, scripts pass through
+    if (req.path === '/' || req.path === '/groupbuy') {
+      return res.sendFile(path.join(__dirname, 'public', 'groupbuy.html'));
+    }
   }
   next();
 });
