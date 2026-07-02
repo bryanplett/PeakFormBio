@@ -109,13 +109,12 @@ router.post('/order', requireAuth, async (req, res) => {
 // Public (no auth) — fires when a vendor submits a group buy order.
 // Inserts into the orders table and emails admin.
 router.post('/groupbuy-order', async (req, res) => {
-  const { name, email, phone, qty, product, payment_method, order_ref, total } = req.body || {};
+  const { name, email, phone, address, qty, product, payment_method, order_ref, total } = req.body || {};
 
   if (!name || !email || !order_ref) {
     return res.status(400).json({ message: 'name, email and order_ref are required.' });
   }
 
-  // Try inserting into orders — gracefully handles missing columns
   let savedId = null;
   try {
     const r = await pool.query(
@@ -129,16 +128,13 @@ router.post('/groupbuy-order', async (req, res) => {
         parseInt(qty) || 1,
         payment_method || '',
         phone || null,
-        `GROUP BUY | Ref: ${order_ref} | Name: ${name} | Email: ${email}`,
+        `GROUP BUY | Ref: ${order_ref} | Name: ${name} | Email: ${email} | Address: ${address || '(not provided)'}`,
       ]
     );
     savedId = r.rows[0]?.id;
   } catch (err) {
     console.warn('Group buy order DB insert failed:', err.message);
-    // Still send email even if DB insert fails
   }
-
-  const h = (v) => String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   notifyAdmin({
     subject: `New Group Buy Order — ${name} (${order_ref})`,
@@ -149,6 +145,7 @@ router.post('/groupbuy-order', async (req, res) => {
         <tr><td style="padding:4px 12px 4px 0;color:#666;">Name</td><td>${h(name)}</td></tr>
         <tr><td style="padding:4px 12px 4px 0;color:#666;">Email</td><td><a href="mailto:${h(email)}">${h(email)}</a></td></tr>
         <tr><td style="padding:4px 12px 4px 0;color:#666;">Phone</td><td>${h(phone || '(not provided)')}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666;">Ship To</td><td>${h(address || '(not provided)')}</td></tr>
         <tr><td style="padding:4px 12px 4px 0;color:#666;">Product</td><td>${h(product || 'Retatrutide 10-Vial Kit')}</td></tr>
         <tr><td style="padding:4px 12px 4px 0;color:#666;">Kits</td><td>${h(qty)}</td></tr>
         <tr><td style="padding:4px 12px 4px 0;color:#666;">Total</td><td>$${h(total)}</td></tr>
