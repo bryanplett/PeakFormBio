@@ -71,6 +71,9 @@ app.get('/m',        (_req, res) => res.sendFile(path.join(__dirname, 'public', 
 app.get('/portal',   (_req, res) => res.sendFile(path.join(__dirname, 'public', 'ClientPortal.html')));
 app.get('/groupbuy', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'groupbuy.html')));
 
+app.get('/payment-config.js',        (_req, res) => res.sendFile(path.join(__dirname, 'public', 'payment-config.js')));
+app.get('/payment-instructions.jsx', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'payment-instructions.jsx')));
+
 // ── pfbgb.com — serve group buy page for the separate vendor domain ──────────
 app.use((req, res, next) => {
   const host = (req.headers.host || req.hostname || '').replace(/:\d+$/, '');
