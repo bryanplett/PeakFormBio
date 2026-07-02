@@ -263,16 +263,16 @@
     const setDaysForWeek = (fn) => setWeeks(ws => ws.map((w, i) => i === wi ? { ...w, days: fn(w.days) } : w));
     const setMealsForActive = (fn) => setDaysForWeek(ds => ds.map((d, i) => i === ai ? { ...d, meals: fn(d.meals) } : d));
     const updateMeal = (mealId, fn) => setMealsForActive(ms => ms.map(m => m.id === mealId ? fn(m) : m));
-    const addItem = (mealId, food) => updateMeal(mealId, m => ({ ...m, items: [...m.items, mkItem(food)] }));
+    const addItem = (mealId, food, servings = 1) => updateMeal(mealId, m => ({ ...m, items: [...m.items, mkItem(food, servings)] }));
     const removeItem = (mealId, u) => updateMeal(mealId, m => ({ ...m, items: m.items.filter(it => it.uid !== u) }));
     const setAmount = (mealId, u, amt) => updateMeal(mealId, m => ({ ...m, items: m.items.map(it => it.uid === u ? { ...it, servings: servingsFromAmount(it, amt, it.displayUnit || 'native') } : it) }));
     const setDisplayUnit = (mealId, u, du) => updateMeal(mealId, m => ({ ...m, items: m.items.map(it => it.uid === u ? { ...it, displayUnit: du } : it) }));
-    const swapItem = (mealId, u, food) => updateMeal(mealId, m => ({ ...m, items: m.items.map(it => it.uid === u ? mkItem(food, it.servings) : it) }));
+    const swapItem = (mealId, u, food, servings) => updateMeal(mealId, m => ({ ...m, items: m.items.map(it => it.uid === u ? mkItem(food, servings || it.servings) : it) }));
 
-    const onPick = (food) => {
+    const onPick = (food, servings = 1) => {
       if (!picker) return;
-      if (picker.swapUid) swapItem(picker.mealId, picker.swapUid, food);
-      else addItem(picker.mealId, food);
+      if (picker.swapUid) swapItem(picker.mealId, picker.swapUid, food, servings);
+      else addItem(picker.mealId, food, servings);
       setPicker(null);
     };
 
