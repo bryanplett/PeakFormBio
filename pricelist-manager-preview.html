@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pricelist Manager — Preview</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="deploy/pricelists.js"></script>
+<script src="deploy/categories.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0a0a0a; color: #f5f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .fade-in { animation: fadeIn .25s ease; }
+
+  /* Minimal re-creation of the Admin.html classes the manager relies on */
+  .card { background: #161617; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+  .field-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; color: #f5f5f7; outline: none; font-family: inherit; }
+  .field-input:focus { border-color: #2997ff; background: rgba(255,255,255,0.07); }
+  .field-input::placeholder { color: rgba(255,255,255,0.3); }
+  .btn-blue { background: #0066cc; color: #fff; border: none; border-radius: 9px;
+    padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-blue:hover { background: #0a73d8; }
+  .btn-ghost { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 9px 16px;
+    font-size: 13.5px; font-weight: 500; cursor: pointer; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+
+  .preview-banner { background: rgba(41,151,255,0.10); border-bottom: 1px solid rgba(41,151,255,0.3);
+    padding: 11px 22px; font-size: 13px; color: #6db8ff; letter-spacing: 0.2px; line-height: 1.5; }
+  .topbar { display: flex; align-items: center; gap: 8px; padding: 14px 22px 0; max-width: 980px; margin: 0 auto; }
+  .tab { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 14px; font-weight: 600;
+    padding: 9px 14px; border-radius: 9px; cursor: pointer; }
+  .tab.is-active { color: #fff; background: rgba(255,255,255,0.08); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 22px; }
+
+  /* Portal preview */
+  .pp-cat { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.4);
+    margin: 22px 4px 8px; }
+  .pp-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+    padding: 11px 16px; border: 1px solid rgba(255,255,255,0.07); border-radius: 11px; background: #141415; margin-bottom: 6px; }
+  .pp-name { font-size: 14.5px; color: #ededef; }
+  .pp-prices { display: flex; gap: 18px; font-variant-numeric: tabular-nums; }
+  .pp-price { font-size: 14px; }
+  .pp-price b { color: #fff; }
+  .pp-price span { color: rgba(255,255,255,0.4); font-size: 11.5px; display: block; text-align: right; text-transform: uppercase; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+<div class="preview-banner">
+  <b>PREVIEW — Admin → Pricelist.</b> This is the editor exactly as it appears in your admin, plus a live “what clients see” tab.
+  Saving here persists to your browser only (the real one saves to your database). Try editing a price, click <b>Save</b>, then open the <b>Client portal view</b> tab.
+</div>
+<div class="topbar">
+  <button class="tab is-active" id="tab-admin">Admin: Pricelist editor</button>
+  <button class="tab" id="tab-portal">Client portal view</button>
+  <button class="btn-ghost" id="reset-preview" style="margin-left:auto; font-size:12px; padding:6px 12px;">Reset preview data</button>
+</div>
+<div id="root" class="wrap"></div>
+
+<script type="text/babel" src="deploy/pricelist-manager.jsx"></script>
+<script type="text/babel">
+// ── Stub backend: an app_settings table backed by localStorage ──────────────
+// Mimics just enough of the api-client surface that loadPricelists/savePricelists use.
+const LS_KEY = 'pfb_preview_app_settings';
+function readStore() { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } }
+function writeStore(s) { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
+
+function makeStubSb() {
+  return {
+    from(table) {
+      const q = { _key: null, _row: null };
+      const api = {
+        select() { return api; },
+        eq(col, val) { if (col === 'key') q._key = val; return api; },
+        maybeSingle() {
+          const store = readStore();
+          return Promise.resolve({ data: store[q._key] || null, error: null });
+        },
+        single() {
+          // used after upsert().select()
+          return Promise.resolve({ data: q._row, error: null });
+        },
+        upsert(row) {
+          const store = readStore();
+          store[row.key] = { key: row.key, value: row.value, updated_at: row.updated_at };
+          writeStore(store);
+          q._row = store[row.key];
+          return api;
+        },
+      };
+      return api;
+    },
+  };
+}
+const stubSb = makeStubSb();
+
+// A couple of stub clients so the per-client override mode is demoable.
+const stubClients = [
+  { id: 'c-ava',  name: 'Ava Bennett',   email: 'ava@example.com',   pricelist: 'standard' },
+  { id: 'c-marco', name: 'Marco Diaz',   email: 'marco@example.com', pricelist: 'wholesale' },
+  { id: 'c-priya', name: 'Priya Shah',   email: 'priya@example.com', pricelist: 'standard' },
+];
+
+// ── Portal preview: re-reads window.PRICELISTS / PRICE_OVERRIDES live ─────────
+function PortalView() {
+  const [, force] = React.useState(0);
+  const [viewAs, setViewAs] = React.useState('base'); // 'base' | clientId
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      await window.loadPricelists(stubSb);
+      await window.loadPriceOverrides(stubSb);
+      if (alive) force(n => n + 1);
+    })();
+    const iv = setInterval(() => force(n => n + 1), 700);
+    return () => { alive = false; clearInterval(iv); };
+  }, []);
+
+  const pl = window.PRICELISTS;
+  const keys = Object.keys(pl);
+  const client = viewAs === 'base' ? null : stubClients.find(c => c.id === viewAs);
+  const clientTier = client ? (client.pricelist || 'standard') : null;
+
+  // Which product set to show
+  const baseTier = client ? clientTier : keys[0];
+  const std = pl[baseTier];
+  const byCat = {};
+  const order = [];
+  std.products.forEach(p => {
+    const c = p.category || 'Other';
+    if (!byCat[c]) { byCat[c] = []; order.push(c); }
+    byCat[c].push(p);
+  });
+  const priceIn = (tierKey, name) => {
+    const found = (pl[tierKey].products || []).find(x => x.name === name);
+    return found ? '$' + found.price : '—';
+  };
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 2px 12px', flexWrap: 'wrap' }}>
+        <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>View as</label>
+        <select value={viewAs} onChange={e => setViewAs(e.target.value)} className="field-input" style={{ padding: '8px 11px', fontSize: 13.5, cursor: 'pointer' }}>
+          <option value="base">Base — show both tiers</option>
+          {stubClients.map(c => <option key={c.id} value={c.id}>{c.name} · {c.pricelist}</option>)}
+        </select>
+        <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+          {client ? `What ${client.name} sees in their portal — custom prices in green.` : 'The base list clients inherit. Pick a client to see their custom prices.'}
+        </span>
+      </div>
+      {order.map(cat => (
+        <div key={cat}>
+          <div className="pp-cat">{cat}</div>
+          {byCat[cat].map(p => {
+            if (client) {
+              const eff = window.getClientPrice(client.id, clientTier, p.name);
+              const isOv = eff !== p.price;
+              return (
+                <div className="pp-row" key={p.name}>
+                  <span className="pp-name">{p.name}</span>
+                  <span className="pp-prices">
+                    <span className="pp-price"><span>{clientTier}{isOv ? ' · custom' : ''}</span>
+                      <b style={{ color: isOv ? '#34c759' : '#fff' }}>${eff}</b></span>
+                  </span>
+                </div>
+              );
+            }
+            return (
+              <div className="pp-row" key={p.name}>
+                <span className="pp-name">{p.name}</span>
+                <span className="pp-prices">
+                  <span className="pp-price"><span>{keys[0]}</span><b>{priceIn(keys[0], p.name)}</b></span>
+                  <span className="pp-price"><span>{keys[1] || ''}</span><b>{keys[1] ? priceIn(keys[1], p.name) : ''}</b></span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+const root = ReactDOM.createRoot(document.getElementById('root'));
+const tabAdmin = document.getElementById('tab-admin');
+const tabPortal = document.getElementById('tab-portal');
+
+function render(which) {
+  tabAdmin.classList.toggle('is-active', which === 'admin');
+  tabPortal.classList.toggle('is-active', which === 'portal');
+  if (which === 'admin') {
+    root.render(<window.PricelistManager sb={stubSb} clients={stubClients} />);
+  } else {
+    root.render(<PortalView />);
+  }
+}
+tabAdmin.onclick = () => render('admin');
+tabPortal.onclick = () => render('portal');
+document.getElementById('reset-preview').onclick = () => {
+  localStorage.removeItem(LS_KEY);
+  window.PRICELISTS = JSON.parse(JSON.stringify(window.PRICELISTS_DEFAULT));
+  render('admin');
+};
+
+render('admin');
+</script>
+</body>
+</html>

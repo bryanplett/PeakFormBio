@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Direct Payment — Preview</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="deploy/payment-config.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: #0a0a0a; color: #f5f5f7; -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+  .field-input { width: 100%; border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 11px 14px; font-size: 15px; color: #f5f5f7; background: rgba(255,255,255,0.06); outline: none; }
+  .field-input::placeholder { color: rgba(255,255,255,0.28); }
+  .btn-blue { background: #0066cc; color: #fff; border: none; border-radius: 980px; padding: 11px 24px; font-size: 15px; cursor: pointer; }
+  .btn-ghost { background: transparent; color: #2997ff; border: 1px solid rgba(41,151,255,0.5); border-radius: 980px; padding: 10px 20px; font-size: 14px; cursor: pointer; }
+  .card { background: #1a1a1c; border-radius: 18px; border: 1px solid rgba(255,255,255,0.07); padding: 28px; }
+  button:active { transform: scale(0.97); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.2s ease; }
+  .seg { display:inline-flex; background:rgba(255,255,255,0.05); border-radius:999px; padding:4px; margin-bottom:24px; }
+  .seg button { padding:8px 18px; font-size:13px; font-family:inherit; border:none; border-radius:999px; cursor:pointer; background:transparent; color:rgba(255,255,255,0.65); font-weight:600; }
+  .seg button.on { background:#0066cc; color:#fff; }
+</style>
+</head>
+<body>
+<div style="max-width: 780px; margin: 0 auto; padding: 32px 28px 90px;">
+  <div id="root"></div>
+</div>
+<script type="text/babel" src="deploy/payment-instructions.jsx"></script>
+<script type="text/babel" src="deploy/payment-settings.jsx"></script>
+<script type="text/babel">
+  // Stub backend: app_settings starts empty (so defaults are used); upsert succeeds.
+  let stored = null;
+  const sb = { from: () => ({
+    select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: stored, error: null }) }) }),
+    upsert: (row) => ({ select: () => ({ single: () => { stored = { key: 'payment_methods', value: row.value }; return Promise.resolve({ data: stored, error: null }); } }) }),
+    update: () => ({ eq: () => Promise.resolve({ data: {}, error: null }) }),
+  }) };
+
+  const Demo = () => {
+    const [view, setView] = React.useState('buyer');
+    const [methods, setMethods] = React.useState(window.visiblePaymentMethods());
+    const [reported, setReported] = React.useState(false);
+    return (
+      <div className="fade-in">
+        <div className="seg">
+          {[['buyer', "Buyer · Awaiting payment"], ['admin', 'Admin · Payment settings']].map(([k, l]) => (
+            <button key={k} className={view === k ? 'on' : ''} onClick={() => setView(k)}>{l}</button>
+          ))}
+        </div>
+        {view === 'buyer'
+          ? <window.PaymentInstructions
+              amountDue={428.5}
+              reference="PFB-7A3F21"
+              methods={methods}
+              chosenId="venmo"
+              reported={reported}
+              onReported={() => setReported(true)}
+              businessName="PeakForm Bio" />
+          : <window.PaymentSettings sb={sb} />}
+      </div>
+    );
+  };
+  ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script>
+</body>
+</html>
