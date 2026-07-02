@@ -76,7 +76,6 @@
 const GB_METHODS = [
   { id: 'venmo',    label: 'Venmo',    kind: 'handle', handle: '@Pepsoc',               hint: 'Send as Friends and Family if prompted.', enabled: true },
   { id: 'cashapp',  label: 'Cash App', kind: 'handle', handle: '$santacruzstyle',       hint: '', enabled: true },
-  { id: 'paypal',   label: 'PayPal',   kind: 'handle', handle: '@bryanplett',           hint: 'Use Friends and Family to avoid fees.', enabled: true },
   { id: 'bitcoin',  label: 'Bitcoin',  kind: 'crypto',  network: 'BTC',          handle: 'bc1qna0z3mj42ha00cn7uh0zaw3yvn24dluh6qn8u2', hint: 'Send only Bitcoin (BTC) to this address.', enabled: true },
   { id: 'usdt_sol', label: 'USDT',     kind: 'crypto',  network: 'Solana (SPL)', handle: '6KZy1tJnBG7YASdCFCtETyXtS8KQLMPaj7hbH5NTwjTn', hint: 'Send only on the Solana network.', enabled: true },
   { id: 'pyusd_sol',label: 'PYUSD',    kind: 'crypto',  network: 'Solana (SPL)', handle: '6KZy1tJnBG7YASdCFCtETyXtS8KQLMPaj7hbH5NTwjTn', hint: 'Send only on the Solana network.', enabled: true },
@@ -485,15 +484,22 @@ function GroupBuyPage() {
               <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em', marginBottom: 16 }}>Send payment</h2>
 
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start',
-                background: 'rgba(255,69,58,0.10)', border: '1px solid rgba(255,69,58,0.45)',
+                background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.35)',
                 borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>!</span>
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: '#ff6961', marginBottom: 4 }}>Payment note - read carefully</p>
-                  <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
-                    Put <strong style={{ color: '#fff' }}>absolutely nothing in the notes</strong> other than your order number
-                    (<code style={{ fontFamily: 'monospace', color: '#2997ff' }}>{orderRef}</code>).
-                    No product names, no descriptions - just the order number.
+                <span style={{ fontSize: 18, flexShrink: 0 }}>📋</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: '#2997ff', marginBottom: 6 }}>Include your order number in the payment note</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 12px' }}>
+                    <code style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 700, color: '#fff', flex: 1 }}>{orderRef}</code>
+                    <button type="button" onClick={() => {
+                      try { navigator.clipboard.writeText(orderRef); } catch(e) {}
+                    }} style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 600, padding: '5px 12px',
+                      borderRadius: 7, border: '1px solid rgba(41,151,255,0.5)', background: 'transparent',
+                      color: '#2997ff', cursor: 'pointer', whiteSpace: 'nowrap' }}>Copy</button>
+                  </div>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>
+                    Nothing else — no names, no product details. Just this number.
                   </p>
                 </div>
               </div>
