@@ -1108,25 +1108,42 @@ const AllOrders = ({ clients, onOpenClient, onBack }) => {
 
 // ─── Group Buy Settings ───────────────────────────────────────────────────────
 const GroupBuySettings = ({ onBack }) => {
-  const load = () => {
-    try { return JSON.parse(localStorage.getItem('pfb_gb_settings') || '{}'); }
-    catch { return {}; }
-  };
-  const [cfg, setCfg] = React.useState(() => {
-    const s = load();
-    return {
-      password:      s.password      || 'PFBVIP2026',
-      testResultsIn: s.testResultsIn || false,
-      openDate:      s.openDate      || '2026-07-01',
-      closeDate:     s.closeDate     || '2026-07-10',
-    };
+  const [cfg, setCfg] = React.useState({
+    password:      'PFBVIP2026',
+    testResultsIn: false,
+    openDate:      '2026-07-01',
+    closeDate:     '2026-07-10',
   });
   const [saved, setSaved] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
 
-  const save = () => {
-    localStorage.setItem('pfb_gb_settings', JSON.stringify(cfg));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  React.useEffect(() => {
+    // Load current settings from backend
+    const token = localStorage.getItem('_pfb_token');
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(s => { if (s) setCfg(c => Object.assign({}, c, s)); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const save = async () => {
+    setError('');
+    const token = localStorage.getItem('_pfb_token');
+    try {
+      const r = await fetch('/api/admin/groupbuy-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(cfg),
+      });
+      if (!r.ok) throw new Error('Save failed');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      setError('Could not save. Try again.');
+    }
   };
 
   const labelStyle = { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 };
@@ -1138,7 +1155,9 @@ const GroupBuySettings = ({ onBack }) => {
         <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em' }}>Group Buy Settings</h2>
       </div>
 
-      <div className="card" style={{ maxWidth: 480 }}>
+      {loading ? (
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>Loading settings...</p>
+      ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 
           <div>
@@ -1189,10 +1208,12 @@ const GroupBuySettings = ({ onBack }) => {
             <button className="btn-blue" onClick={save} style={{ padding: '11px 28px' }}>
               {saved ? '✓ Saved' : 'Save Settings'}
             </button>
-            {saved && <span style={{ fontSize: 13, color: '#34c759' }}>Settings saved — groupbuy page updated.</span>}
+            {saved && <span style={{ fontSize: 13, color: '#34c759' }}>Settings saved — live on pfbgb.com.</span>}
+            {error && <span style={{ fontSize: 13, color: '#ff453a' }}>{error}</span>}
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };
