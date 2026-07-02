@@ -1119,8 +1119,8 @@ const GroupBuySettings = ({ onBack }) => {
   const [error, setError] = React.useState('');
 
   React.useEffect(() => {
-    // Load current settings from backend
     const token = localStorage.getItem('_pfb_token');
+    fetch('/api/admin/groupbuy-settings', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(r => r.ok ? r.json() : null)
@@ -1212,7 +1212,6 @@ const GroupBuySettings = ({ onBack }) => {
             {error && <span style={{ fontSize: 13, color: '#ff453a' }}>{error}</span>}
           </div>
         </div>
-      </div>
       )}
     </div>
   );
