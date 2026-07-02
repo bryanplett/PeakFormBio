@@ -1106,6 +1106,97 @@ const AllOrders = ({ clients, onOpenClient, onBack }) => {
   );
 };
 
+// ─── Group Buy Settings ───────────────────────────────────────────────────────
+const GroupBuySettings = ({ onBack }) => {
+  const load = () => {
+    try { return JSON.parse(localStorage.getItem('pfb_gb_settings') || '{}'); }
+    catch { return {}; }
+  };
+  const [cfg, setCfg] = React.useState(() => {
+    const s = load();
+    return {
+      password:      s.password      || 'PFBVIP2026',
+      testResultsIn: s.testResultsIn || false,
+      openDate:      s.openDate      || '2026-07-01',
+      closeDate:     s.closeDate     || '2026-07-10',
+    };
+  });
+  const [saved, setSaved] = React.useState(false);
+
+  const save = () => {
+    localStorage.setItem('pfb_gb_settings', JSON.stringify(cfg));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const labelStyle = { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
+        <button className="btn-ghost" onClick={onBack}>← Back</button>
+        <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em' }}>Group Buy Settings</h2>
+      </div>
+
+      <div className="card" style={{ maxWidth: 480 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+          <div>
+            <label style={labelStyle}>Access Code</label>
+            <input className="field-input" type="text" value={cfg.password}
+              onChange={e => setCfg(c => ({ ...c, password: e.target.value }))}
+              placeholder="PFBVIP2026" />
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 6 }}>
+              Case-insensitive. Share only with vendors.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 14 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Open Date</label>
+              <input className="field-input" type="date" value={cfg.openDate}
+                onChange={e => setCfg(c => ({ ...c, openDate: e.target.value }))} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Close Date</label>
+              <input className="field-input" type="date" value={cfg.closeDate}
+                onChange={e => setCfg(c => ({ ...c, closeDate: e.target.value }))} />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Test Results</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button type="button" onClick={() => setCfg(c => ({ ...c, testResultsIn: !c.testResultsIn }))}
+                style={{ width: 46, height: 27, borderRadius: 14, border: 'none', cursor: 'pointer', flexShrink: 0,
+                  background: cfg.testResultsIn ? '#34c759' : 'rgba(255,255,255,0.14)',
+                  position: 'relative', transition: 'background 0.2s' }}>
+                <div style={{ position: 'absolute', top: 3,
+                  left: cfg.testResultsIn ? 22 : 3,
+                  width: 21, height: 21, borderRadius: '50%', background: '#fff',
+                  transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
+              </button>
+              <span style={{ fontSize: 14, color: cfg.testResultsIn ? '#34c759' : 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                {cfg.testResultsIn
+                  ? 'Results received — price is $90/kit'
+                  : 'Awaiting results — price is $85/kit (early bird)'}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 20,
+            display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button className="btn-blue" onClick={save} style={{ padding: '11px 28px' }}>
+              {saved ? '✓ Saved' : 'Save Settings'}
+            </button>
+            {saved && <span style={{ fontSize: 13, color: '#34c759' }}>Settings saved — groupbuy page updated.</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 const App = () => {
   const [user, setUser] = React.useState(null);
@@ -1123,6 +1214,7 @@ const App = () => {
   const [showOrders, setShowOrders] = React.useState(false);
   const [showCoupons, setShowCoupons] = React.useState(false);
   const [showInventory, setShowInventory] = React.useState(false);
+  const [showGroupBuy, setShowGroupBuy] = React.useState(false);
 
   const clearViews = () => {
     setShowBuilder(false);
@@ -1135,6 +1227,7 @@ const App = () => {
     setShowOrders(false);
     setShowCoupons(false);
     setShowInventory(false);
+    setShowGroupBuy(false);
     setSelected(null);
     setEditor(null);
   };
@@ -1187,6 +1280,7 @@ const App = () => {
           <button className="btn-ghost" onClick={() => { clearViews(); setShowRecipes(true); }}>Recipes</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPricelist(true); }}>Pricelist</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPayments(true); }}>Payments</button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowGroupBuy(true); }}>Group Buy</button>
           <span className="admin-email" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{user.email}</span>
           <button className="btn-ghost" onClick={signOut}>Sign Out</button>
         </div>
@@ -1214,6 +1308,8 @@ const App = () => {
           ? <window.CouponsManager sb={sb} onBack={() => setShowCoupons(false)} />
           : showInventory && window.InventoryManager
           ? <window.InventoryManager sb={sb} onBack={() => setShowInventory(false)} />
+          : showGroupBuy
+          ? <GroupBuySettings onBack={() => setShowGroupBuy(false)} />
           : editor
           ? (editor.kind === 'workout'
               ? <WorkoutEditor sb={sb} client={editor.client} onBack={() => setEditor(null)} />
