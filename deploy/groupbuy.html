@@ -248,8 +248,8 @@ function GroupBuyPage() {
 
   const [step, setStep] = useState(() => Number(sessionStorage.getItem('pfb_gb_step') || 1));
   const [form, setForm] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem('pfb_gb_form') || '{"name":"","email":"","phone":"","qty":1}'); }
-    catch (e) { return { name: '', email: '', phone: '', qty: 1 }; }
+    try { return JSON.parse(sessionStorage.getItem('pfb_gb_form') || '{"name":"","email":"","phone":"","address":"","qty":1}'); }
+    catch (e) { return { name: '', email: '', phone: '', address: '', qty: 1 }; }
   });
   const [chosenMethod, setChosenMethod] = useState(() => sessionStorage.getItem('pfb_gb_method') || '');
   const [reported, setReported] = useState(() => sessionStorage.getItem('pfb_gb_reported') === '1');
@@ -273,7 +273,7 @@ function GroupBuyPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name, email: form.email, phone: form.phone,
+          name: form.name, email: form.email, phone: form.phone, address: form.address,
           qty: form.qty, product: PRODUCT.name + ' ' + PRODUCT.subtitle,
           payment_method: chosenMethod, order_ref: orderRef, total: grandTotal,
         }),
@@ -416,6 +416,12 @@ function GroupBuyPage() {
                     value={form.phone} onChange={(e) => setForm(f => Object.assign({}, f, { phone: e.target.value }))} />
                 </div>
                 <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 }}>Shipping Address</label>
+                  <textarea className="form-input" placeholder="123 Main St, City, State 12345" rows={3}
+                    value={form.address} onChange={(e) => setForm(f => Object.assign({}, f, { address: e.target.value }))}
+                    style={{ resize: 'vertical', minHeight: 80, lineHeight: 1.5 }} />
+                </div>
+                <div>
                   <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 }}>Kits</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <button type="button" onClick={() => setForm(f => Object.assign({}, f, { qty: Math.max(1, f.qty - 1) }))}
@@ -449,7 +455,7 @@ function GroupBuyPage() {
                 </div>
               </div>
 
-              <button className="btn-primary" disabled={!form.name || !form.email || !form.phone}
+              <button className="btn-primary" disabled={!form.name || !form.email || !form.phone || !form.address}
                 onClick={() => { const n = 2; setStep(n); save(n, form, chosenMethod); }}
                 style={{ width: '100%', padding: '16px', fontSize: 17 }}>
                 Continue to Payment
