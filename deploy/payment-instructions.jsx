@@ -159,14 +159,14 @@
           <>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Pay with {chosen.label}</div>
 
-            {/* Privacy disclaimer + mandatory acknowledgement (gates the pay button) */}
-            <div style={{ fontSize: 13, color: '#ffd27a', marginBottom: 12, lineHeight: 1.5, background: 'rgba(255,184,77,0.08)', border: '1px solid rgba(255,184,77,0.28)', borderRadius: 10, padding: '11px 13px' }}>
-              <strong style={{ color: '#ffd27a' }}>For your privacy:</strong> put <strong>ONLY your name</strong> in the payment note — do <strong>not</strong> include any product names or details.
+            {/* Order reference reminder */}
+            <div style={{ fontSize: 13, color: '#2997ff', marginBottom: 12, lineHeight: 1.5, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.28)', borderRadius: 10, padding: '11px 13px' }}>
+              Include <strong>only your order reference number</strong> in the payment note — no names, no product details.
             </div>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.45 }}>
               <input type="checkbox" checked={ackName} onChange={(e) => setAckName(e.target.checked)}
                 style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
-              <span>I've read this and will put <strong>only my name</strong> in the payment note.</span>
+              <span>I will include <strong>only my order reference</strong> in the payment note.</span>
             </label>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
