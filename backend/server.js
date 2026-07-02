@@ -74,6 +74,82 @@ app.get('/groupbuy', (_req, res) => res.sendFile(path.join(__dirname, 'public', 
 app.get('/payment-config.js',        (_req, res) => res.sendFile(path.join(__dirname, 'public', 'payment-config.js')));
 app.get('/payment-instructions.jsx', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'payment-instructions.jsx')));
 
+// ── Group Buy public API ──────────────────────────────────────────────────────
+// Verify password server-side (never exposes the stored password)
+app.post('/api/public/groupbuy-verify', async (req, res) => {
+  const { password } = req.body || {};
+  try {
+    const { rows } = await pool.query("SELECT value FROM app_settings WHERE key = 'groupbuy_settings'");
+    const s = rows[0]?.value || {};
+    const stored = (s.password || 'PFBVIP2026').toUpperCase();
+    if ((password || '').trim().toUpperCase() === stored) return res.json({ ok: true });
+    return res.status(401).json({ ok: false });
+  } catch (e) {
+    if ((password || '').trim().toUpperCase() === 'PFBVIP2026') return res.json({ ok: true });
+    res.status(401).json({ ok: false });
+  }
+});
+// Return non-sensitive settings (dates + test status, no password)
+app.get('/api/public/groupbuy-settings', async (_req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT value FROM app_settings WHERE key = 'groupbuy_settings'");
+    const s = rows[0]?.value || {};
+    res.json({
+      testResultsIn: s.testResultsIn || false,
+      openDate:      s.openDate      || '2026-07-01',
+      closeDate:     s.closeDate     || '2026-07-10',
+    });
+  } catch (e) {
+    res.json({ testResultsIn: false, openDate: '2026-07-01', closeDate: '2026-07-10' });
+  }
+});
+
+// Save settings (admin auth required)
+app.post('/api/admin/groupbuy-settings', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const jwt = await import('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'change-me-in-production';
+    const user = jwt.default.verify(token, secret);
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
+    const { password, testResultsIn, openDate, closeDate } = req.body || {};
+    const value = { password, testResultsIn, openDate, closeDate };
+    await pool.query(
+      `INSERT INTO app_settings (key, value) VALUES ('groupbuy_settings', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1`,
+      [JSON.stringify(value)]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// Read settings (admin auth required)
+app.get('/api/admin/groupbuy-settings', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const jwt = await import('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'change-me-in-production';
+    const user = jwt.default.verify(token, secret);
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
+    const { rows } = await pool.query("SELECT value FROM app_settings WHERE key = 'groupbuy_settings'");
+    const s = rows[0]?.value || {};
+    res.json({
+      password:      s.password      || 'PFBVIP2026',
+      testResultsIn: s.testResultsIn || false,
+      openDate:      s.openDate      || '2026-07-01',
+      closeDate:     s.closeDate     || '2026-07-10',
+    });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 // ── pfbgb.com — serve group buy page for the separate vendor domain ──────────
 app.use((req, res, next) => {
   const host = (req.headers.host || req.hostname || '').replace(/:\d+$/, '');
