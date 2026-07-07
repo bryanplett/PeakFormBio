@@ -934,6 +934,17 @@ const ConsultationModal = ({ onClose }) => {
         }),
       });
       if (!res.ok) throw new Error('Submission failed');
+      // Also save to backend DB for Admin panel
+      try {
+        await fetch('/api/public/inquiries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: form.name, email: form.email, phone: form.phone,
+            preferred_contact: form.contactMethod, focus_area: form.focus, message: form.message,
+          }),
+        });
+      } catch (dbErr) { console.warn('DB save failed (non-critical):', dbErr); }
       setSubmitted(true);
     } catch (err) {
       console.error('Inquiry submit failed:', err);
