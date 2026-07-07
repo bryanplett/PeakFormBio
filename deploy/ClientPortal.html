@@ -1029,6 +1029,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // (loaded once on mount; admin manages them in Admin → Coupons).
   const [couponCode, setCouponCode] = React.useState('');
   const [activeCoupons, setActiveCoupons] = React.useState([]);
+  const [clientPastCoupons, setClientPastCoupons] = React.useState([]);
   const [fieldErrors, setFieldErrors] = React.useState({});
   const [success, setSuccess] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
