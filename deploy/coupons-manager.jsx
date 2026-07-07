@@ -33,7 +33,7 @@ function CouponsManager({ sb, onBack }) {
   useCouponEffect(() => { load(); }, []);
 
   const startNew = () => setEditing({
-    code: '', kind: 'percent', amount: 10, scope: 'all', active: true, notes: '',
+    code: '', kind: 'percent', amount: 10, scope: 'all', active: true, notes: '', one_time_use: false, min_order: '', max_discount: '',
   });
 
   const startEdit = (c) => setEditing({ ...c });
@@ -55,6 +55,9 @@ function CouponsManager({ sb, onBack }) {
       scope: editing.scope,
       active: !!editing.active,
       notes: editing.notes?.trim() || null,
+      one_time_use: !!editing.one_time_use,
+      min_order: editing.min_order !== '' && editing.min_order != null ? parseFloat(editing.min_order) || null : null,
+      max_discount: editing.max_discount !== '' && editing.max_discount != null ? parseFloat(editing.max_discount) || null : null,
     };
 
     let res;
@@ -129,7 +132,7 @@ function CouponsManager({ sb, onBack }) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  {['Code', 'Discount', 'Applies to', 'Status', 'Notes', ''].map(h => (
+                  {['Code', 'Discount', 'Applies to', 'Limits', 'Status', 'Notes', ''].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '12px 18px', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</th>
                   ))}
                 </tr>
@@ -145,6 +148,12 @@ function CouponsManager({ sb, onBack }) {
                     </td>
                     <td style={{ padding: '14px 18px', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
                       {c.scope === 'retatrutide' ? 'Retatrutide only' : 'Entire order'}
+                    </td>
+                    <td style={{ padding: '14px 18px', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.8 }}>
+                      {c.one_time_use && <div style={{ color: '#ff9f0a' }}>One-time use</div>}
+                      {c.min_order != null && c.min_order > 0 && <div>Min: ${c.min_order}</div>}
+                      {c.max_discount != null && c.max_discount > 0 && <div>Max: ${c.max_discount} off</div>}
+                      {!c.one_time_use && !(c.min_order > 0) && !(c.max_discount > 0) && <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}
                     </td>
                     <td style={{ padding: '14px 18px' }}>
                       <button onClick={() => toggleActive(c)} className="tag" style={{
@@ -240,6 +249,42 @@ function CouponForm({ editing, setEditing, onSave, onCancel }) {
         <input className="field-input" type="text" value={editing.notes || ''}
           onChange={e => set('notes', e.target.value)}
           placeholder="e.g. VIP referral; expires April; etc." />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <div>
+          <label style={labelStyle}>Min Order Amount</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)', fontSize: 14, pointerEvents: 'none' }}>$</span>
+            <input className="field-input" type="number" min="0" step="1"
+              value={editing.min_order || ''}
+              onChange={e => set('min_order', e.target.value)}
+              placeholder="No minimum"
+              style={{ paddingLeft: 24 }} />
+          </div>
+          <p style={hintStyle}>Cart must reach this total before discount applies.</p>
+        </div>
+        <div>
+          <label style={labelStyle}>Max Discount Cap</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)', fontSize: 14, pointerEvents: 'none' }}>$</span>
+            <input className="field-input" type="number" min="0" step="1"
+              value={editing.max_discount || ''}
+              onChange={e => set('max_discount', e.target.value)}
+              placeholder="No cap"
+              style={{ paddingLeft: 24 }} />
+          </div>
+          <p style={hintStyle}>Maximum dollars off regardless of order size.</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <input type="checkbox" checked={!!editing.one_time_use} onChange={e => set('one_time_use', e.target.checked)}
+            style={{ width: 16, height: 16, accentColor: '#2997ff' }} />
+          <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>One-time use per client</span>
+        </label>
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>(code can only be used once per client account)</span>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>

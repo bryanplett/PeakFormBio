@@ -1288,6 +1288,16 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
         return;
       }
       setActiveCoupons(data || []);
+      // Load client's past coupon codes for one_time_use enforcement
+      if (userData && userData.id) {
+        try {
+          const { data: pastOrders } = await sb.from('orders').select('coupon_code').eq('client_id', userData.id);
+          const usedCodes = (pastOrders || [])
+            .map(o => (o.coupon_code || '').toLowerCase().split(' ')[0]) // strip "(label; saved $x)" suffix
+            .filter(Boolean);
+          setClientPastCoupons(usedCodes);
+        } catch (e) {}
+      }
     })();
   }, []);
 
@@ -1296,7 +1306,25 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     if (!entered) return null;
     return activeCoupons.find(c => (c.code || '').toLowerCase() === entered) || null;
   }, [couponCode, activeCoupons]);
-  const couponActive = !!matchedCoupon;
+
+  // Subtotal needed for min_order check — compute early (before priceFor, using raw prices)
+  const rawSubtotal = React.useMemo(() =>
+    cart.reduce((sum, item) => {
+      const m = item.label.match(/\$([\d,.]+)/);
+      return sum + (m ? parseFloat(m[1].replace(/,/g, '')) : 0) * item.qty;
+    }, 0)
+  , [cart]);
+
+  const couponError = React.useMemo(() => {
+    if (!matchedCoupon) return couponCode.trim() ? 'Invalid code.' : null;
+    if (matchedCoupon.one_time_use && clientPastCoupons.includes((matchedCoupon.code || '').toLowerCase()))
+      return 'This code has already been used on your account.';
+    if (matchedCoupon.min_order > 0 && rawSubtotal < matchedCoupon.min_order)
+      return `Minimum order of $${matchedCoupon.min_order.toFixed(0)} required.`;
+    return null;
+  }, [matchedCoupon, couponCode, clientPastCoupons, rawSubtotal]);
+
+  const couponActive = !!matchedCoupon && !couponError;
 
   const isRetatrutideLabel = (label) => /\bretatrutide\b/i.test(label || '');
   const lineMatchesCoupon = (label) => {
@@ -1344,14 +1372,18 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     fixedDiscount = Math.min(matchingSubtotal, parseFloat(matchedCoupon.amount) || 0);
   }
 
-  const subtotalEffective = Math.max(0, subtotalAfterLineDiscounts - fixedDiscount);
-  const couponSavings = subtotalOriginal - subtotalEffective;
+  // Apply max_discount cap if set
+  const rawSavingsBeforeCap = subtotalOriginal - Math.max(0, subtotalAfterLineDiscounts - fixedDiscount);
+  const maxDiscountCap = (matchedCoupon && matchedCoupon.max_discount > 0) ? matchedCoupon.max_discount : Infinity;
+  const cappedSavings = Math.min(rawSavingsBeforeCap, maxDiscountCap);
+  const subtotalEffective = Math.max(0, subtotalOriginal - cappedSavings);
+  const couponSavings = cappedSavings;
   const cartTotal = subtotalEffective + shippingCost;
   const hasPrices = cart.length > 0 && cart.every(item => /\$[\d,.]+/.test(item.label));
 
   // Human-readable summary of the matched coupon (for the totals row).
   const couponLabel = matchedCoupon
-    ? `${matchedCoupon.kind === 'percent' ? matchedCoupon.amount + '%' : '$' + matchedCoupon.amount} off${matchedCoupon.scope === 'retatrutide' ? ' Retatrutide' : ''}`
+    ? `${matchedCoupon.kind === 'percent' ? matchedCoupon.amount + '%' : '$' + matchedCoupon.amount} off${matchedCoupon.scope === 'retatrutide' ? ' Retatrutide' : ''}${matchedCoupon.max_discount > 0 ? ' (max $' + matchedCoupon.max_discount + ')' : ''}`
     : '';
   // Whether the matched coupon couldn't apply because no qualifying items
   // are in the cart (e.g. Retatrutide-only coupon but no Retatrutide line).
