@@ -299,6 +299,19 @@ async function init() {
     console.error('app_settings setup error:', err.message);
   }
 
+  // ── Coupons — new constraint columns ────────────────────────────────────
+  try {
+    await pool.query(`
+      ALTER TABLE coupons
+        ADD COLUMN IF NOT EXISTS one_time_use BOOLEAN NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS min_order    NUMERIC,
+        ADD COLUMN IF NOT EXISTS max_discount NUMERIC;
+    `);
+    console.log('Coupons constraint columns ensured.');
+  } catch (err) {
+    console.error('Coupons migration warning:', err.message);
+  }
+
   // ── Inquiries table ──────────────────────────────────────────────────────
   try {
     await pool.query(`CREATE TABLE IF NOT EXISTS inquiries (
