@@ -77,6 +77,15 @@
     padding: 3px 10px; border-radius: 980px; font-size: 12px; font-weight: 600;
   }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
+  .nav-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ff9f0a;
+    margin-left: 6px;
+    animation: blink 1.2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
   .fade-in { animation: fadeIn 0.2s ease; }
 
   /* ---- Mobile responsive ---- */
@@ -1364,6 +1373,8 @@ const App = () => {
   const [showInventory, setShowInventory] = React.useState(false);
   const [showGroupBuy, setShowGroupBuy] = React.useState(false);
   const [showInquiries, setShowInquiries] = React.useState(false);
+  const [newInquiries, setNewInquiries] = React.useState(0);
+  const [newOrders, setNewOrders] = React.useState(0);
 
   const clearViews = () => {
     setShowBuilder(false);
@@ -1387,6 +1398,20 @@ const App = () => {
     setClients(data || []);
   };
 
+  const loadBadges = async () => {
+    // Inquiries: count status='new'
+    try {
+      const { data: inqs } = await sb.from('inquiries').select('id,status');
+      setNewInquiries((inqs || []).filter(i => i.status === 'new').length);
+    } catch (e) {}
+    // Orders: count orders newer than last-viewed timestamp
+    try {
+      const lastSeen = localStorage.getItem('pfb_orders_last_seen') || '1970-01-01';
+      const { data: ords } = await sb.from('orders').select('id,created_at');
+      setNewOrders((ords || []).filter(o => (o.created_at || '') > lastSeen).length);
+    } catch (e) {}
+  };
+
   React.useEffect(() => {
     (async () => {
       if (window.loadPricelists) { try { await window.loadPricelists(sb); } catch (e) {} }
@@ -1395,6 +1420,7 @@ const App = () => {
         setUser(session.user);
         await loadClients();
       }
+      await loadBadges();
       setLoading(false);
     })();
   }, []);
@@ -1402,6 +1428,7 @@ const App = () => {
   const onSignedIn = async (u) => {
     setUser(u);
     await loadClients();
+    await loadBadges();
   };
 
   const signOut = async () => {
@@ -1421,8 +1448,12 @@ const App = () => {
           <span style={{ fontSize: 12, letterSpacing: 2, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Admin</span>
         </div>
         <div className="admin-header-actions" style={{ display: 'flex', alignItems: 'center' }}>
-          <button className="btn-ghost" onClick={() => { clearViews(); setShowOrders(true); }}>Orders</button>
-          <button className="btn-ghost" onClick={() => { clearViews(); setShowInquiries(true); }}>Inquiries</button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowOrders(true); localStorage.setItem('pfb_orders_last_seen', new Date().toISOString()); setNewOrders(0); }} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            Orders{newOrders > 0 && <span className="nav-badge" title={newOrders + ' new'} />}
+          </button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowInquiries(true); setNewInquiries(0); }} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            Inquiries{newInquiries > 0 && <span className="nav-badge" title={newInquiries + ' new'} />}
+          </button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowInventory(true); }}>Inventory</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowCoupons(true); }}>Coupons</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowBuilder(true); }}><span className="label-long">Workout </span>Builder</button>
