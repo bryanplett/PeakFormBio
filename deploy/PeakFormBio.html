@@ -240,7 +240,7 @@
     .section-divider { height: 80px !important; }
 
     /* Scrolling banner */
-    .marquee-track { animation-duration: 48s !important; }
+    .marquee-track { animation-duration: 24s !important; }
 
     /* Top promo banner — mobile */
     .promo-banner { height: 32px !important; }
@@ -304,11 +304,20 @@ const IconCheck = () =>
 const PromoBanner = () => {
   const item = (
     <span className="promo-item">
-      <span className="promo-pct">PEAK BREAK</span>
-      <span style={{ textTransform: 'none', letterSpacing: '0.01em', fontWeight: 500, fontSize: 13 }}>
-        Peak Form is on a Peak Break! Shipping will resume <strong style={{ fontWeight: 700 }}>6/10/2026</strong>. Thank you for your support, and keep performing at your peak!
-      </span>
+      <span className="promo-pct">25% OFF</span>
+      <span>All Growth Hormone Releasing Peptides</span>
       <span className="promo-dot" />
+      <span>CJC-1295</span>
+      <span className="promo-dot" />
+      <span>Ipamorelin</span>
+      <span className="promo-dot" />
+      <span>GHRP-2</span>
+      <span className="promo-dot" />
+      <span>GHRP-6</span>
+      <span className="promo-dot" />
+      <span>Tesamorelin</span>
+      <span className="promo-dot" />
+      <span>Limited time</span>
     </span>
   );
   const run = Array.from({ length: 6 }, (_, i) => <React.Fragment key={i}>{item}</React.Fragment>);
@@ -337,8 +346,9 @@ const Nav = ({ onSchedule }) => {
 
   return (
     <>
+      <PromoBanner />
       <nav className="nav-root" style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 500,
+        position: 'fixed', top: 36, left: 0, right: 0, zIndex: 500,
         background: scrolled ? 'rgba(0,0,0,0.90)' : '#000',
         backdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
@@ -372,7 +382,7 @@ const Nav = ({ onSchedule }) => {
           >Client Portal</a>
           <button className="btn-primary nav-cta-book" onClick={onSchedule}
           style={{ padding: '8px 18px', fontSize: 13, borderRadius: 980, whiteSpace: 'nowrap' }}>
-            Book a Consultation
+            Request Information
           </button>
           <button onClick={() => setMobileOpen(true)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'none', padding: 4, alignItems: 'center', justifyContent: 'center' }}
@@ -409,7 +419,7 @@ const Nav = ({ onSchedule }) => {
         )}
           <button className="btn-primary" onClick={() => {setMobileOpen(false);onSchedule();}}
         style={{ marginTop: 32 }}>
-            Book a Consultation
+            Request Information
           </button>
         </div>
       }
@@ -484,7 +494,7 @@ const Hero = ({ onSchedule }) =>
       <div className="hero-ctas" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         <button className="btn-primary" onClick={onSchedule}
       style={{ padding: '16px 36px', fontSize: 18 }}>
-          Schedule a Consultation
+          Request Information
         </button>
         <a href="#supplementation" className="btn-ghost-light"
       style={{ padding: '15px 32px', fontSize: 17 }}>
@@ -637,7 +647,7 @@ const PillarTile = ({ id, dark, icon, headline, tagline, body, features, onSched
             color: linkColor, fontSize: 17, fontWeight: 400,
             letterSpacing: '-0.374px', padding: 0, fontFamily: 'inherit'
           }}>
-          Book a consultation
+          Request Information
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M3 8h10M9 4l4 4-4 4" stroke={linkColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -674,8 +684,8 @@ const HowItWorks = ({ onSchedule }) => {
   const steps = [
   {
     num: '01',
-    title: 'Book Your Consultation',
-    desc: 'Schedule a 45-minute session with a PeakForm Bio specialist. Share your goals, history, and current routines.'
+    title: 'Request Information',
+    desc: 'Submit a brief inquiry with your goals and area of interest. We\'ll reach out to discuss your needs personally.'
   },
   {
     num: '02',
@@ -735,7 +745,7 @@ const HowItWorks = ({ onSchedule }) => {
         <div style={{ textAlign: 'center', marginTop: 56 }}>
           <button className="btn-primary" onClick={onSchedule}
           style={{ padding: '16px 40px', fontSize: 18 }}>
-            Get Started
+            Request Information
           </button>
         </div>
       </div>
@@ -828,11 +838,11 @@ const FinalCTA = ({ onSchedule }) =>
       fontSize: 19, fontWeight: 300, color: 'rgba(255,255,255,0.60)',
       lineHeight: 1.5, marginBottom: 44, letterSpacing: '-0.01em'
     }}>
-        Your first consultation is a 45-minute deep dive. No commitments.
+        Submit a quick inquiry and a specialist will reach out to discuss the right plan for you.
       </p>
       <button className="btn-primary" onClick={onSchedule}
     style={{ padding: '18px 48px', fontSize: 19 }}>
-        Schedule a Consultation
+        Request Information
       </button>
     </div>
   </section>;
@@ -843,7 +853,7 @@ const Footer = ({ onSchedule }) => {
   const cols = [
   { heading: 'Services', links: ['Supplementation', 'Fitness', 'Nutrition', 'Packages'] },
   { heading: 'Company', links: ['About', 'Our Approach', 'Credentials', 'Blog'] },
-  { heading: 'Support', links: ['Book a Consultation', 'FAQ', 'Contact', 'Privacy Policy'] }];
+  { heading: 'Support', links: ['Request Information', 'FAQ', 'Contact', 'Privacy Policy'] }];
 
 
   return (
@@ -875,7 +885,7 @@ const Footer = ({ onSchedule }) => {
               letterSpacing: '-0.12px', marginBottom: 16
             }}>{col.heading}</p>
               {col.links.map((l) =>
-            <a key={l} href="#" onClick={l === 'Book a Consultation' ? (e) => {e.preventDefault();onSchedule();} : (e) => e.preventDefault()}
+            <a key={l} href="#" onClick={l === 'Request Information' ? (e) => {e.preventDefault();onSchedule();} : (e) => e.preventDefault()}
             style={{
               display: 'block', fontSize: 13, color: 'rgba(0,0,0,0.55)',
               letterSpacing: '-0.12px', lineHeight: 2.4,
@@ -911,19 +921,14 @@ const Footer = ({ onSchedule }) => {
 
 };
 
-// ─── Consultation Modal ───────────────────────────────────────────────────────
+// ─── Inquiry Modal ───────────────────────────────────────────────────────────
 const ConsultationModal = ({ onClose }) => {
-  const [step, setStep] = React.useState(1);
-  const [form, setForm] = React.useState({
-    name: '', email: '', phone: '',
-    focus: '', goal: '', date: '', time: '', meeting: ''
-  });
+  const [form, setForm] = React.useState({ name: '', email: '', phone: '', contactMethod: '', focus: '', message: '' });
   const [submitted, setSubmitted] = React.useState(false);
-
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
-
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
+
+  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -931,52 +936,39 @@ const ConsultationModal = ({ onClose }) => {
     setSubmitting(true);
     setSubmitError('');
     try {
-       const res = await fetch('/api/notifications/consultation', {
+      const res = await fetch('https://formspree.io/f/mnjwvgan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
+          _subject: `Information Request — ${form.name} (${form.focus || 'General'})`,
           name: form.name,
           email: form.email,
-          phone: form.phone || null,
-          focus: form.focus || null,
-          goal: form.goal || null,
-          preferred_date: form.date || null,
-          preferred_time: form.time || null,
-          meeting_option: form.meeting || null,
+          phone: form.phone || '(not provided)',
+          preferred_contact: form.contactMethod || '(not specified)',
+          focus_area: form.focus || '(not selected)',
+          message: form.message || '(none provided)',
+          submitted_at: new Date().toLocaleString(),
         }),
       });
       if (!res.ok) throw new Error('Submission failed');
       setSubmitted(true);
     } catch (err) {
-      console.error('Consultation submit failed:', err);
-      setSubmitError('Something went wrong. Please try again, or email us directly.');
+      console.error('Inquiry submit failed:', err);
+      setSubmitError('Something went wrong. Please try again or email us directly.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const meetingOptions = ['Video', 'Phone', 'In Person'];
-
-  const getAvailableTimes = (dateStr) => {
-    if (!dateStr) return [];
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const day = new Date(y, m - 1, d).getDay(); // local time — avoids UTC timezone shift
-    if (day === 1) return ['3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM','5:30 PM'];
-    if (day === 5) return ['3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM','5:30 PM'];
-    if (day === 6) return ['9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM'];
-    return [];
-  };
-
   return (
-    <div className="modal-overlay" onClick={(e) => {if (e.target === e.currentTarget) onClose();}}>
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal-card" style={{
         background: '#fff', borderRadius: 24,
-        width: '100%', maxWidth: 520,
+        width: '100%', maxWidth: 480,
         padding: '40px', position: 'relative',
         animation: 'slideUp 0.25s ease',
         maxHeight: '90vh', overflowY: 'auto'
       }}>
-        {/* Close */}
         <button onClick={onClose} style={{
           position: 'absolute', top: 20, right: 20,
           background: 'rgba(0,0,0,0.06)', border: 'none',
@@ -987,219 +979,114 @@ const ConsultationModal = ({ onClose }) => {
           <IconX />
         </button>
 
-        {/* Logo */}
         <img src="1_5058098532557259934/PNG/VH/PFB_VH (1).png" alt="PeakForm Bio"
-        style={{ height: 22, marginBottom: 28 }} />
+          style={{ height: 22, marginBottom: 28 }} />
 
         {submitted ? (
-        /* Success state */
-        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div style={{
-            width: 64, height: 64, borderRadius: '50%',
-            background: 'rgba(0,102,204,0.08)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 24px'
-          }}>
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'rgba(0,102,204,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 24px'
+            }}>
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                 <path d="M6 14l5.5 5.5L22 9" stroke="#0066cc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <h3 style={{ fontSize: 26, fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.025em', marginBottom: 12 }}>
-              Consultation booked.
+              Inquiry received.
             </h3>
             <p style={{ fontSize: 17, color: 'rgba(0,0,0,0.6)', lineHeight: 1.5, marginBottom: 32 }}>
-              We'll send a confirmation to <strong>{form.email}</strong>. A specialist will be in touch shortly.
+              Thanks, <strong>{form.name}</strong>. We'll be in touch at <strong>{form.email}</strong> shortly.
             </p>
             <button className="btn-primary" onClick={onClose} style={{ padding: '13px 32px' }}>
               Done
             </button>
-          </div>) :
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <h3 style={{ fontSize: 26, fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.025em', marginBottom: 6 }}>
+              Request Information
+            </h3>
+            <p style={{ fontSize: 15, color: 'rgba(0,0,0,0.5)', marginBottom: 28, lineHeight: 1.5 }}>
+              Tell us a bit about yourself and what you're looking for. We'll follow up personally.
+            </p>
 
-        <>
-            {/* Step indicator */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 32 }}>
-              {[1, 2].map((s) =>
-            <div key={s} style={{
-              height: 3, flex: 1, borderRadius: 2,
-              background: s <= step ? '#0066cc' : 'rgba(0,0,0,0.10)',
-              transition: 'background 0.3s'
-            }} />
-            )}
-            </div>
-
-            {step === 1 &&
-          <div style={{ animation: 'slideUp 0.2s ease' }}>
-                <h3 style={{ fontSize: 26, fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.025em', marginBottom: 6 }}>
-                  Let's get started.
-                </h3>
-                <p style={{ fontSize: 15, color: 'rgba(0,0,0,0.5)', marginBottom: 28, lineHeight: 1.5 }}>
-                  Tell us about yourself and your goals.
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Full Name</label>
-                    <input className="form-input" type="text" placeholder="Alex Johnson"
-                value={form.name} onChange={(e) => set('name', e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Email</label>
-                    <input className="form-input" type="email" placeholder="alex@email.com"
-                value={form.email} onChange={(e) => set('email', e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Phone</label>
-                    <input className="form-input" type="tel" placeholder="(555) 123-4567"
-                value={form.phone} onChange={(e) => set('phone', e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Focus Area</label>
-                    <select className="form-select"
-                value={form.focus} onChange={(e) => set('focus', e.target.value)}>
-                      <option value="">Select a focus area</option>
-                      <option>Supplementation</option>
-                      <option>Fitness</option>
-                      <option>Nutrition</option>
-                      <option>All Three</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Primary Goal</label>
-                    <textarea className="form-input" rows="3"
-                placeholder="e.g. Increase energy, build muscle, improve recovery…"
-                value={form.goal} onChange={(e) => set('goal', e.target.value)}
-                style={{ resize: 'vertical', minHeight: 90 }} />
-                  </div>
-                </div>
-
-                <button
-              className="btn-primary"
-              onClick={() => setStep(2)}
-              disabled={!form.name || !form.email || !form.phone}
-              style={{ width: '100%', marginTop: 28, padding: '16px', fontSize: 17,
-                opacity: !form.name || !form.email || !form.phone ? 0.4 : 1,
-                cursor: !form.name || !form.email || !form.phone ? 'not-allowed' : 'pointer'
-              }}>
-                  Continue
-                </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Full Name</label>
+                <input className="form-input" type="text" placeholder="Alex Johnson"
+                  value={form.name} onChange={(e) => set('name', e.target.value)} required />
               </div>
-          }
-
-            {step === 2 &&
-          <form onSubmit={handleSubmit} style={{ animation: 'slideUp 0.2s ease' }}>
-                <h3 style={{ fontSize: 26, fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.025em', marginBottom: 6 }}>
-                  Pick a time.
-                </h3>
-                <p style={{ fontSize: 15, color: 'rgba(0,0,0,0.5)', marginBottom: 28, lineHeight: 1.5 }}>
-                  Available Mon & Fri 3–6 PM · Sat 9 AM–1 PM · 30-min slots.
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Preferred Date</label>
-                    <input className="form-input" type="date"
-                min={new Date().toISOString().split('T')[0]}
-                value={form.date} onChange={(e) => { set('date', e.target.value); set('time', ''); }} />
-                    {/* Availability guide */}
-                    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {[
-                        { day: 'Monday', hours: '3:00 PM – 6:00 PM', avail: true },
-                        { day: 'Tuesday', hours: 'Unavailable', avail: false },
-                        { day: 'Wednesday', hours: 'Unavailable', avail: false },
-                        { day: 'Thursday', hours: 'Unavailable', avail: false },
-                        { day: 'Friday', hours: '3:00 PM – 6:00 PM', avail: true },
-                        { day: 'Saturday', hours: '9:00 AM – 1:00 PM', avail: true },
-                        { day: 'Sunday', hours: 'Unavailable', avail: false },
-                      ].map(({ day, hours, avail }) => (
-                        <div key={day} style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '6px 10px', borderRadius: 8,
-                          background: avail ? 'rgba(0,102,204,0.06)' : 'transparent',
-                        }}>
-                          <span style={{ fontSize: 13, fontWeight: avail ? 600 : 400, color: avail ? '#1d1d1f' : 'rgba(0,0,0,0.35)' }}>{day}</span>
-                          <span style={{ fontSize: 12, color: avail ? '#0066cc' : 'rgba(0,0,0,0.28)' }}>{hours}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {form.date && getAvailableTimes(form.date).length === 0 && (
-                      <p style={{ fontSize: 13, color: '#c0392b', marginTop: 8 }}>No availability on this day. Please choose a Monday, Friday, or Saturday.</p>
-                    )}
-                  </div>
-
-                  {form.date && getAvailableTimes(form.date).length > 0 && (
-                    <div>
-                      <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 10 }}>Preferred Time</label>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {getAvailableTimes(form.date).map((t) =>
-                    <button
-                      key={t} type="button"
-                      onClick={() => set('time', t)}
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Email Address</label>
+                <input className="form-input" type="email" placeholder="alex@email.com"
+                  value={form.email} onChange={(e) => set('email', e.target.value)} required />
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Phone Number <span style={{ fontWeight: 400, color: 'rgba(0,0,0,0.4)' }}>(optional)</span></label>
+                <input className="form-input" type="tel" placeholder="(555) 123-4567"
+                  value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Preferred Contact Method</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {['Email', 'Phone', 'Text'].map((m) => (
+                    <button key={m} type="button"
+                      onClick={() => set('contactMethod', m)}
                       style={{
-                        borderRadius: 980, padding: '8px 16px',
+                        borderRadius: 980, padding: '8px 18px',
                         fontSize: 14, cursor: 'pointer', lineHeight: 1,
                         fontFamily: 'inherit', transition: 'all 0.12s',
-                        background: form.time === t ? '#0066cc' : '#fff',
-                        color: form.time === t ? '#fff' : '#1d1d1f',
-                        border: form.time === t ? '1.5px solid #0066cc' : '1.5px solid rgba(0,0,0,0.12)'
+                        background: form.contactMethod === m ? '#0066cc' : '#fff',
+                        color: form.contactMethod === m ? '#fff' : '#1d1d1f',
+                        border: form.contactMethod === m ? '1.5px solid #0066cc' : '1.5px solid rgba(0,0,0,0.12)'
                       }}>
-                      {t}</button>
-                    )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 10 }}>Meeting Option</label>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {meetingOptions.map((m) =>
-                  <button
-                    key={m} type="button"
-                    onClick={() => set('meeting', m)}
-                    style={{
-                      borderRadius: 980, padding: '8px 16px',
-                      fontSize: 14, cursor: 'pointer', lineHeight: 1,
-                      fontFamily: 'inherit', transition: 'all 0.12s',
-                      background: form.meeting === m ? '#0066cc' : '#fff',
-                      color: form.meeting === m ? '#fff' : '#1d1d1f',
-                      border: form.meeting === m ? '1.5px solid #0066cc' : '1.5px solid rgba(0,0,0,0.12)'
-                    }}>
-                    {m}</button>
-                  )}
-                    </div>
-                    <p style={{
-                      fontSize: 13, color: 'rgba(0,0,0,0.5)', lineHeight: 1.6,
-                      marginTop: 12, letterSpacing: '-0.12px',
-                    }}>
-                      After selecting your preferred consultation method (video, phone, or in-person) and completing your booking, a representative will contact you to provide the necessary details, including a video meeting link or the address for your in-person appointment.
-                    </p>
-                  </div>
+                      {m}
+                    </button>
+                  ))}
                 </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Area of Interest</label>
+                <select className="form-select"
+                  value={form.focus} onChange={(e) => set('focus', e.target.value)}>
+                  <option value="">Select an area</option>
+                  <option>Supplementation</option>
+                  <option>Fitness</option>
+                  <option>Nutrition</option>
+                  <option>All Three</option>
+                  <option>General Inquiry</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Message <span style={{ fontWeight: 400, color: 'rgba(0,0,0,0.4)' }}>(optional)</span></label>
+                <textarea className="form-input" rows="3"
+                  placeholder="Share your goals or any questions you have…"
+                  value={form.message} onChange={(e) => set('message', e.target.value)}
+                  style={{ resize: 'vertical', minHeight: 90 }} />
+              </div>
+            </div>
 
-                {submitError && (
-                  <p style={{ fontSize: 13, color: '#c0392b', marginTop: 16 }}>{submitError}</p>
-                )}
+            {submitError && (
+              <p style={{ fontSize: 13, color: '#c0392b', marginTop: 16 }}>{submitError}</p>
+            )}
 
-                <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
-                  <button type="button" className="btn-ghost" onClick={() => setStep(1)}
-              style={{ flex: '0 0 auto', padding: '15px 24px' }}>
-                    Back
-                  </button>
-                  <button type="submit" className="btn-primary"
-              disabled={!form.date || !form.time || !form.meeting || submitting}
-              style={{ flex: 1, padding: '16px', fontSize: 17,
-                opacity: (!form.date || !form.time || !form.meeting || submitting) ? 0.4 : 1,
-                cursor: (!form.date || !form.time || !form.meeting || submitting) ? 'not-allowed' : 'pointer'
+            <button type="submit" className="btn-primary"
+              disabled={!form.name || !form.email || submitting}
+              style={{
+                width: '100%', marginTop: 28, padding: '16px', fontSize: 17,
+                opacity: (!form.name || !form.email || submitting) ? 0.4 : 1,
+                cursor: (!form.name || !form.email || submitting) ? 'not-allowed' : 'pointer'
               }}>
-                    {submitting ? 'Booking…' : 'Confirm Booking'}
-                  </button>
-                </div>
-              </form>
-          }
-          </>
-        }
+              {submitting ? 'Sending…' : 'Send Inquiry'}
+            </button>
+          </form>
+        )}
       </div>
-    </div>);
-
+    </div>
+  );
 };
 
 // ─── Scrolling Banner ─────────────────────────────────────────────────────────
@@ -1210,7 +1097,7 @@ const ScrollingBanner = () => {
     <div style={{ background: '#000', overflow: 'hidden', padding: '0', borderTop: '1px solid rgba(41,151,255,0.15)', borderBottom: '1px solid rgba(41,151,255,0.15)' }}>
       <style>{`
         @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .marquee-track { display: flex; width: max-content; animation: marquee 80s linear infinite; }
+        .marquee-track { display: flex; width: max-content; animation: marquee 40s linear infinite; }
         .marquee-track:hover { animation-play-state: paused; }
       `}</style>
       <div className="marquee-track">
@@ -1317,7 +1204,7 @@ const App = () => {
     <div style={{ minHeight: '100vh' }}>
       <Nav onSchedule={openModal} />
 
-      <div style={{ paddingTop: 52 }}>
+      <div style={{ paddingTop: 88 }}>
         <Hero onSchedule={openModal} />
         <ScrollingBanner />
         <PillarTile {...pillars[0]} onSchedule={openModal} />
