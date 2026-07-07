@@ -150,6 +150,55 @@ app.get('/api/admin/groupbuy-settings', async (req, res) => {
   }
 });
 
+// ── Inquiries (public submit, admin read) ────────────────────────────────────
+app.post('/api/public/inquiries', async (req, res) => {
+  try {
+    const { name, email, phone, preferred_contact, focus_area, message } = req.body || {};
+    await pool.query(
+      `INSERT INTO inquiries (name, email, phone, contact_method, focus_area, message)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [name || '', email || '', phone || '', preferred_contact || '', focus_area || '', message || '']
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Inquiry insert error:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.get('/api/data/inquiries', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const jwt = await import('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'change-me-in-production';
+    const user = jwt.default.verify(token, secret);
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
+    const { rows } = await pool.query('SELECT * FROM inquiries ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.patch('/api/data/inquiries/:id', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const jwt = await import('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'change-me-in-production';
+    const user = jwt.default.verify(token, secret);
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
+    const { status } = req.body || {};
+    await pool.query('UPDATE inquiries SET status = $1 WHERE id = $2', [status, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── pfbgb.com — serve group buy page for the separate vendor domain ──────────
 app.use((req, res, next) => {
   const host = (req.headers.host || req.hostname || '').replace(/:\d+$/, '');
@@ -248,6 +297,24 @@ async function init() {
     console.log('app_settings table ensured.');
   } catch (err) {
     console.error('app_settings setup error:', err.message);
+  }
+
+  // ── Inquiries table ──────────────────────────────────────────────────────
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS inquiries (
+      id         SERIAL PRIMARY KEY,
+      name       TEXT,
+      email      TEXT,
+      phone      TEXT,
+      contact_method TEXT,
+      focus_area TEXT,
+      message    TEXT,
+      status     TEXT NOT NULL DEFAULT 'new',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );`);
+    console.log('inquiries table ensured.');
+  } catch (err) {
+    console.error('inquiries setup error:', err.message);
   }
 
   const adminEmail = process.env.ADMIN_EMAIL;
