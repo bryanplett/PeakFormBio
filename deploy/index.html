@@ -930,6 +930,7 @@ const ConsultationModal = ({ onClose }) => {
           preferred_contact: form.contactMethod || '(not specified)',
           focus_area: form.focus || '(not selected)',
           how_did_you_hear: form.referral || '(not provided)',
+          referred_by: form.referralName || undefined,
           message: form.message || '(none provided)',
           submitted_at: new Date().toLocaleString(),
         }),
@@ -942,7 +943,7 @@ const ConsultationModal = ({ onClose }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: form.name, email: form.email, phone: form.phone,
-            preferred_contact: form.contactMethod, focus_area: form.focus, referral: form.referral, message: form.message,
+            preferred_contact: form.contactMethod, focus_area: form.focus, referral: form.referral + (form.referralName ? ` (${form.referralName})` : ''), message: form.message,
           }),
         });
       } catch (dbErr) { console.warn('DB save failed (non-critical):', dbErr); }
@@ -1065,6 +1066,12 @@ const ConsultationModal = ({ onClose }) => {
                   <option>Facebook</option>
                   <option>TikTok</option>
                   <option>Friend or Family Referral</option>
+                </select>
+                {form.referral === 'Friend or Family Referral' && (
+                  <input className="form-input" type="text" placeholder="Who referred you? (name)"
+                    value={form.referralName || ''} onChange={(e) => set('referralName', e.target.value)}
+                    style={{ marginTop: 10 }} />
+                )}
                   <option>Existing Client Referral</option>
                   <option>Doctor / Healthcare Provider</option>
                   <option>Podcast</option>
