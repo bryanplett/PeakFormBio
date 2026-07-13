@@ -980,6 +980,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // Shipping fields — required at checkout. Prefill from the user's profile
   // when we have it, but always let the client confirm/correct.
   const [shippingAddress, setShippingAddress] = React.useState('');
+  const [pickupModal, setPickupModal] = React.useState(null); // 'sj' | 'mh' | null
+  const [pickupAcknowledged, setPickupAcknowledged] = React.useState({ sj: false, mh: false });
   const [phone, setPhone] = React.useState('');
   // Payment method — required at checkout. Empty string = not yet chosen.
   // Value is a method id (venmo / paypal / cashapp / card / …).
@@ -1621,8 +1623,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   className="field-input"
                   value={shippingMethod}
                   onChange={e => {
-                    setShippingMethod(e.target.value);
+                    const v = e.target.value;
+                    setShippingMethod(v);
                     if (fieldErrors.shipping) setFieldErrors(prev => ({ ...prev, shipping: undefined }));
+                    if (v === 'Pickup San Jose') setPickupModal('sj');
+                    if (v === 'Pickup Morgan Hill') setPickupModal('mh');
                   }}
                   required
                   aria-invalid={!!fieldErrors.shipping}
@@ -1640,6 +1645,124 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   </p>
                 )}
               </div>
+
+              {/* Pickup acknowledgement reminder */}
+              {shippingMethod === 'Pickup San Jose' && !pickupAcknowledged.sj && (
+                <p style={{ fontSize: 12, color: '#ff9f0a', marginTop: -8 }}>Please acknowledge the San Jose pickup details above.</p>
+              )}
+              {shippingMethod === 'Pickup Morgan Hill' && !pickupAcknowledged.mh && (
+                <p style={{ fontSize: 12, color: '#ff9f0a', marginTop: -8 }}>Please acknowledge the Morgan Hill pickup details above.</p>
+              )}
+
+              {/* ── Pickup Modals ── */}
+              {pickupModal && (() => {
+                const isSJ = pickupModal === 'sj';
+                const acked = isSJ ? pickupAcknowledged.sj : pickupAcknowledged.mh;
+                return (
+                  <div style={{
+                    position: 'fixed', inset: 0, zIndex: 300,
+                    background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 24,
+                  }}>
+                    <div style={{
+                      background: '#1a1a1c', border: '1px solid rgba(255,255,255,0.10)',
+                      borderRadius: 20, padding: 32, maxWidth: 460, width: '100%',
+                      boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: 'rgba(255,159,10,0.12)', border: '1px solid rgba(255,159,10,0.3)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}>
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zm0 3v3.5M8 10v.5" stroke="#ff9f0a" strokeWidth="1.4" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                        <h3 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em' }}>
+                          {isSJ ? 'Pickup — San Jose' : 'Pickup — Morgan Hill'}
+                        </h3>
+                      </div>
+
+                      {isSJ ? (
+                        <>
+                          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 12 }}>
+                            San Jose pickups are available <strong style={{color:'#f5f5f7'}}>Mondays and Thursdays between 3:00 PM – 5:00 PM</strong>. Extended pickup until 6:00 PM may be arranged in advance.
+                          </p>
+                          <div style={{
+                            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: 10, padding: '12px 14px', marginBottom: 20,
+                            display: 'flex', alignItems: 'flex-start', gap: 10,
+                          }}>
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{marginTop:2,flexShrink:0}}>
+                              <path d="M7 1.5C4.5 1.5 2.5 3.6 2.5 6.2c0 3.5 4.5 6.3 4.5 6.3s4.5-2.8 4.5-6.3C11.5 3.6 9.5 1.5 7 1.5z" stroke="#2997ff" strokeWidth="1.3"/>
+                              <circle cx="7" cy="6" r="1.2" fill="#2997ff"/>
+                            </svg>
+                            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+                              1302 Lincoln Ave #201<br/>San Jose, CA 95125
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 8 }}>
+                            Morgan Hill pickups are <strong style={{color:'#f5f5f7'}}>by appointment only</strong>. Upon completion of your order, contact PeakFormBio to schedule your pickup.
+                          </p>
+                          <p style={{ fontSize: 13, color: '#ff6b6b', fontWeight: 600, marginBottom: 12 }}>
+                            ⚠ DO NOT SHOW UP UNANNOUNCED.
+                          </p>
+                          <div style={{
+                            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: 10, padding: '12px 14px', marginBottom: 20,
+                            display: 'flex', alignItems: 'flex-start', gap: 10,
+                          }}>
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{marginTop:2,flexShrink:0}}>
+                              <path d="M7 1.5C4.5 1.5 2.5 3.6 2.5 6.2c0 3.5 4.5 6.3 4.5 6.3s4.5-2.8 4.5-6.3C11.5 3.6 9.5 1.5 7 1.5z" stroke="#2997ff" strokeWidth="1.3"/>
+                              <circle cx="7" cy="6" r="1.2" fill="#2997ff"/>
+                            </svg>
+                            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+                              15750 Vineyard Blvd #170<br/>Morgan Hill, CA 95037
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 24 }}>
+                        <input type="checkbox" checked={acked}
+                          onChange={e => setPickupAcknowledged(prev => ({ ...prev, [isSJ ? 'sj' : 'mh']: e.target.checked }))}
+                          style={{ width: 16, height: 16, marginTop: 2, accentColor: '#2997ff', flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+                          {isSJ
+                            ? 'I understand pickups are only available Mon/Thu 3–5 PM (or 6 PM by arrangement) at 1302 Lincoln Ave #201, San Jose.'
+                            : 'I understand this is by appointment only and I will contact PeakFormBio to schedule before arriving at 15750 Vineyard Blvd #170, Morgan Hill.'}
+                        </span>
+                      </label>
+
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button
+                          onClick={() => { setShippingMethod(''); setPickupModal(null); }}
+                          style={{
+                            flex: 1, background: 'transparent', color: 'rgba(255,255,255,0.55)',
+                            border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12,
+                            padding: '12px', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
+                          }}>Cancel</button>
+                        <button
+                          disabled={!acked}
+                          onClick={() => setPickupModal(null)}
+                          style={{
+                            flex: 2, background: acked ? '#0066cc' : 'rgba(255,255,255,0.06)',
+                            color: acked ? '#fff' : 'rgba(255,255,255,0.3)',
+                            border: 'none', borderRadius: 12,
+                            padding: '12px', fontSize: 14, fontWeight: 500,
+                            cursor: acked ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+                            transition: 'all 0.2s',
+                          }}>Confirm Pickup</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Shipping Address — required (unless pickup) */}
               <div>
