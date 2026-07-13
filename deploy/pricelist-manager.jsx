@@ -25,7 +25,7 @@
     const _st = document.createElement('style');
     _st.id = 'plm-responsive-styles';
     _st.textContent =
-      '.plm-head,.plm-row{display:grid;grid-template-columns:1fr 180px 56px 100px 100px 34px;gap:10px;align-items:center;}' +
+      '.plm-head,.plm-row{display:grid;gap:10px;align-items:center;}' +
       '@media (max-width:760px){' +
       '.plm-head{display:none;}' +
       '.plm-row{grid-template-columns:1fr 1fr;gap:8px 10px;padding:10px 6px !important;border-bottom:1px solid rgba(255,255,255,0.06);}' +
@@ -95,7 +95,7 @@
 
     // Base mode
     const [rows, setRows] = useState([]);
-    const [meta, setMeta] = useState({ standard: { name: 'Standard', description: '' }, wholesale: { name: 'Wholesale', description: '' } });
+    const [meta, setMeta] = useState({ standard: { name: 'Standard', description: '' }, wholesale: { name: 'Wholesale', description: '' }, telegram: { name: 'Telegram', description: '' } });
     const [tierKeys, setTierKeys] = useState(['standard', 'wholesale']);
     const [source, setSource] = useState('');
 
@@ -231,6 +231,7 @@
     };
     const clearAllClient = () => { setCEdits({}); setMsg('Cleared all custom prices for this client (not saved yet — click Save to apply).'); };
 
+    const gridCols = `1fr 180px 56px ${tierKeys.map(() => '100px').join(' ')} 34px`;
     const cell = { padding: '7px 10px', fontSize: 13.5 };
     const priceField = (val, onChange, placeholder, width) => (
       <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
@@ -293,8 +294,7 @@
               <div className="plm-head" style={{
                 padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
                 <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span>
-                <span style={{ textAlign: 'right' }}>{meta[tierKeys[0]]?.name || 'Standard'}</span>
-                <span style={{ textAlign: 'right' }}>{meta[tierKeys[1]]?.name || 'Wholesale'}</span>
+                {tierKeys.map(t => <span key={t} style={{ textAlign: 'right' }}>{meta[t]?.name || t}</span>)}
                 <span></span>
               </div>
               <div style={{ display: 'grid', gap: 18 }}>
@@ -306,7 +306,7 @@
                     </div>
                     <div className="card" style={{ padding: 8, display: 'grid', gap: 4 }}>
                       {group.items.map(r => (
-                        <div key={r._id} className="plm-row" style={{ padding: '2px 6px' }}>
+                        <div key={r._id} className="plm-row" style={{ padding: '2px 6px', gridTemplateColumns: gridCols }}>
                           <input value={r.name} onChange={e => patchRow(r._id, { name: e.target.value })} placeholder="Product name…" className="field-input plm-name" style={cell} />
                           <select value={r.category} onChange={e => patchRow(r._id, { category: e.target.value })} className="field-input plm-cat" style={{ ...cell, cursor: 'pointer' }}>
                             {!(window.CATEGORY_TITLES || []).includes(r.category) && <option value={r.category}>{r.category || '— category —'}</option>}
@@ -315,8 +315,7 @@
                           <label title="Show on public website" style={{ display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
                             <input type="checkbox" checked={r.public !== false} onChange={e => patchRow(r._id, { public: e.target.checked })} />
                           </label>
-                          <div style={{ justifySelf: 'end' }}>{priceField(r.prices[tierKeys[0]], v => patchPrice(r._id, tierKeys[0], v), '—')}</div>
-                          <div style={{ justifySelf: 'end' }}>{priceField(r.prices[tierKeys[1]], v => patchPrice(r._id, tierKeys[1], v), '—')}</div>
+                          {tierKeys.map(t => <div key={t} style={{ justifySelf: 'end' }}>{priceField(r.prices[t], v => patchPrice(r._id, t, v), '—')}</div>)}
                           <button onClick={() => removeRow(r._id)} title="Remove product"
                             style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 15, lineHeight: 1 }}>×</button>
                         </div>

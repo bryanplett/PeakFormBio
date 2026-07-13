@@ -1357,6 +1357,109 @@ const AllInquiries = ({ onBack }) => {
   );
 };
 
+// ─── Telegram Orders ─────────────────────────────────────────────────────────
+const AllTelegramOrders = ({ onBack }) => {
+  const [orders, setOrders] = React.useState(null);
+  const [query, setQuery] = React.useState('');
+
+  React.useEffect(() => {
+    sb.from('telegram_orders').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => setOrders(data || []));
+  }, []);
+
+  const setStatus = async (id, status) => {
+    await sb.from('telegram_orders').update({ status }).eq('id', id);
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+  };
+
+  const STATUS_COLORS_TG = {
+    new:       { bg: 'rgba(255,159,10,0.14)', fg: '#ff9f0a' },
+    confirmed: { bg: 'rgba(41,151,255,0.14)', fg: '#2997ff' },
+    shipped:   { bg: 'rgba(52,199,89,0.14)',  fg: '#34c759' },
+    delivered: { bg: 'rgba(52,199,89,0.14)',  fg: '#34c759' },
+    cancelled: { bg: 'rgba(255,69,58,0.12)',  fg: '#ff453a' },
+  };
+
+  const filtered = React.useMemo(() => {
+    if (!orders) return [];
+    const q = query.toLowerCase();
+    if (!q) return orders;
+    return orders.filter(o =>
+      (o.name||'').toLowerCase().includes(q) ||
+      (o.email||'').toLowerCase().includes(q) ||
+      (o.reference||'').toLowerCase().includes(q) ||
+      (o.items||'').toLowerCase().includes(q)
+    );
+  }, [orders, query]);
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button className="btn-ghost" onClick={onBack}>Back</button>
+          <h2 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.025em' }}>Telegram Orders</h2>
+          {orders && <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{orders.length} total</span>}
+        </div>
+        <input placeholder="Search..." value={query} onChange={e => setQuery(e.target.value)}
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10, padding: '9px 14px', fontSize: 14, color: '#f5f5f7', outline: 'none', width: 240 }} />
+      </div>
+
+      {orders === null && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>Loading...</div>}
+      {orders !== null && filtered.length === 0 && (
+        <div className="card" style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+          {orders.length === 0 ? 'No Telegram orders yet.' : 'Nothing matches your search.'}
+        </div>
+      )}
+
+      {filtered.length > 0 && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="table-wrap">
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  {['Date','Ref','Customer','Items','Shipping','Payment','Total','Status',''].map((h, i) => (
+                    <th key={i} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(ord => {
+                  const sc = STATUS_COLORS_TG[ord.status] || STATUS_COLORS_TG.new;
+                  return (
+                    <tr key={ord.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>{new Date(ord.created_at).toLocaleDateString()}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: '#2997ff', whiteSpace: 'nowrap' }}>{ord.reference}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 13 }}>
+                        <div style={{ fontWeight: 500 }}>{ord.name}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{ord.email}</div>
+                        {ord.phone && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{ord.phone}</div>}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.65)', maxWidth: 260, lineHeight: 1.5 }}>{ord.items}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.65)', whiteSpace: 'nowrap' }}>
+                        <div>{ord.shipping_method}</div>
+                        {ord.shipping_address && <div style={{ color: 'rgba(255,255,255,0.4)', marginTop: 2, maxWidth: 180, lineHeight: 1.4 }}>{ord.shipping_address}</div>}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>{ord.payment_method}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>{'$' + (Number(ord.total)||0).toFixed(0)}</td>
+                      <td style={{ padding: '12px 16px' }}><span className="tag" style={{ background: sc.bg, color: sc.fg }}>{ord.status || 'new'}</span></td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <select value={ord.status || 'new'} onChange={e => setStatus(ord.id, e.target.value)}
+                          style={{ background: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8, padding: '6px 10px', fontSize: 12, width: '100%' }}>
+                          {['new','confirmed','shipped','delivered','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 const App = () => {
   const [user, setUser] = React.useState(null);
@@ -1376,8 +1479,10 @@ const App = () => {
   const [showInventory, setShowInventory] = React.useState(false);
   const [showGroupBuy, setShowGroupBuy] = React.useState(false);
   const [showInquiries, setShowInquiries] = React.useState(false);
+  const [showTelegramOrders, setShowTelegramOrders] = React.useState(false);
   const [newInquiries, setNewInquiries] = React.useState(0);
   const [newOrders, setNewOrders] = React.useState(0);
+  const [newTelegramOrders, setNewTelegramOrders] = React.useState(0);
 
   const clearViews = () => {
     setShowBuilder(false);
@@ -1392,6 +1497,7 @@ const App = () => {
     setShowInventory(false);
     setShowGroupBuy(false);
     setShowInquiries(false);
+    setShowTelegramOrders(false);
     setSelected(null);
     setEditor(null);
   };
@@ -1406,6 +1512,11 @@ const App = () => {
     try {
       const { data: inqs } = await sb.from('inquiries').select('id,status');
       setNewInquiries((inqs || []).filter(i => i.status === 'new').length);
+    } catch (e) {}
+    // Telegram orders: count status='new'
+    try {
+      const { data: tgOrds } = await sb.from('telegram_orders').select('id,status');
+      setNewTelegramOrders((tgOrds || []).filter(o => o.status === 'new').length);
     } catch (e) {}
     // Orders: count orders newer than last-viewed timestamp
     try {
@@ -1457,6 +1568,9 @@ const App = () => {
           <button className="btn-ghost" onClick={() => { clearViews(); setShowInquiries(true); setNewInquiries(0); }} style={{ display: 'inline-flex', alignItems: 'center' }}>
             Inquiries{newInquiries > 0 && <span className="nav-badge" title={newInquiries + ' new'} />}
           </button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowTelegramOrders(true); setNewTelegramOrders(0); }} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            Telegram Orders{newTelegramOrders > 0 && <span className="nav-badge" title={newTelegramOrders + ' new'} />}
+          </button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowInventory(true); }}>Inventory</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowCoupons(true); }}>Coupons</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowBuilder(true); }}><span className="label-long">Workout </span>Builder</button>
@@ -1484,6 +1598,8 @@ const App = () => {
           ? <window.PricelistManager sb={sb} clients={clients} onBack={() => setShowPricelist(false)} />
           : showRecipes
           ? <window.RecipesDB sb={sb} onBack={() => setShowRecipes(false)} />
+          : showTelegramOrders
+          ? <AllTelegramOrders onBack={() => setShowTelegramOrders(false)} />
           : showInquiries
           ? <AllInquiries onBack={() => setShowInquiries(false)} />
           : showOrders
