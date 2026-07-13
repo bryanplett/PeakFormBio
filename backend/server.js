@@ -150,6 +150,22 @@ app.get('/api/admin/groupbuy-settings', async (req, res) => {
   }
 });
 
+// ── Telegram Orders (public submit) ──────────────────────────────────────────
+app.post('/api/public/telegram-orders', async (req, res) => {
+  try {
+    const { reference, name, email, phone, shipping_method, shipping_address, payment_method, items, subtotal, shipping_cost, total } = req.body || {};
+    await pool.query(
+      `INSERT INTO telegram_orders (reference, name, email, phone, shipping_method, shipping_address, payment_method, items, subtotal, shipping_cost, total)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [reference||'', name||'', email||'', phone||'', shipping_method||'', shipping_address||'', payment_method||'', items||'', subtotal||0, shipping_cost||0, total||0]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Telegram order insert error:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ── Inquiries (public submit, admin read) ────────────────────────────────────
 app.post('/api/public/inquiries', async (req, res) => {
   try {
@@ -298,6 +314,27 @@ async function init() {
   } catch (err) {
     console.error('app_settings setup error:', err.message);
   }
+
+  // ── Telegram orders table ────────────────────────────────────────────────
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS telegram_orders (
+      id              SERIAL PRIMARY KEY,
+      reference       TEXT,
+      name            TEXT,
+      email           TEXT,
+      phone           TEXT,
+      shipping_method TEXT,
+      shipping_address TEXT,
+      payment_method  TEXT,
+      items           TEXT,
+      subtotal        NUMERIC,
+      shipping_cost   NUMERIC,
+      total           NUMERIC,
+      status          TEXT NOT NULL DEFAULT 'new',
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    );`);
+    console.log('telegram_orders table ensured.');
+  } catch (err) { console.error('telegram_orders setup error:', err.message); }
 
   // ── Inquiries — add referral column if missing ───────────────────────────
   try {
