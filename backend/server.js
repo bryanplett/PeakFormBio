@@ -155,9 +155,9 @@ app.post('/api/public/inquiries', async (req, res) => {
   try {
     const { name, email, phone, preferred_contact, focus_area, message } = req.body || {};
     await pool.query(
-      `INSERT INTO inquiries (name, email, phone, contact_method, focus_area, message)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [name || '', email || '', phone || '', preferred_contact || '', focus_area || '', message || '']
+      `INSERT INTO inquiries (name, email, phone, contact_method, focus_area, referral, message)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [name || '', email || '', phone || '', preferred_contact || '', focus_area || '', req.body.referral || '', message || '']
     );
     res.json({ ok: true });
   } catch (err) {
@@ -299,6 +299,11 @@ async function init() {
     console.error('app_settings setup error:', err.message);
   }
 
+  // ── Inquiries — add referral column if missing ───────────────────────────
+  try {
+    await pool.query(`ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS referral TEXT;`);
+  } catch (err) { console.error('inquiries referral migration:', err.message); }
+
   // ── Coupons — new constraint columns ────────────────────────────────────
   try {
     await pool.query(`
@@ -321,6 +326,7 @@ async function init() {
       phone      TEXT,
       contact_method TEXT,
       focus_area TEXT,
+      referral   TEXT,
       message    TEXT,
       status     TEXT NOT NULL DEFAULT 'new',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
