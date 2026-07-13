@@ -66,7 +66,8 @@ const PUBLIC_FILES = [
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/assets',  express.static(path.join(__dirname, 'assets')));
 
-app.get('/admin',    (_req, res) => res.sendFile(path.join(__dirname, 'public', 'Admin.html')));
+app.get('/admin',    (_req, res) => res.sendFile(path.join(__dirname, 'public', 'Admin.html')))
+app.get('/telegram', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'telegram.html')));
 app.get('/m',        (_req, res) => res.sendFile(path.join(__dirname, 'public', 'Admin-Mobile.html')));
 app.get('/portal',   (_req, res) => res.sendFile(path.join(__dirname, 'public', 'ClientPortal.html')));
 app.get('/groupbuy', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'groupbuy.html')));
