@@ -666,6 +666,8 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
     } else {
       onSelect(parsed.fullLabel);
     }
+    // Auto-close the expanded overlay after adding to cart
+    if (onExpand) onExpand(null);
   };
 
   return (
@@ -918,7 +920,7 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect }) => {
                 selectedLabels={selectedLabels}
                 isSelected={selectedLabels.includes(parsed.fullLabel)}
                 onSelect={onSelect}
-                onExpand={() => setExpandedKey(parsed.fullLabel)}
+                onExpand={(key) => setExpandedKey(key !== null ? parsed.fullLabel : null)}
               />
             ))}
           </div>
