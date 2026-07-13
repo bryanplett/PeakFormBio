@@ -906,7 +906,7 @@ const Footer = ({ onSchedule }) => {
 
 // ─── Inquiry Modal ───────────────────────────────────────────────────────────
 const ConsultationModal = ({ onClose }) => {
-  const [form, setForm] = React.useState({ name: '', email: '', phone: '', contactMethod: '', focus: '', message: '' });
+  const [form, setForm] = React.useState({ name: '', email: '', phone: '', contactMethod: '', focus: '', referral: '', message: '' });
   const [submitted, setSubmitted] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
@@ -929,6 +929,7 @@ const ConsultationModal = ({ onClose }) => {
           phone: form.phone || '(not provided)',
           preferred_contact: form.contactMethod || '(not specified)',
           focus_area: form.focus || '(not selected)',
+          how_did_you_hear: form.referral || '(not provided)',
           message: form.message || '(none provided)',
           submitted_at: new Date().toLocaleString(),
         }),
@@ -941,7 +942,7 @@ const ConsultationModal = ({ onClose }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: form.name, email: form.email, phone: form.phone,
-            preferred_contact: form.contactMethod, focus_area: form.focus, message: form.message,
+            preferred_contact: form.contactMethod, focus_area: form.focus, referral: form.referral, message: form.message,
           }),
         });
       } catch (dbErr) { console.warn('DB save failed (non-critical):', dbErr); }
@@ -1055,6 +1056,22 @@ const ConsultationModal = ({ onClose }) => {
                 </select>
               </div>
               <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>How did you hear about us? <span style={{ color: '#c0392b' }}>*</span></label>
+                <select className="form-select"
+                  value={form.referral} onChange={(e) => set('referral', e.target.value)} required>
+                  <option value="">Select an option</option>
+                  <option>Google / Web Search</option>
+                  <option>Instagram</option>
+                  <option>Facebook</option>
+                  <option>TikTok</option>
+                  <option>Friend or Family Referral</option>
+                  <option>Existing Client Referral</option>
+                  <option>Doctor / Healthcare Provider</option>
+                  <option>Podcast</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
                 <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Message <span style={{ fontWeight: 400, color: 'rgba(0,0,0,0.4)' }}>(optional)</span></label>
                 <textarea className="form-input" rows="3"
                   placeholder="Share your goals or any questions you have…"
@@ -1068,11 +1085,11 @@ const ConsultationModal = ({ onClose }) => {
             )}
 
             <button type="submit" className="btn-primary"
-              disabled={!form.name || !form.email || submitting}
+              disabled={!form.name || !form.email || !form.referral || submitting}
               style={{
                 width: '100%', marginTop: 28, padding: '16px', fontSize: 17,
-                opacity: (!form.name || !form.email || submitting) ? 0.4 : 1,
-                cursor: (!form.name || !form.email || submitting) ? 'not-allowed' : 'pointer'
+                opacity: (!form.name || !form.email || !form.referral || submitting) ? 0.4 : 1,
+                cursor: (!form.name || !form.email || !form.referral || submitting) ? 'not-allowed' : 'pointer'
               }}>
               {submitting ? 'Sending…' : 'Send Inquiry'}
             </button>

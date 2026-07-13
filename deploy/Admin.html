@@ -1292,7 +1292,7 @@ const AllInquiries = ({ onBack }) => {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  {['Date', 'Name', 'Contact', 'Area', 'Message', 'Status', ''].map((h, i) => (
+                  {['Date', 'Name', 'Contact', 'Area', 'Source', 'Message', 'Status', ''].map((h, i) => (
                     <th key={i} style={{ textAlign: 'left', padding: '12px 18px', fontSize: 11,
                       fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase',
                       letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
@@ -1325,6 +1325,9 @@ const AllInquiries = ({ onBack }) => {
                         {inq.focus_area
                           ? <span className="tag" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.85)' }}>{inq.focus_area}</span>
                           : <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '14px 18px', fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>
+                        {inq.referral || <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}
                       </td>
                       <td style={{ padding: '14px 18px', fontSize: 13, color: 'rgba(255,255,255,0.65)', maxWidth: 300, lineHeight: 1.5 }}>
                         {inq.message || <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}
