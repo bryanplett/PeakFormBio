@@ -1055,7 +1055,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // setting (set by the coach in the admin profile editor). Falls back to
   // the legacy hardcoded PRODUCTS list if pricelists.js hasn't loaded.
   const productOptions = React.useMemo(() => {
-    const key = userData?.profile?.pricelist || 'standard';
+    const key = userData?.profile?.pricelist || 'wholesale';
     let list;
     if (userData?.id && typeof window.getPricelistAsLabelsForClient === 'function') {
       // Apply this client's per-product price overrides (set by the coach in

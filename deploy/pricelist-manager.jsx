@@ -95,7 +95,7 @@
 
     // Base mode
     const [rows, setRows] = useState([]);
-    const [meta, setMeta] = useState({ standard: { name: 'Standard', description: '' }, wholesale: { name: 'Wholesale', description: '' }, telegram: { name: 'Telegram', description: '' } });
+    const [meta, setMeta] = useState({ wholesale: { name: 'Wholesale', description: '' }, telegram: { name: 'Telegram', description: '' } });
     const [tierKeys, setTierKeys] = useState(['standard', 'wholesale']);
     const [source, setSource] = useState('');
 
@@ -291,7 +291,7 @@
 
             {/* ── BASE MODE ─────────────────────────────────────────────────── */}
             {mode === 'base' && <>
-              <div className="plm-head" style={{
+              <div className="plm-head" style={{ gridTemplateColumns: gridCols,
                 padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
                 <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span>
                 {tierKeys.map(t => <span key={t} style={{ textAlign: 'right' }}>{meta[t]?.name || t}</span>)}

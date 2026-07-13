@@ -8,69 +8,6 @@
 // key (e.g. 'standard') because that's what's stored on each client row.
 
 window.PRICELISTS = {
-  standard: {
-    name: 'Standard',
-    description: 'Retail pricing — default for new clients.',
-    products: [
-      { name: 'Nutrition Plan — 1 Month',                       price: 350, category: 'Programs / Services' },
-      { name: 'Workout Plan — 12 weeks',                        price: 250, category: 'Programs / Services' },
-      { name: 'Nutrition / Workout / Hormone Bundle — 1 Month', price: 600, category: 'Programs / Services', public: false },
-      { name: 'Selank — 10mg',         price: 150, category: 'Cognitive / Mood / Sleep' },
-      { name: 'Semax — 10mg',          price: 150, category: 'Cognitive / Mood / Sleep' },
-      { name: 'Semax-Selank Blend — 10mg', price: 175, category: 'Cognitive / Mood / Sleep' },
-      { name: 'KPV — 10mg',            price: 125, category: 'Skin / Beauty / Anti-Aging' },
-      { name: 'DSIP — 10mg',           price: 175, category: 'Cognitive / Mood / Sleep' },
-      { name: 'SS-31 — 10mg',          price: 125, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'SS-31 — 30mg',          price: 175, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'CJC 1295 DAC — 5mg',    price: 150, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'BPC — 10mg',            price: 175, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: '5 Amino — 50mg',        price: 175, category: 'Metabolic / Weight Management' },
-      { name: 'SNAP-8 — 8mg',          price: 100, category: 'Skin / Beauty / Anti-Aging' },
-      { name: 'TB-500 — 10mg',         price: 175, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'PT-141 — 10mg',         price: 125, category: 'Hormonal / Sexual Wellness' },
-      { name: 'Mito Magic — 120mg',    price:  65, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'MOTS-c — 10mg',         price: 125, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'MOTS-c — 40mg',         price: 200, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'Epithalon — 50mg',      price: 225, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'GHRP-2 — 10mg',         price: 150, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'GHRP-6 — 10mg',         price: 150, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'HCG — 5000IU',          price: 150, category: 'Hormonal / Sexual Wellness' },
-      { name: 'CJC-1295 + Ipamorelin — 5+5mg', price: 175, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'Ipamorelin — 10mg',     price: 125, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'IGF LR3 — 1mg',         price: 200, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'Cagrilintide — 10mg',   price: 150, category: 'Metabolic / Weight Management', public: false },
-      { name: 'KLOW — 80mg',           price: 200, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'NAD+ — 1000mg',         price: 150, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'Glutathione — 1200mg',  price: 125, category: 'Wellness' },
-      { name: 'Tesamorelin — 10mg',    price:  80, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'Wolverine — 10mg',      price: 125, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'GHK-Cu — 50mg',         price:  55, category: 'Skin / Beauty / Anti-Aging' },
-      { name: 'HGH — 10IU',            price:  45, category: 'Growth Hormone / Recovery / Muscle', public: false },
-      { name: 'HGH — 36IU',            price:  85, category: 'Growth Hormone / Recovery / Muscle', public: false },
-      { name: 'Lipo-C',                price:  100, category: 'Wellness' },
-      { name: 'Supershred',            price:  100, category: 'Wellness' },
-      { name: 'B12',                   price:  65, category: 'Wellness' },
-      { name: 'L-Carnitine',           price: 100, category: 'Metabolic / Weight Management' },
-      { name: 'Semaglutide — 10mg',    price: 150, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Semaglutide — 15mg',    price: 175, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Tirzepatide — 10mg',    price: 150, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Tirzepatide — 20mg',    price: 175, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Tirzepatide — 30mg',    price: 200, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Tirzepatide — 40mg',    price: 225, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Tirzepatide — 60mg',    price: 250, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Retatrutide — 10mg',    price: 160, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Retatrutide — 12mg',    price: 170, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Retatrutide — 15mg',    price: 180, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Retatrutide — 20mg',    price: 200, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Retatrutide — 30mg',    price: 225, category: 'Metabolic / Weight Management', public: false },
-      { name: 'Retatrutide — 60mg',    price: 275, category: 'Metabolic / Weight Management', public: false },
-      { name: 'BAC Water — 10mL',        price:  15, category: 'Accessories', public: false },
-      { name: 'Accessory Pack — 01',     price:   5, category: 'Accessories', public: false },
-      { name: 'Accessory Pack — 02',     price:  10, category: 'Accessories', public: false },
-      { name: 'Accessory Pack — 03',     price:  15, category: 'Accessories', public: false },
-    ],
-  },
-
   wholesale: {
     name: 'Wholesale',
     description: 'Discounted pricing — for resellers, VIPs, or bulk buyers.',
@@ -192,9 +129,9 @@ window.PRICELISTS = {
 };
 
 // Helper used by ClientPortal: get the right product list for a client.
-// Falls back to 'standard' if pricelist is missing or unknown.
+// Falls back to 'wholesale' if pricelist is missing or unknown.
 window.getPricelist = function(key) {
-  return window.PRICELISTS[key] || window.PRICELISTS.standard;
+  return window.PRICELISTS[key] || window.PRICELISTS.wholesale;
 };
 
 // Helper: flat list of "Name — $price" strings, for the simple <select> dropdown.
