@@ -1066,17 +1066,16 @@ const ConsultationModal = ({ onClose }) => {
                   <option>Facebook</option>
                   <option>TikTok</option>
                   <option>Friend or Family Referral</option>
+                  <option>Existing Client Referral</option>
+                  <option>Doctor / Healthcare Provider</option>
+                  <option>Podcast</option>
+                  <option>Other</option>
                 </select>
                 {form.referral === 'Friend or Family Referral' && (
                   <input className="form-input" type="text" placeholder="Who referred you? (name)"
                     value={form.referralName || ''} onChange={(e) => set('referralName', e.target.value)}
                     style={{ marginTop: 10 }} />
                 )}
-                  <option>Existing Client Referral</option>
-                  <option>Doctor / Healthcare Provider</option>
-                  <option>Podcast</option>
-                  <option>Other</option>
-                </select>
               </div>
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', display: 'block', marginBottom: 8 }}>Message <span style={{ fontWeight: 400, color: 'rgba(0,0,0,0.4)' }}>(optional)</span></label>
