@@ -626,7 +626,7 @@ const PortalVial = ({ name, strength, tint, size = 130 }) => (
   </div>
 );
 
-const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand, onClose, variants, selectedLabels = [], expanded = false }) => {
+const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand, onClose, variants, selectedLabels = [], expanded = false, inventoryMap = {} }) => {
   // `variants` (optional): array of { parsed: {...}, blurb } for products that
   // share one card across multiple strengths (Semaglutide / Tirzepatide /
   // Retatrutide). When supplied, the card shows a strength selector and
@@ -825,7 +825,7 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
   );
 };
 
-const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect }) => {
+const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect, inventoryMap = {} }) => {
   const [expandedKey, setExpandedKey] = React.useState(null);
 
   // Close on Esc.
@@ -921,6 +921,7 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect }) => {
                 isSelected={selectedLabels.includes(parsed.fullLabel)}
                 onSelect={onSelect}
                 onExpand={() => setExpandedKey(parsed.fullLabel)}
+                inventoryMap={inventoryMap}
               />
             ))}
           </div>
@@ -1035,6 +1036,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const [couponCode, setCouponCode] = React.useState('');
   const [activeCoupons, setActiveCoupons] = React.useState([]);
   const [clientPastCoupons, setClientPastCoupons] = React.useState([]);
+  const [inventoryMap, setInventoryMap] = React.useState({}); // name -> qty
   const [fieldErrors, setFieldErrors] = React.useState({});
   const [success, setSuccess] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -1294,6 +1296,13 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
         return;
       }
       setActiveCoupons(data || []);
+      // Load inventory levels
+      try {
+        const { data: inv } = await sb.from('inventory').select('name,qty');
+        const map = {};
+        (inv || []).forEach(r => { map[r.name.trim().toLowerCase()] = Number(r.qty); });
+        setInventoryMap(map);
+      } catch (e) { console.warn('inventory load failed:', e); }
       // Load client's past coupon codes for one_time_use enforcement
       if (userData && userData.id) {
         try {
@@ -1424,6 +1433,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
         productOptions={productOptions}
         selectedLabels={cartLabels}
         onSelect={addToCart}
+        inventoryMap={inventoryMap}
       />
 
       {/* Cart / Checkout panel */}
