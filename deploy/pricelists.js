@@ -68,6 +68,7 @@ window.PRICELISTS = {
       { name: 'Accessory Pack — 01',     price:   5, category: 'Accessories', public: false },
       { name: 'Accessory Pack — 02',     price:  10, category: 'Accessories', public: false },
       { name: 'Accessory Pack — 03',     price:  15, category: 'Accessories', public: false },
+      { name: 'Accessory Pack — 04',     price:   5, category: 'Accessories', public: false },
     ],
   },
 

@@ -945,18 +945,18 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect, inventor
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: 24, animation: 'fadeIn 0.18s ease',
             }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 440, position: 'relative' }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 440, position: 'relative', marginTop: 54 }}>
               <button
                 onClick={() => setExpandedKey(null)}
                 aria-label="Close"
                 style={{
-                  position: 'absolute', top: -52, right: 0,
+                  position: 'absolute', top: 10, right: 10,
                   width: 44, height: 44, borderRadius: '50%',
                   background: 'rgba(30,30,32,0.95)', border: '1.5px solid rgba(255,255,255,0.25)',
                   color: '#fff', cursor: 'pointer', fontSize: 20, lineHeight: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
-                  WebkitTapHighlightColor: 'transparent',
+                  WebkitTapHighlightColor: 'transparent', zIndex: 10,
                 }}>✕</button>
               <PortalRevealCard
                 parsed={found.parsed}
@@ -2100,8 +2100,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
                       {[
                         { prefix: 'Accessory Pack — 01', contents: 'Syringes & Wipes' },
-                        { prefix: 'Accessory Pack — 02', contents: 'BAC Water' },
-                        { prefix: 'Accessory Pack — 03', contents: 'Syringes, Wipes & BAC Water' },
+                        { prefix: 'Accessory Pack — 02', contents: 'Syringes, Wipes & 3ml BAC' },
+                        { prefix: 'Accessory Pack — 03', contents: 'Syringes, Wipes & 10ml BAC' },
+                        { prefix: 'Accessory Pack — 04', contents: '10 Syringes' },
                       ].map(({ prefix, contents }) => {
                         const label = findOptionLabel(prefix);
                         if (!label) return null;
