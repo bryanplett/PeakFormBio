@@ -647,6 +647,12 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
   const activeVariant = hasVariants ? variants[selectedIdx] : null;
   const display = hasVariants ? activeVariant.parsed : parsed;
   const displayBlurb = hasVariants ? (activeVariant.blurb || blurb) : blurb;
+  // Out-of-stock check — match inventory by full label or name
+  const stockCheckLabel = (display.fullLabel || '').toLowerCase().replace(/\s*—\s*\$[\d,.]+/, '').trim();
+  const stockCheckName = (display.name || '').trim().toLowerCase();
+  const stockQty = inventoryMap.hasOwnProperty(stockCheckLabel) ? inventoryMap[stockCheckLabel]
+    : inventoryMap.hasOwnProperty(stockCheckName) ? inventoryMap[stockCheckName] : null;
+  const outOfStock = stockQty !== null && stockQty <= 0;
 
   const [hover, setHover] = React.useState(false);
   const variantSelected = hasVariants && selectedLabels.includes(activeVariant.parsed.fullLabel);
