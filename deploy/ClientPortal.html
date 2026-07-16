@@ -477,8 +477,15 @@ const lookupCategoryTitle = (label) => {
 const blurbForCategory = (lower, id) => {
   const cat = CATEGORY_MAP.find(c => c.id === id);
   if (!cat || !cat.blurbs) return '';
+  // Prefer longest matching key (most specific)
   let blurb = '';
-  for (const key of Object.keys(cat.blurbs)) if (key && lower.includes(key)) blurb = cat.blurbs[key];
+  let bestLen = -1;
+  for (const key of Object.keys(cat.blurbs)) {
+    if (key && lower.includes(key) && key.length > bestLen) {
+      blurb = cat.blurbs[key];
+      bestLen = key.length;
+    }
+  }
   return blurb;
 };
 const categorize = (label) => {
