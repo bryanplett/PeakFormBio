@@ -96,7 +96,7 @@
     // Base mode
     const [rows, setRows] = useState([]);
     const [meta, setMeta] = useState({ wholesale: { name: 'Wholesale', description: '' }, telegram: { name: 'Telegram', description: '' } });
-    const [tierKeys, setTierKeys] = useState(['standard', 'wholesale']);
+    const [tierKeys, setTierKeys] = useState(['wholesale', 'telegram']);
     const [source, setSource] = useState('');
 
     // Client mode — edits as { [productName]: stringValue }, '' = use tier price
@@ -128,7 +128,7 @@
     }, []);
 
     const selectedClient = mode !== 'base' ? clientList.find(c => String(c.id) === String(mode)) : null;
-    const clientTier = selectedClient ? (selectedClient.pricelist || 'standard') : null;
+    const clientTier = selectedClient ? (selectedClient.pricelist || 'wholesale') : null;
 
     // When switching to a client, seed cEdits from their saved overrides.
     const switchMode = (m) => {
