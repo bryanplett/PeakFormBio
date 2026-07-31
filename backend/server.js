@@ -342,6 +342,17 @@ async function init() {
     await pool.query(`ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS referral TEXT;`);
   } catch (err) { console.error('inquiries referral migration:', err.message); }
 
+  // ── Clients — retire the removed 'standard' pricing tier ─────────────────
+  // The 'standard' tier was deleted; rows still carrying it are read as
+  // wholesale at runtime. Rewrite them once so the data matches behaviour.
+  try {
+    const r = await pool.query(
+      `UPDATE clients SET pricelist = 'wholesale'
+        WHERE pricelist IS NULL OR pricelist = '' OR pricelist = 'standard';`
+    );
+    if (r.rowCount > 0) console.log(`Migrated ${r.rowCount} client(s) to wholesale tier.`);
+  } catch (err) { console.error('client pricelist migration:', err.message); }
+
   // ── Coupons — new constraint columns ────────────────────────────────────
   try {
     await pool.query(`
