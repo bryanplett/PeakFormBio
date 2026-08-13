@@ -96,12 +96,13 @@ app.get('/api/public/groupbuy-settings', async (_req, res) => {
     const { rows } = await pool.query("SELECT value FROM app_settings WHERE key = 'groupbuy_settings'");
     const s = rows[0]?.value || {};
     res.json({
+      round:         s.round         || 2,
       testResultsIn: s.testResultsIn || false,
-      openDate:      s.openDate      || '2026-07-01',
-      closeDate:     s.closeDate     || '2026-07-10',
+      openDate:      s.openDate      || '2026-08-13',
+      closeDate:     s.closeDate     || '2026-08-27',
     });
   } catch (e) {
-    res.json({ testResultsIn: false, openDate: '2026-07-01', closeDate: '2026-07-10' });
+    res.json({ round: 2, testResultsIn: false, openDate: '2026-08-13', closeDate: '2026-08-27' });
   }
 });
 
@@ -115,8 +116,8 @@ app.post('/api/admin/groupbuy-settings', async (req, res) => {
     const secret = process.env.JWT_SECRET || 'change-me-in-production';
     const user = jwt.default.verify(token, secret);
     if (user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
-    const { password, testResultsIn, openDate, closeDate } = req.body || {};
-    const value = { password, testResultsIn, openDate, closeDate };
+    const { password, round, testResultsIn, openDate, closeDate } = req.body || {};
+    const value = { password, round, testResultsIn, openDate, closeDate };
     await pool.query(
       `INSERT INTO app_settings (key, value) VALUES ('groupbuy_settings', $1)
        ON CONFLICT (key) DO UPDATE SET value = $1`,
@@ -142,9 +143,10 @@ app.get('/api/admin/groupbuy-settings', async (req, res) => {
     const s = rows[0]?.value || {};
     res.json({
       password:      s.password      || 'PFBVIP2026',
+      round:         s.round         || 2,
       testResultsIn: s.testResultsIn || false,
-      openDate:      s.openDate      || '2026-07-01',
-      closeDate:     s.closeDate     || '2026-07-10',
+      openDate:      s.openDate      || '2026-08-13',
+      closeDate:     s.closeDate     || '2026-08-27',
     });
   } catch (e) {
     res.status(500).json({ message: e.message });
