@@ -92,9 +92,10 @@ const PRODUCT = {
 };
 
 const GB_DEFAULTS = {
+  round:         2,
   testResultsIn: false,
-  openDate:      '2026-07-01',
-  closeDate:     '2026-07-10',
+  openDate:      '2026-08-13',
+  closeDate:     '2026-08-27',
 };
 
 const { useState, useEffect } = React;
@@ -297,7 +298,7 @@ function GroupBuyPage() {
         <img src="/1_5058098532557259934/PNG/VH/PFB_VH (7).png" alt="PeakForm Bio" style={{ height: 15 }} />
         <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase',
           color: '#2997ff', background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.28)',
-          borderRadius: 999, padding: '4px 10px' }}>Vendor Group Buy</span>
+          borderRadius: 999, padding: '4px 10px' }}>Vendor Group Buy{settings.round > 1 ? ` - Round ${settings.round}` : ''}</span>
       </nav>
 
       <div style={{ position: 'relative', paddingTop: 52, minHeight: 520, display: 'flex', alignItems: 'flex-end' }}>
@@ -366,7 +367,9 @@ function GroupBuyPage() {
 
           {!settings.testResultsIn && (
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 28, lineHeight: 1.55 }}>
-              A sample has been sent for testing. Order before results return and lock in ${PRODUCT.priceEarly}/kit.
+              {settings.round > 1
+                ? `Early bird pricing carries over from Round 1 - $${PRODUCT.priceEarly}/kit while this round is open.`
+                : `A sample has been sent for testing. Order before results return and lock in $${PRODUCT.priceEarly}/kit.`}
             </p>
           )}
 

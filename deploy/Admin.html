@@ -1119,9 +1119,10 @@ const AllOrders = ({ clients, onOpenClient, onBack }) => {
 const GroupBuySettings = ({ onBack }) => {
   const [cfg, setCfg] = React.useState({
     password:      'PFBVIP2026',
+    round:         2,
     testResultsIn: false,
-    openDate:      '2026-07-01',
-    closeDate:     '2026-07-10',
+    openDate:      '2026-08-13',
+    closeDate:     '2026-08-27',
   });
   const [saved, setSaved] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -1180,6 +1181,11 @@ const GroupBuySettings = ({ onBack }) => {
           </div>
 
           <div style={{ display: 'flex', gap: 14 }}>
+            <div style={{ width: 110 }}>
+              <label style={labelStyle}>Round</label>
+              <input className="field-input" type="number" min="1" step="1" value={cfg.round}
+                onChange={e => setCfg(c => ({ ...c, round: Number(e.target.value) || 1 }))} />
+            </div>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>Open Date</label>
               <input className="field-input" type="date" value={cfg.openDate}
