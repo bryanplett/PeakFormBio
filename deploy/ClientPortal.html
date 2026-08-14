@@ -1112,6 +1112,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     return list;
   }, [userData?.profile?.pricelist, userData?.id, plReady]);
 
+
   const addToCart = (label) => {
     setCart(prev => {
       const existing = prev.find(item => item.label === label);
@@ -1127,6 +1128,24 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     const el = document.getElementById('cart');
     if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 16, behavior: 'smooth' });
   };
+
+  // Deep link from the marketing site: ClientPortal.html?add=<product name>.
+  // Adds the first matching catalog item once the pricelist has resolved,
+  // then clears the param so a refresh doesn't add it twice.
+  const deepLinkDone = React.useRef(false);
+  React.useEffect(() => {
+    if (deepLinkDone.current || !productOptions.length) return;
+    const want = new URLSearchParams(window.location.search).get('add');
+    if (!want) return;
+    deepLinkDone.current = true;
+    const target = productOptions.find(l => l.toLowerCase().startsWith(want.trim().toLowerCase()));
+    if (target) {
+      addToCart(target);
+      const url = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', url);
+    }
+  }, [productOptions]);
+
 
   const updateCart = (label, qty) => {
     if (qty <= 0) setCart(prev => prev.filter(i => i.label !== label));
@@ -1339,7 +1358,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // ─── Coupon + shipping pricing ───────────────────────────────────────
   // Coupons come from Supabase (`coupons` table). Each has:
   //   kind:  'percent' | 'fixed'    → amount is % off (0–100) or $ off
-  //   scope: 'all' | 'retatrutide'  → entire cart, or Retatrutide line items
+  //   scope: 'all' | 'retatrutide' | 'carnitine'  → entire cart, or only the
+  //          matching product's line items (see COUPON_SCOPE_TESTS)
   // Codes are case-insensitive and stored lowercased server-side.
   React.useEffect(() => {
     (async () => {
@@ -1394,12 +1414,19 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
   const couponActive = !!matchedCoupon && !couponError;
 
-  const isRetatrutideLabel = (label) => /\bretatrutide\b/i.test(label || '');
+  // Which cart lines a scoped coupon may discount. Mirrors COUPON_SCOPES in
+  // coupons-manager.jsx — add a key here when adding a scope there.
+  const COUPON_SCOPE_TESTS = {
+    retatrutide: (label) => /\bretatrutide\b/i.test(label),
+    carnitine:   (label) => /\bl[\s-]?carnitine\b/i.test(label),
+  };
+  const COUPON_SCOPE_NAMES = { retatrutide: 'Retatrutide', carnitine: 'L-Carnitine' };
+
   const lineMatchesCoupon = (label) => {
     if (!matchedCoupon) return false;
     if (matchedCoupon.scope === 'all') return true;
-    if (matchedCoupon.scope === 'retatrutide') return isRetatrutideLabel(label);
-    return false;
+    const test = COUPON_SCOPE_TESTS[matchedCoupon.scope];
+    return test ? test(label || '') : false;
   };
 
   // Per-line effective price.
@@ -1451,7 +1478,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
   // Human-readable summary of the matched coupon (for the totals row).
   const couponLabel = matchedCoupon
-    ? `${matchedCoupon.kind === 'percent' ? matchedCoupon.amount + '%' : '$' + matchedCoupon.amount} off${matchedCoupon.scope === 'retatrutide' ? ' Retatrutide' : ''}${matchedCoupon.max_discount > 0 ? ' (max $' + matchedCoupon.max_discount + ')' : ''}`
+    ? `${matchedCoupon.kind === 'percent' ? matchedCoupon.amount + '%' : '$' + matchedCoupon.amount} off${COUPON_SCOPE_NAMES[matchedCoupon.scope] ? ' ' + COUPON_SCOPE_NAMES[matchedCoupon.scope] : ''}${matchedCoupon.max_discount > 0 ? ' (max $' + matchedCoupon.max_discount + ')' : ''}`
     : '';
   // Whether the matched coupon couldn't apply because no qualifying items
   // are in the cart (e.g. Retatrutide-only coupon but no Retatrutide line).
@@ -1685,7 +1712,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               )}
               {couponActive && couponHasNoTarget && (
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, letterSpacing: '-0.1px' }}>
-                  Code applied{matchedCoupon.scope === 'retatrutide' ? ', but no Retatrutide items in your cart yet.' : '.'}
+                  Code applied{COUPON_SCOPE_NAMES[matchedCoupon.scope] ? `, but no ${COUPON_SCOPE_NAMES[matchedCoupon.scope]} items in your cart yet.` : '.'}
                 </p>
               )}
             </div>

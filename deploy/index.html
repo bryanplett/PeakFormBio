@@ -51,7 +51,7 @@
   .promo-track {
     display: flex; flex-shrink: 0;
     width: max-content;
-    animation: promoMarquee 44s linear infinite;
+    animation: promoMarquee 120s linear infinite;
     will-change: transform;
   }
   .promo-banner:hover .promo-track { animation-play-state: paused; }
@@ -70,6 +70,14 @@
     border: 1px solid rgba(255,255,255,0.30);
     padding: 2.5px 9px; border-radius: 980px;
   }
+  .promo-clickable { cursor: pointer; }
+  .promo-clickable:hover { filter: brightness(1.06); }
+  .promo-item .promo-cta {
+    font-weight: 500; font-size: 11.5px; letter-spacing: 0.10em;
+    color: rgba(255,255,255,0.82); text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) { .promo-track { animation: none; } }
   .promo-item .promo-dot {
     width: 4px; height: 4px; border-radius: 50%;
     background: rgba(255,255,255,0.55); flex-shrink: 0;
@@ -293,28 +301,6 @@ const IconCheck = () =>
   </svg>;
 
 
-// ─── Promo Banner ────────────────────────────────────────────────────────────
-const PromoBanner = () => {
-  const item = (
-    <span className="promo-item">
-      <span className="promo-pct">PEAK BREAK</span>
-      <span style={{ textTransform: 'none', letterSpacing: '0.01em', fontWeight: 500, fontSize: 13 }}>
-        Peak Form is on a Peak Break! Shipping will resume <strong style={{ fontWeight: 700 }}>6/10/2026</strong>. Thank you for your support, and keep performing at your peak!
-      </span>
-      <span className="promo-dot" />
-    </span>
-  );
-  const run = Array.from({ length: 6 }, (_, i) => <React.Fragment key={i}>{item}</React.Fragment>);
-  return (
-    <div className="promo-banner" role="region" aria-label="Promotional announcement">
-      <div className="promo-track">
-        {run}
-        {run}
-      </div>
-    </div>
-  );
-};
-
 // ─── Nav ─────────────────────────────────────────────────────────────────────
 const Nav = ({ onSchedule }) => {
   const [scrolled, setScrolled] = React.useState(false);
@@ -331,7 +317,7 @@ const Nav = ({ onSchedule }) => {
   return (
     <>
       <nav className="nav-root" style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 500,
+        position: 'fixed', top: 36, left: 0, right: 0, zIndex: 500,
         background: scrolled ? 'rgba(0,0,0,0.90)' : '#000',
         backdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
@@ -1106,6 +1092,126 @@ const ConsultationModal = ({ onClose }) => {
   );
 };
 
+// ─── August Promo Banner ─────────────────────────────────────────────────────
+const PromoBanner = ({ onOpen }) => {
+  const item = (
+    <span className="promo-item">
+      <span className="promo-pct">25% OFF</span>
+      <span>All L-Carnitine &middot; August only</span>
+      <span className="promo-cta">Learn more</span>
+      <span className="promo-dot" />
+    </span>
+  );
+  const run = Array.from({ length: 6 }, (_, i) => <React.Fragment key={i}>{item}</React.Fragment>);
+  return (
+    <div
+      className="promo-banner promo-clickable"
+      role="button"
+      tabIndex={0}
+      aria-label="25% off all L-Carnitine in August. Open details."
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
+      <div className="promo-track">
+        {run}
+        {run}
+      </div>
+    </div>
+  );
+};
+
+// ─── L-Carnitine Info Modal ──────────────────────────────────────────────────
+const CarnitineModal = ({ onClose }) => {
+  const benefits = [
+    { title: 'Fatty acid transport', body: 'Carnitine shuttles long-chain fatty acids across the inner mitochondrial membrane, the required step before they can enter beta-oxidation and be used for energy.' },
+    { title: 'Exercise recovery', body: 'Studied for its effect on markers of muscle damage and post-exercise soreness, with research focused on L-Carnitine L-Tartrate in trained populations.' },
+    { title: 'Metabolic substrate use', body: 'Investigated for its role in how efficiently tissue draws on fat versus glycogen during sustained aerobic work.' },
+    { title: 'Cognitive research', body: 'The acetylated form, Acetyl-L-Carnitine, crosses the blood-brain barrier and is a subject of research into neuronal energy metabolism.' },
+    { title: 'Cardiac tissue', body: 'Heart muscle depends heavily on fatty acid oxidation, which is why cardiac tissue holds among the highest carnitine concentrations in the body.' },
+    { title: 'Endogenous synthesis', body: 'The body makes carnitine from lysine and methionine, requiring vitamin C, B6, niacin, and iron as cofactors. Synthesis capacity varies between individuals.' },
+  ];
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        background: '#fff', borderRadius: 24, width: '100%', maxWidth: 680,
+        padding: '40px', position: 'relative', animation: 'slideUp 0.25s ease',
+        maxHeight: '90vh', overflowY: 'auto',
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 20, right: 20, background: 'rgba(0,0,0,0.06)',
+          border: 'none', borderRadius: '50%', width: 32, height: 32,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        }}>
+          <IconX />
+        </button>
+
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 18,
+          padding: '5px 12px', borderRadius: 980,
+          background: 'rgba(0,102,204,0.08)', border: '1px solid rgba(0,102,204,0.18)',
+          fontSize: 11, fontWeight: 700, color: '#0066cc',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+        }}>
+          August offer &middot; 25% off
+        </div>
+
+        <h2 style={{ fontSize: 32, fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 14 }}>
+          L-Carnitine
+        </h2>
+        <p style={{ fontSize: 17, color: 'rgba(0,0,0,0.6)', lineHeight: 1.55, marginBottom: 32, maxWidth: 540 }}>
+          An amino acid derivative concentrated in skeletal muscle and heart tissue, where it governs how
+          fatty acids reach the mitochondria. Below is a summary of the mechanisms and research areas most
+          often associated with it.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginBottom: 32 }}>
+          {benefits.map(b =>
+            <div key={b.title}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', marginBottom: 6, letterSpacing: '-0.01em' }}>{b.title}</div>
+              <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.55)', lineHeight: 1.55, textWrap: 'pretty' }}>{b.body}</p>
+            </div>
+          )}
+        </div>
+
+        <div style={{ borderTop: '1px solid rgba(0,0,0,0.09)', paddingTop: 24, marginBottom: 28 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+            Common forms
+          </div>
+          <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.55)', lineHeight: 1.6, textWrap: 'pretty' }}>
+            <strong style={{ color: '#1d1d1f', fontWeight: 600 }}>L-Carnitine L-Tartrate</strong> is the form
+            most used in exercise research. <strong style={{ color: '#1d1d1f', fontWeight: 600 }}>Acetyl-L-Carnitine</strong> is
+            the form studied for central nervous system work. <strong style={{ color: '#1d1d1f', fontWeight: 600 }}>Propionyl-L-Carnitine</strong> appears
+            most often in cardiovascular and peripheral circulation literature.
+          </p>
+        </div>
+
+        <div style={{
+          background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.07)',
+          borderRadius: 14, padding: '16px 18px', marginBottom: 28,
+        }}>
+          <p style={{ fontSize: 12.5, color: 'rgba(0,0,0,0.5)', lineHeight: 1.6 }}>
+            Sold for laboratory and research use only. Not evaluated by the FDA. Not intended to diagnose,
+            treat, cure, or prevent any disease, and not for human or animal consumption.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <a href="ClientPortal.html?add=L-Carnitine" className="btn-primary"
+            style={{ padding: '14px 28px', fontSize: 16, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 9 }}>
+            Add L-Carnitine to cart
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+              <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+          <span style={{ fontSize: 13, color: 'rgba(0,0,0,0.45)' }}>
+            Discount code <strong style={{ color: '#1d1d1f', fontWeight: 600, letterSpacing: '0.02em' }}>AUGCARN25</strong> at checkout
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Scrolling Banner ─────────────────────────────────────────────────────────
 const ScrollingBanner = () => {
   const words = ['DISCIPLINE', 'CONSISTENCY', 'DISCIPLINE'];
@@ -1176,6 +1282,7 @@ const SectionDivider = ({ accent = '#2997ff' }) =>
 // ─── App ─────────────────────────────────────────────────────────────────────
 const App = () => {
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [carnitineOpen, setCarnitineOpen] = React.useState(false);
 
   const openModal = () => setModalOpen(true);
   const closeModal = () => setModalOpen(false);
@@ -1219,9 +1326,10 @@ const App = () => {
 
   return (
     <div style={{ minHeight: '100vh' }}>
+      <PromoBanner onOpen={() => setCarnitineOpen(true)} />
       <Nav onSchedule={openModal} />
 
-      <div style={{ paddingTop: 52 }}>
+      <div style={{ paddingTop: 88 }}>
         <Hero onSchedule={openModal} />
         <ScrollingBanner />
         <PillarTile {...pillars[0]} onSchedule={openModal} />
@@ -1238,6 +1346,7 @@ const App = () => {
       </div>
 
       {modalOpen && <ConsultationModal onClose={closeModal} />}
+      {carnitineOpen && <CarnitineModal onClose={() => setCarnitineOpen(false)} />}
     </div>);
 
 };
