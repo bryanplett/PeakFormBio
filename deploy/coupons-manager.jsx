@@ -2,15 +2,24 @@
 //
 // Coupon shape (matches the `coupons` Supabase table):
 //   { id, code, kind: 'percent'|'fixed', amount: number,
-//     scope: 'all'|'retatrutide', active: bool, notes: string }
+//     scope: 'all'|'retatrutide'|'carnitine', active: bool, notes: string }
 //
 // Two discount kinds:
 //   percent → amount is 0–100, applied as a % off the matching subtotal.
 //   fixed   → amount is dollars off the matching subtotal (clamped at subtotal).
 //
-// Two scopes:
+// Scopes (see COUPON_SCOPES below — add an entry to introduce a new one):
 //   all          → discount applies to the whole cart subtotal.
 //   retatrutide  → discount applies only to Retatrutide line items.
+//   carnitine    → discount applies only to L-Carnitine line items.
+
+// Shared scope table. ClientPortal.html mirrors these keys when it decides
+// which cart lines a coupon may discount.
+const COUPON_SCOPES = [
+  { val: 'all',         label: 'Entire order',  short: 'Entire order' },
+  { val: 'retatrutide', label: 'Retatrutide',   short: 'Retatrutide only' },
+  { val: 'carnitine',   label: 'L-Carnitine',   short: 'L-Carnitine only' },
+];
 
 const { useState: useCouponState, useEffect: useCouponEffect } = React;
 
@@ -147,7 +156,7 @@ function CouponsManager({ sb, onBack }) {
                       {c.kind === 'percent' ? `${c.amount}% off` : `$${c.amount} off`}
                     </td>
                     <td style={{ padding: '14px 18px', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-                      {c.scope === 'retatrutide' ? 'Retatrutide only' : 'Entire order'}
+                      {(COUPON_SCOPES.find(s => s.val === c.scope) || COUPON_SCOPES[0]).short}
                     </td>
                     <td style={{ padding: '14px 18px', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.8 }}>
                       {c.one_time_use && <div style={{ color: '#ff9f0a' }}>One-time use</div>}
@@ -229,10 +238,7 @@ function CouponForm({ editing, setEditing, onSave, onCancel }) {
         <div>
           <label style={labelStyle}>Applies to</label>
           <div style={{ display: 'flex', gap: 0, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)' }}>
-            {[
-              { val: 'all',         label: 'Entire order' },
-              { val: 'retatrutide', label: 'Retatrutide only' },
-            ].map(opt => (
+            {COUPON_SCOPES.map(opt => (
               <button key={opt.val} type="button" onClick={() => set('scope', opt.val)} style={{
                 flex: 1, padding: '10px 12px', fontSize: 13, border: 'none', cursor: 'pointer',
                 background: editing.scope === opt.val ? '#2997ff' : 'transparent',
