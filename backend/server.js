@@ -355,6 +355,35 @@ async function init() {
     if (r.rowCount > 0) console.log(`Migrated ${r.rowCount} client(s) to wholesale tier.`);
   } catch (err) { console.error('client pricelist migration:', err.message); }
 
+  // ── Clients — per-client pickup location overrides ───────────────────────
+  try {
+    await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS pickup_locations JSONB;`);
+    console.log('clients.pickup_locations column ensured.');
+  } catch (err) { console.error('pickup_locations migration:', err.message); }
+
+  // ── Group buy — open Round 2, keeping $85 early-bird pricing ─────────────
+  // The Round 1 record in app_settings outranks the code defaults, so the
+  // page kept reading as closed. Advance it once; skip if already on 2+.
+  try {
+    const { rows } = await pool.query("SELECT value FROM app_settings WHERE key = 'groupbuy_settings'");
+    const cur = rows[0]?.value || {};
+    if (!cur.round || Number(cur.round) < 2) {
+      const next = Object.assign({}, cur, {
+        round:         2,
+        testResultsIn: false,       // false = $85 early-bird price stays active
+        openDate:      '2026-08-13',
+        closeDate:     '2026-08-27',
+        password:      cur.password || 'PFBVIP2026',
+      });
+      await pool.query(
+        `INSERT INTO app_settings (key, value) VALUES ('groupbuy_settings', $1)
+         ON CONFLICT (key) DO UPDATE SET value = $1`,
+        [JSON.stringify(next)]
+      );
+      console.log('Group buy advanced to Round 2 (2026-08-13 to 2026-08-27, $85/kit).');
+    }
+  } catch (err) { console.error('groupbuy round migration:', err.message); }
+
   // ── Coupons — new constraint columns ────────────────────────────────────
   try {
     await pool.query(`
