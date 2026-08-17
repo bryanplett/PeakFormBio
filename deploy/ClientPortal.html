@@ -1060,6 +1060,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const [pickupAcknowledged, setPickupAcknowledged] = React.useState({ sj: false, mh: false, mv: false });
   const [pickupSettings, setPickupSettings] = React.useState(window.PICKUP_SETTINGS_DEFAULT);
   React.useEffect(() => { window.loadPickupSettings(sb).then(setPickupSettings); }, []);
+  const clientPickup = userData?.profile?.pickup_locations; // null = no override
   const [phone, setPhone] = React.useState('');
   // Payment method — required at checkout. Empty string = not yet chosen.
   // Value is a method id (venmo / paypal / cashapp / card / …).
@@ -1483,9 +1484,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const SHIPPING_OPTIONS = [
     { value: 'Regular Shipping ($7)',   cost: 7,  label: 'Regular Shipping — $7' },
     { value: 'Priority Shipping ($15)', cost: 15, label: 'Priority Shipping — $15' },
-    pickupSettings.sanJose && { value: 'Pickup San Jose', cost: 0, label: 'Pickup San Jose' },
-    pickupSettings.morganHill && { value: 'Pickup Morgan Hill', cost: 0, label: 'Pickup Morgan Hill' },
-    pickupSettings.mountainView?.enabled && pickupSettings.mountainView.address && { value: 'Pickup Mountain View', cost: 0, label: 'Pickup Mountain View' },
+    pickupSettings.sanJose && (!clientPickup || clientPickup.includes('sanJose')) && { value: 'Pickup San Jose', cost: 0, label: 'Pickup San Jose' },
+    pickupSettings.morganHill && (!clientPickup || clientPickup.includes('morganHill')) && { value: 'Pickup Morgan Hill', cost: 0, label: 'Pickup Morgan Hill' },
+    pickupSettings.mountainView?.enabled && pickupSettings.mountainView.address && (!clientPickup || clientPickup.includes('mountainView')) && { value: 'Pickup Mountain View', cost: 0, label: 'Pickup Mountain View' },
   ].filter(Boolean);
   const shippingCost = SHIPPING_OPTIONS.find(o => o.value === shippingMethod)?.cost ?? 0;
 

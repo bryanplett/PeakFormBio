@@ -610,6 +610,8 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [savingPricelist, setSavingPricelist] = React.useState(null); // client id mid-save
+  const [pickupEditorId, setPickupEditorId] = React.useState(null);
+  const [savingPickup, setSavingPickup] = React.useState(null);
   const [exportMsg, setExportMsg] = React.useState('');
 
   // Available pricelist tiers (standard, wholesale, …). Falls back to a
@@ -628,6 +630,34 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
     }
     // Mutate locally so the dropdown reflects the new value without a full refetch.
     client.pricelist = key;
+    onRefresh && onRefresh();
+  };
+
+  // A client's pickup_locations is null ("use site defaults") until an admin
+  // narrows it to a specific array of allowed location keys.
+  const PICKUP_KEYS = [
+    { key: 'sanJose', label: 'San Jose' },
+    { key: 'morganHill', label: 'Morgan Hill' },
+    { key: 'mountainView', label: 'Mountain View' },
+  ];
+  const clientPickupSet = (client) => Array.isArray(client.pickup_locations)
+    ? new Set(client.pickup_locations) : null; // null = no override, all site-enabled locations apply
+  const togglePickup = async (client, key) => {
+    const current = clientPickupSet(client) || new Set(PICKUP_KEYS.map(p => p.key));
+    current.has(key) ? current.delete(key) : current.add(key);
+    setSavingPickup(client.id);
+    const { error } = await sb.from('clients').update({ pickup_locations: Array.from(current) }).eq('id', client.id);
+    setSavingPickup(null);
+    if (error) { alert('Failed to update pickup options: ' + error.message); return; }
+    client.pickup_locations = Array.from(current);
+    onRefresh && onRefresh();
+  };
+  const resetPickup = async (client) => {
+    setSavingPickup(client.id);
+    const { error } = await sb.from('clients').update({ pickup_locations: null }).eq('id', client.id);
+    setSavingPickup(null);
+    if (error) { alert('Failed to reset pickup options: ' + error.message); return; }
+    client.pickup_locations = null;
     onRefresh && onRefresh();
   };
 
@@ -731,6 +761,48 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
                       </option>
                     ))}
                   </select>
+                  <div style={{ position: 'relative', display: 'inline-block', marginLeft: 8 }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPickupEditorId(pickupEditorId === c.id ? null : c.id); }}
+                      title="Choose which pickup locations this client can use"
+                      style={{
+                        background: 'rgba(255,255,255,0.06)', color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8,
+                        padding: '6px 10px', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
+                      }}>
+                      Pickup{clientPickupSet(c) ? ' •' : ''}
+                    </button>
+                    {pickupEditorId === c.id && (
+                      <div onClick={(e) => e.stopPropagation()} style={{
+                        position: 'absolute', top: '110%', left: 0, zIndex: 40,
+                        background: '#1a1a1c', border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: 10, padding: 14, minWidth: 200,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                      }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                          Pickup options for {c.name}
+                        </div>
+                        {PICKUP_KEYS.map(p => {
+                          const set = clientPickupSet(c) || new Set(PICKUP_KEYS.map(k => k.key));
+                          const on = set.has(p.key);
+                          return (
+                            <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 13, color: '#f5f5f7', cursor: savingPickup === c.id ? 'wait' : 'pointer' }}>
+                              <input type="checkbox" checked={on} disabled={savingPickup === c.id}
+                                onChange={() => togglePickup(c, p.key)}
+                                style={{ accentColor: '#2997ff' }} />
+                              {p.label}
+                            </label>
+                          );
+                        })}
+                        {clientPickupSet(c) && (
+                          <button onClick={() => resetPickup(c)} disabled={savingPickup === c.id}
+                            style={{ marginTop: 10, background: 'none', border: 'none', color: '#2997ff', fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                            Reset to site defaults
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td style={{ padding: '16px 20px' }}>
                   <span className="tag" style={{ background: c.status === 'active' ? 'rgba(52,199,89,0.14)' : 'rgba(255,255,255,0.08)', color: c.status === 'active' ? '#34c759' : 'rgba(255,255,255,0.6)' }}>
