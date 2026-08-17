@@ -201,6 +201,39 @@ window.savePricelists = async function(sb, pricelists) {
   return { error: res.error || null };
 };
 
+// ─── Pickup location settings ─────────────────────────────────────────────────
+// A single app_settings row (key='pickup_settings') controls which pickup
+// locations are offered at checkout. San Jose and Morgan Hill are toggles only
+// (their address/hours copy is fixed in ClientPortal.html); Mountain View is
+// fully admin-authored since it has no built-in copy yet.
+window.PICKUP_SETTINGS_DEFAULT = {
+  sanJose: true,
+  morganHill: true,
+  mountainView: { enabled: false, address: '', hours: '', ackText: '' },
+};
+
+window.loadPickupSettings = async (sb) => {
+  if (!sb) return window.PICKUP_SETTINGS_DEFAULT;
+  try {
+    const { data, error } = await sb.from('app_settings')
+      .select('*').eq('key', 'pickup_settings').maybeSingle();
+    if (error || !data || !data.value) return window.PICKUP_SETTINGS_DEFAULT;
+    return Object.assign({}, window.PICKUP_SETTINGS_DEFAULT, data.value, {
+      mountainView: Object.assign({}, window.PICKUP_SETTINGS_DEFAULT.mountainView, data.value.mountainView || {}),
+    });
+  } catch (e) {
+    return window.PICKUP_SETTINGS_DEFAULT;
+  }
+};
+
+window.savePickupSettings = async (sb, settings) => {
+  if (!sb) return { error: { message: 'No backend connection.' } };
+  const res = await sb.from('app_settings')
+    .upsert({ key: 'pickup_settings', value: settings, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    .select().single();
+  return res;
+};
+
 // ─── Per-client price overrides ──────────────────────────────────────────────
 // A single app_settings row (key='price_overrides') holds a map of
 //   { [clientId]: { [productName]: priceNumber } }

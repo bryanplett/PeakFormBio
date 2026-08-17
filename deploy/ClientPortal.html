@@ -1056,8 +1056,10 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // Shipping fields — required at checkout. Prefill from the user's profile
   // when we have it, but always let the client confirm/correct.
   const [shippingAddress, setShippingAddress] = React.useState('');
-  const [pickupModal, setPickupModal] = React.useState(null); // 'sj' | 'mh' | null
-  const [pickupAcknowledged, setPickupAcknowledged] = React.useState({ sj: false, mh: false });
+  const [pickupModal, setPickupModal] = React.useState(null); // 'sj' | 'mh' | 'mv' | null
+  const [pickupAcknowledged, setPickupAcknowledged] = React.useState({ sj: false, mh: false, mv: false });
+  const [pickupSettings, setPickupSettings] = React.useState(window.PICKUP_SETTINGS_DEFAULT);
+  React.useEffect(() => { window.loadPickupSettings(sb).then(setPickupSettings); }, []);
   const [phone, setPhone] = React.useState('');
   // Payment method — required at checkout. Empty string = not yet chosen.
   // Value is a method id (venmo / paypal / cashapp / card / …).
@@ -1481,9 +1483,10 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const SHIPPING_OPTIONS = [
     { value: 'Regular Shipping ($7)',   cost: 7,  label: 'Regular Shipping — $7' },
     { value: 'Priority Shipping ($15)', cost: 15, label: 'Priority Shipping — $15' },
-    { value: 'Pickup San Jose',         cost: 0,  label: 'Pickup San Jose' },
-    { value: 'Pickup Morgan Hill',       cost: 0,  label: 'Pickup Morgan Hill' },
-  ];
+    pickupSettings.sanJose && { value: 'Pickup San Jose', cost: 0, label: 'Pickup San Jose' },
+    pickupSettings.morganHill && { value: 'Pickup Morgan Hill', cost: 0, label: 'Pickup Morgan Hill' },
+    pickupSettings.mountainView?.enabled && pickupSettings.mountainView.address && { value: 'Pickup Mountain View', cost: 0, label: 'Pickup Mountain View' },
+  ].filter(Boolean);
   const shippingCost = SHIPPING_OPTIONS.find(o => o.value === shippingMethod)?.cost ?? 0;
 
   // Subtotals
@@ -1803,6 +1806,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                     if (fieldErrors.shipping) setFieldErrors(prev => ({ ...prev, shipping: undefined }));
                     if (v === 'Pickup San Jose') setPickupModal('sj');
                     if (v === 'Pickup Morgan Hill') setPickupModal('mh');
+                    if (v === 'Pickup Mountain View') setPickupModal('mv');
                   }}
                   required
                   aria-invalid={!!fieldErrors.shipping}
@@ -1832,7 +1836,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               {/* ── Pickup Modals ── */}
               {pickupModal && (() => {
                 const isSJ = pickupModal === 'sj';
-                const acked = isSJ ? pickupAcknowledged.sj : pickupAcknowledged.mh;
+                const isMV = pickupModal === 'mv';
+                const acked = pickupAcknowledged[pickupModal];
+                const mv = pickupSettings.mountainView || {};
                 return (
                   <div style={{
                     position: 'fixed', inset: 0, zIndex: 300,
@@ -1856,11 +1862,28 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                           </svg>
                         </div>
                         <h3 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em' }}>
-                          {isSJ ? 'Pickup — San Jose' : 'Pickup — Morgan Hill'}
+                          {isSJ ? 'Pickup — San Jose' : isMV ? 'Pickup — Mountain View' : 'Pickup — Morgan Hill'}
                         </h3>
                       </div>
 
-                      {isSJ ? (
+                      {isMV ? (
+                        <>
+                          {mv.hours && (
+                            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 12 }}>{mv.hours}</p>
+                          )}
+                          <div style={{
+                            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: 10, padding: '12px 14px', marginBottom: 20,
+                            display: 'flex', alignItems: 'flex-start', gap: 10,
+                          }}>
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{marginTop:2,flexShrink:0}}>
+                              <path d="M7 1.5C4.5 1.5 2.5 3.6 2.5 6.2c0 3.5 4.5 6.3 4.5 6.3s4.5-2.8 4.5-6.3C11.5 3.6 9.5 1.5 7 1.5z" stroke="#2997ff" strokeWidth="1.3"/>
+                              <circle cx="7" cy="6" r="1.2" fill="#2997ff"/>
+                            </svg>
+                            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{mv.address}</span>
+                          </div>
+                        </>
+                      ) : isSJ ? (
                         <>
                           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 12 }}>
                             San Jose pickups are available <strong style={{color:'#f5f5f7'}}>Mondays and Thursdays between 3:00 PM – 5:00 PM</strong>. Extended pickup until 6:00 PM may be arranged in advance.
@@ -1905,11 +1928,13 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
                       <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 24 }}>
                         <input type="checkbox" checked={acked}
-                          onChange={e => setPickupAcknowledged(prev => ({ ...prev, [isSJ ? 'sj' : 'mh']: e.target.checked }))}
+                          onChange={e => setPickupAcknowledged(prev => ({ ...prev, [pickupModal]: e.target.checked }))}
                           style={{ width: 16, height: 16, marginTop: 2, accentColor: '#2997ff', flexShrink: 0 }} />
                         <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                           {isSJ
                             ? 'I understand pickups are only available Mon/Thu 3–5 PM (or 6 PM by arrangement) at 1302 Lincoln Ave #201, San Jose.'
+                            : isMV
+                            ? (mv.ackText || 'I understand the pickup details above for Mountain View.')
                             : 'I understand this is by appointment only and I will contact PeakFormBio to schedule before arriving at 15750 Vineyard Blvd #170, Morgan Hill.'}
                         </span>
                       </label>
