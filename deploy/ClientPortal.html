@@ -1405,9 +1405,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       setActiveCoupons(data || []);
       // Load inventory levels
       try {
-        const { data: inv } = await sb.from('inventory').select('name,qty');
+        const { data: inv } = await sb.from('inventory').select('product_name,stock');
         const map = {};
-        (inv || []).forEach(r => { map[r.name.trim().toLowerCase()] = Number(r.qty); });
+        (inv || []).forEach(r => { map[(r.product_name || '').trim().toLowerCase()] = Number(r.stock); });
         setInventoryMap(map);
       } catch (e) { console.warn('inventory load failed:', e); }
       // Load client's past coupon codes for one_time_use enforcement
