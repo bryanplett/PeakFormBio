@@ -47,16 +47,25 @@
     ));
   };
 
-  // Build a tap-to-pay URL for a method, prefilling the amount where supported.
+  // Build a tap-to-pay URL for a method, prefilling amount + a note where the
+  // service's link format supports it, so the order reference lands in the
+  // payment note automatically instead of the buyer typing it by hand.
   // Returns null when the method has no public payment link (e.g. Zelle, crypto).
-  global.paymentLink = function (m, amount) {
+  global.paymentLink = function (m, amount, note) {
     if (!m || !m.handle) return null;
     const h = String(m.handle).trim();
     const bare = h.replace(/^@/, '');
     const tag = h.startsWith('$') ? h : '$' + bare;        // cashtag
     const amt = (amount && Number(amount) > 0) ? Number(amount).toFixed(2) : null;
+    const memo = note ? encodeURIComponent(String(note)) : null;
     switch (m.id) {
-      case 'venmo':   return 'https://venmo.com/u/' + encodeURIComponent(bare);
+      case 'venmo': {
+        // Venmo's web link supports txn/amount/note as query params.
+        const params = new URLSearchParams({ txn: 'pay' });
+        if (amt) params.set('amount', amt);
+        if (memo) params.set('note', note);
+        return 'https://venmo.com/u/' + encodeURIComponent(bare) + '?' + params.toString();
+      }
       case 'paypal':  return 'https://paypal.me/' + encodeURIComponent(bare) + (amt ? '/' + amt : '');
       case 'cashapp': return 'https://cash.app/' + tag + (amt ? '/' + amt : '');
       default:        return null; // Zelle / crypto have no universal web link

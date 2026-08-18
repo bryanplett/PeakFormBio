@@ -53,9 +53,9 @@
     );
   };
 
-  const MethodCard = ({ m, amount, highlight, linksEnabled = true, onPayClick }) => {
+  const MethodCard = ({ m, amount, note, highlight, linksEnabled = true, onPayClick }) => {
     const isHandle = m.kind === 'handle' || m.kind === 'crypto';
-    const link = global.paymentLink ? global.paymentLink(m, amount) : null;
+    const link = global.paymentLink ? global.paymentLink(m, amount, note) : null;
     return (
       <div style={{
         border: `1px solid ${highlight ? 'rgba(41,151,255,0.55)' : 'rgba(255,255,255,0.09)'}`,
@@ -161,7 +161,9 @@
 
             {/* Order reference reminder */}
             <div style={{ fontSize: 13, color: '#2997ff', marginBottom: 12, lineHeight: 1.5, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.28)', borderRadius: 10, padding: '11px 13px' }}>
-              Include <strong>only your order reference number</strong> in the payment note — no names, no product details.
+              {chosen.id === 'venmo'
+                ? <>The <strong>Open Venmo</strong> button below pre-fills your order reference in the payment note — just confirm and send.</>
+                : <>Include <strong>only your order reference number</strong> in the payment note — no names, no product details.</>}
             </div>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.45 }}>
               <input type="checkbox" checked={ackName} onChange={(e) => setAckName(e.target.checked)}
@@ -170,7 +172,7 @@
             </label>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-              <MethodCard m={chosen} amount={amountDue} highlight linksEnabled={ackName} onPayClick={() => setShowReturnReminder(true)} />
+              <MethodCard m={chosen} amount={amountDue} note={reference} highlight linksEnabled={ackName} onPayClick={() => setShowReturnReminder(true)} />
             </div>
           </>
         )}
