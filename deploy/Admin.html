@@ -312,14 +312,14 @@ const OrdersTable = ({
   }
 
   const headers = showClient
-    ? ['Date', 'Client', 'Items', 'Payment', 'Shipping', 'Total', 'Notes', 'Fulfillment', 'Payment', '']
-    : ['Date', 'Items', 'Payment', 'Shipping', 'Total', 'Notes', 'Fulfillment', 'Payment', ''];
+    ? ['Date', 'Ref', 'Client', 'Items', 'Payment', 'Shipping', 'Total', 'Notes', 'Fulfillment', 'Payment', '']
+    : ['Date', 'Ref', 'Items', 'Payment', 'Shipping', 'Total', 'Notes', 'Fulfillment', 'Payment', ''];
 
   // Column widths — explicit, so the action column (right) doesn't get
   // squeezed off-screen when the page is narrower than the table.
   const colWidths = showClient
-    ? ['96px',  '180px', '300px', '120px', '220px', '140px', '160px', '110px', '110px', '180px']
-    : ['96px',           '300px', '120px', '220px', '140px', '160px', '110px', '110px', '180px'];
+    ? ['96px', '110px', '180px', '300px', '120px', '220px', '140px', '160px', '110px', '110px', '180px']
+    : ['96px', '110px',         '300px', '120px', '220px', '140px', '160px', '110px', '110px', '180px'];
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -357,6 +357,9 @@ const OrdersTable = ({
                 <tr key={first.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)', verticalAlign: 'top' }}>
                   <td style={{ padding: '14px 18px', color: 'rgba(255,255,255,0.6)', fontSize: 13, whiteSpace: 'nowrap' }}>
                     {new Date(first.created_at || first.ordered_at).toLocaleDateString()}
+                  </td>
+                  <td style={{ padding: '14px 18px', fontSize: 12.5, color: '#2997ff', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                    {first.order_reference || '—'}
                   </td>
                   {showClient && (
                     <td style={{ padding: '14px 18px', fontSize: 14 }}>
@@ -1112,7 +1115,7 @@ const AllOrders = ({ clients, onOpenClient, onBack }) => {
       if (!q) return true;
       const c = clientById[o.client_id];
       const blob = [
-        o.item, o.product, o.notes, o.coupon_code,
+        o.item, o.product, o.notes, o.coupon_code, o.order_reference,
         c?.name, c?.email, c?.phone,
       ].filter(Boolean).join(' ').toLowerCase();
       return blob.includes(q);
