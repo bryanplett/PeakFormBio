@@ -238,16 +238,11 @@ function CouponForm({ editing, setEditing, onSave, onCancel }) {
         </div>
         <div>
           <label style={labelStyle}>Applies to</label>
-          <div style={{ display: 'flex', gap: 0, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.10)' }}>
+          <select className="field-input" value={editing.scope || 'all'} onChange={e => set('scope', e.target.value)}>
             {COUPON_SCOPES.map(opt => (
-              <button key={opt.val} type="button" onClick={() => set('scope', opt.val)} style={{
-                flex: 1, padding: '10px 12px', fontSize: 13, border: 'none', cursor: 'pointer',
-                background: editing.scope === opt.val ? '#2997ff' : 'transparent',
-                color: editing.scope === opt.val ? '#fff' : 'rgba(255,255,255,0.7)',
-                fontWeight: editing.scope === opt.val ? 600 : 400, fontFamily: 'inherit',
-              }}>{opt.label}</button>
+              <option key={opt.val} value={opt.val}>{opt.label}</option>
             ))}
-          </div>
+          </select>
         </div>
       </div>
 
