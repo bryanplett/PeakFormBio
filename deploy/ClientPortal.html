@@ -1178,12 +1178,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // Adds the first matching catalog item once the pricelist has resolved,
   // then clears the param so a refresh doesn't add it twice.
   const deepLinkDone = React.useRef(false);
-  React.useEffect(() => {
-    if (deepLinkDone.current || !productOptions.length) return;
+  const processDeepLink = React.useCallback(() => {
+    if (!productOptions.length) return;
     const params = new URLSearchParams(window.location.search);
     const want = params.get('add');
     if (!want) return;
-    deepLinkDone.current = true;
     const target = productOptions.find(l => l.toLowerCase().startsWith(want.trim().toLowerCase()));
     if (target) {
       const qty = parseInt(params.get('qty'), 10) || 1;
@@ -1194,6 +1193,20 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     const url = window.location.pathname + window.location.hash;
     window.history.replaceState({}, '', url);
   }, [productOptions]);
+
+  React.useEffect(() => {
+    if (deepLinkDone.current) return;
+    deepLinkDone.current = true;
+    processDeepLink();
+  }, [processDeepLink]);
+
+  // Also handle the case where OrderForm is already mounted (client already on
+  // the Order tab) — the banner dispatches 'pfb-deep-link' directly since a
+  // same-tab switchTab() won't remount this component to re-run the effect above.
+  React.useEffect(() => {
+    window.addEventListener('pfb-deep-link', processDeepLink);
+    return () => window.removeEventListener('pfb-deep-link', processDeepLink);
+  }, [processDeepLink]);
 
 
   const updateCart = (label, qty) => {
@@ -3330,7 +3343,7 @@ const Portal = ({ userId, onLogout }) => {
               setCarnitineOpen(false);
               switchTab('order');
               window.history.replaceState({}, '', window.location.pathname + '?add=Glutathione&qty=2&coupon=GOGLUTA' + window.location.hash);
-              window.dispatchEvent(new PopStateEvent('popstate'));
+              window.dispatchEvent(new CustomEvent('pfb-deep-link'));
             }} />
         )}
         {/* Onboarding reminder banner */}
