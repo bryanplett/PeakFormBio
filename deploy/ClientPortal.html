@@ -1180,15 +1180,19 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const deepLinkDone = React.useRef(false);
   React.useEffect(() => {
     if (deepLinkDone.current || !productOptions.length) return;
-    const want = new URLSearchParams(window.location.search).get('add');
+    const params = new URLSearchParams(window.location.search);
+    const want = params.get('add');
     if (!want) return;
     deepLinkDone.current = true;
     const target = productOptions.find(l => l.toLowerCase().startsWith(want.trim().toLowerCase()));
     if (target) {
-      addToCart(target);
-      const url = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, '', url);
+      const qty = parseInt(params.get('qty'), 10) || 1;
+      updateCart(target, qty);
     }
+    const coupon = params.get('coupon');
+    if (coupon) setCouponCode(coupon);
+    const url = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', url);
   }, [productOptions]);
 
 
@@ -3325,7 +3329,7 @@ const Portal = ({ userId, onLogout }) => {
             onAdd={() => {
               setCarnitineOpen(false);
               switchTab('order');
-              window.history.replaceState({}, '', window.location.pathname + '?add=Glutathione' + window.location.hash);
+              window.history.replaceState({}, '', window.location.pathname + '?add=Glutathione&qty=2&coupon=GOGLUTA' + window.location.hash);
               window.dispatchEvent(new PopStateEvent('popstate'));
             }} />
         )}
