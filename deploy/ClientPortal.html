@@ -1462,10 +1462,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // Which cart lines a scoped coupon may discount. Mirrors COUPON_SCOPES in
   // coupons-manager.jsx — add a key here when adding a scope there.
   const COUPON_SCOPE_TESTS = {
-    retatrutide: (label) => /\bretatrutide\b/i.test(label),
-    carnitine:   (label) => /\bl[\s-]?carnitine\b/i.test(label),
+    retatrutide:  (label) => /\bretatrutide\b/i.test(label),
+    carnitine:    (label) => /\bl[\s-]?carnitine\b/i.test(label),
+    glutathione:  (label) => /\bglutathione\b/i.test(label),
   };
-  const COUPON_SCOPE_NAMES = { retatrutide: 'Retatrutide', carnitine: 'L-Carnitine' };
+  const COUPON_SCOPE_NAMES = { retatrutide: 'Retatrutide', carnitine: 'L-Carnitine', glutathione: 'Glutathione' };
 
   const lineMatchesCoupon = (label) => {
     if (!matchedCoupon) return false;
@@ -3319,12 +3320,12 @@ const Portal = ({ userId, onLogout }) => {
       <main style={{ flex: 1, padding: '48px 40px', paddingBottom: 80, background: '#0a0a0a' }}>
         <PortalPromoBanner onOpen={() => setCarnitineOpen(true)} />
         {carnitineOpen && (
-          <CarnitineModal
+          <GlutathioneModal
             onClose={() => setCarnitineOpen(false)}
             onAdd={() => {
               setCarnitineOpen(false);
               switchTab('order');
-              window.history.replaceState({}, '', window.location.pathname + '?add=L-Carnitine' + window.location.hash);
+              window.history.replaceState({}, '', window.location.pathname + '?add=Glutathione' + window.location.hash);
               window.dispatchEvent(new PopStateEvent('popstate'));
             }} />
         )}
@@ -3418,8 +3419,8 @@ const EmptyState = ({ title, message }) => (
 const PortalPromoBanner = ({ onOpen }) => {
   const item = (
     <span className="portal-promo-item">
-      <span className="portal-promo-pct">25% OFF</span>
-      <span>All L-Carnitine &middot; August only</span>
+      <span className="portal-promo-pct">BOGO</span>
+      <span>Glutathione 1200 &middot; Buy One Get One</span>
       <span className="portal-promo-cta">Learn more</span>
       <span className="portal-promo-dot" />
     </span>
@@ -3427,7 +3428,7 @@ const PortalPromoBanner = ({ onOpen }) => {
   const run = Array.from({ length: 6 }, (_, i) => <React.Fragment key={i}>{item}</React.Fragment>);
   return (
     <div className="portal-promo-banner" role="button" tabIndex={0}
-      aria-label="25% off all L-Carnitine in August. Open details."
+      aria-label="Buy one get one free on Glutathione 1200mg. Open details."
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
       <div className="portal-promo-track">{run}{run}</div>
@@ -3435,15 +3436,15 @@ const PortalPromoBanner = ({ onOpen }) => {
   );
 };
 
-// ─── L-Carnitine Info Modal (portal) ─────────────────────────────────────────
-const CarnitineModal = ({ onClose, onAdd }) => {
+// ─── Glutathione BOGO Modal (portal) ─────────────────────────────────────────
+const GlutathioneModal = ({ onClose, onAdd }) => {
   const benefits = [
-    { title: 'Fatty acid transport', body: 'Carnitine shuttles long-chain fatty acids across the inner mitochondrial membrane, the required step before they can enter beta-oxidation and be used for energy.' },
-    { title: 'Exercise recovery', body: 'Studied for its effect on markers of muscle damage and post-exercise soreness, with research focused on L-Carnitine L-Tartrate in trained populations.' },
-    { title: 'Metabolic substrate use', body: 'Investigated for its role in how efficiently tissue draws on fat versus glycogen during sustained aerobic work.' },
-    { title: 'Cognitive research', body: 'The acetylated form, Acetyl-L-Carnitine, crosses the blood-brain barrier and is a subject of research into neuronal energy metabolism.' },
-    { title: 'Cardiac tissue', body: 'Heart muscle depends heavily on fatty acid oxidation, which is why cardiac tissue holds among the highest carnitine concentrations in the body.' },
-    { title: 'Endogenous synthesis', body: 'The body makes carnitine from lysine and methionine, requiring vitamin C, B6, niacin, and iron as cofactors. Synthesis capacity varies between individuals.' },
+    { title: 'Master antioxidant', body: 'The most abundant intracellular antioxidant, neutralizing free radicals and regenerating other antioxidants like vitamins C and E.' },
+    { title: 'Detoxification', body: 'Central to phase II liver detoxification, conjugating with toxins and heavy metals so they can be cleared from the body.' },
+    { title: 'Immune function', body: 'Supports lymphocyte proliferation and immune cell function, an area of active research interest.' },
+    { title: 'Cellular protection', body: 'Protects mitochondria and cell membranes from oxidative stress, a process implicated in aging and chronic disease research.' },
+    { title: 'Skin research', body: 'Studied for its role in melanin pathways and skin brightening, one of its more widely discussed applications.' },
+    { title: 'Synthesis and depletion', body: 'Made from cysteine, glutamine, and glycine. Levels decline with age, chronic stress, and toxin exposure, prompting interest in supplementation.' },
   ];
 
   return (
@@ -3468,13 +3469,12 @@ const CarnitineModal = ({ onClose, onAdd }) => {
           padding: '5px 12px', borderRadius: 980,
           background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.3)',
           fontSize: 11, fontWeight: 700, color: '#2997ff', letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>August offer &middot; 25% off</div>
+        }}>Buy One Get One</div>
 
-        <h2 style={{ fontSize: 30, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 14 }}>L-Carnitine</h2>
+        <h2 style={{ fontSize: 30, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 14 }}>Glutathione — 1200mg</h2>
         <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 30, maxWidth: 540 }}>
-          An amino acid derivative concentrated in skeletal muscle and heart tissue, where it governs how
-          fatty acids reach the mitochondria. Below is a summary of the mechanisms and research areas most
-          often associated with it.
+          A tripeptide antioxidant central to cellular defense and detoxification. Below is a summary of the
+          mechanisms and research areas most often associated with it.
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginBottom: 30 }}>
@@ -3486,16 +3486,6 @@ const CarnitineModal = ({ onClose, onAdd }) => {
           ))}
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 22, marginBottom: 26 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Common forms</div>
-          <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, textWrap: 'pretty' }}>
-            <strong style={{ color: '#f5f5f7', fontWeight: 600 }}>L-Carnitine L-Tartrate</strong> is the form
-            most used in exercise research. <strong style={{ color: '#f5f5f7', fontWeight: 600 }}>Acetyl-L-Carnitine</strong> is
-            the form studied for central nervous system work. <strong style={{ color: '#f5f5f7', fontWeight: 600 }}>Propionyl-L-Carnitine</strong> appears
-            most often in cardiovascular and peripheral circulation literature.
-          </p>
-        </div>
-
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '16px 18px', marginBottom: 26 }}>
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
             Sold for laboratory and research use only. Not evaluated by the FDA. Not intended to diagnose,
@@ -3505,13 +3495,13 @@ const CarnitineModal = ({ onClose, onAdd }) => {
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <button onClick={onAdd} className="btn-primary" style={{ padding: '13px 26px', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-            Add L-Carnitine to cart
+            Add Glutathione to cart
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
               <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
-            Discount code <strong style={{ color: '#f5f5f7', fontWeight: 600, letterSpacing: '0.02em' }}>AUGCARN25</strong> at checkout
+            Discount code <strong style={{ color: '#f5f5f7', fontWeight: 600, letterSpacing: '0.02em' }}>GOGLUTA</strong> at checkout — add two, second one's free
           </span>
         </div>
       </div>

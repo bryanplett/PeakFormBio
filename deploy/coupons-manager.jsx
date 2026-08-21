@@ -19,6 +19,7 @@ const COUPON_SCOPES = [
   { val: 'all',         label: 'Entire order',  short: 'Entire order' },
   { val: 'retatrutide', label: 'Retatrutide',   short: 'Retatrutide only' },
   { val: 'carnitine',   label: 'L-Carnitine',   short: 'L-Carnitine only' },
+  { val: 'glutathione', label: 'Glutathione',   short: 'Glutathione only' },
 ];
 
 const { useState: useCouponState, useEffect: useCouponEffect } = React;
