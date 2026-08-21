@@ -1119,6 +1119,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // BAC water requirement, and syringes/wipes accessory pack. Shown ONCE per
   // checkout, only when the cart contains a reconstitution-needed product.
   const [showReminder, setShowReminder] = React.useState(false);
+  const [accessoryPromptFor, setAccessoryPromptFor] = React.useState(null); // label just added, or null
   const reminderConfirmedRef = React.useRef(false);
 
   // Hydrate shipping fields from the saved profile once it arrives.
@@ -1159,6 +1160,13 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       return [...prev, { label, qty: 1 }];
     });
     showToast(label.replace(/\s*—\s*\$[\d,.]+/, '').trim() + ' added');
+    // Prompt for an accessory pack right after adding a dosed peptide, unless
+    // one is already in the cart or the item added IS an accessory/BAC item.
+    const isDosedPeptide = /\b\d+(?:\.\d+)?\s*(?:mg|IU)\b/i.test(label) && !/accessory pack|bac water/i.test(label);
+    const alreadyHasPack = cart.some(it => /accessory pack/i.test(it.label)) || /accessory pack/i.test(label);
+    if (isDosedPeptide && !alreadyHasPack) {
+      setAccessoryPromptFor(label);
+    }
   };
 
   const goToCart = () => {
@@ -1211,7 +1219,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   );
   const cartHasBacWater     = cart.some(it => /bac water/i.test(it.label));
   const cartHasAccessoryPack = cart.some(it => /accessory pack/i.test(it.label));
-  const reminderRelevant = cartNeedsReconstitution && (!cartHasBacWater || !cartHasAccessoryPack);
+  const reminderRelevant = cartNeedsReconstitution && !cartHasBacWater;
 
   // Find a label in productOptions that startsWith the given prefix. Lets us
   // quick-add the right BAC Water / Accessory Pack line (including price suffix).
@@ -1545,6 +1553,75 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
           </a>
         )}
       </div>
+
+      {/* Post-add accessory pack prompt */}
+      {accessoryPromptFor && (
+        <div
+          onClick={() => setAccessoryPromptFor(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 340,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: '#161617', border: '1px solid rgba(255,255,255,0.10)',
+            borderRadius: 18, padding: '26px 26px 22px', width: '100%', maxWidth: 380,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, marginBottom: 14,
+              background: 'rgba(255,159,10,0.10)', border: '1px solid rgba(255,159,10,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff9f0a',
+            }}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+                <path d="M9 3h6M10 3v6.5L5.5 18a2 2 0 0 0 1.7 3h9.6a2 2 0 0 0 1.7-3L14 9.5V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7.5 14h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.01em', marginBottom: 8 }}>
+              Add an accessory pack?
+            </h3>
+            <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 16 }}>
+              Would you like to add an accessory pack (bacteriostatic water, syringes and/or alcohol wipes) to your purchase?{' '}
+              <strong style={{ color: 'rgba(255,255,255,0.8)' }}>One accessory pack supplies one vial.</strong>
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
+              {[
+                { prefix: 'Accessory Pack — 01', contents: 'Syringes & Wipes' },
+                { prefix: 'Accessory Pack — 02', contents: 'Syringes, Wipes & 3ml BAC' },
+                { prefix: 'Accessory Pack — 03', contents: 'Syringes, Wipes & 10ml BAC' },
+                { prefix: 'Accessory Pack — 04', contents: '10 Syringes' },
+              ].map(({ prefix, contents }) => {
+                const label = findOptionLabel(prefix);
+                if (!label) return null;
+                const price = label.match(/\$[\d.]+/)?.[0] || '';
+                return (
+                  <button key={prefix} type="button"
+                    onClick={() => { addToCart(label); setAccessoryPromptFor(null); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                      background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.28)',
+                      borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit',
+                      textAlign: 'left', width: '100%',
+                    }}>
+                    <span style={{ fontSize: 13, color: '#ff9f0a', fontWeight: 500 }}>
+                      {prefix.replace('Accessory Pack — ', 'Pack ')} <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}>· {contents}</span>
+                    </span>
+                    <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)' }}>{price}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button type="button" onClick={() => setAccessoryPromptFor(null)} style={{
+              width: '100%', background: 'transparent', color: 'rgba(255,255,255,0.5)',
+              border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '10px',
+              fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              No thanks
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add-to-cart confirmation toast */}
       {toast && (
@@ -2289,56 +2366,6 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   )}
                 </div>
               </div>
-
-              {/* Item 3 — Accessory Pack */}
-              <div style={{ display: 'flex', gap: 14, padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{
-                  flexShrink: 0, width: 28, height: 28, borderRadius: 8,
-                  background: 'rgba(255,159,10,0.10)', border: '1px solid rgba(255,159,10,0.32)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff9f0a',
-                  fontSize: 13, fontWeight: 600,
-                }}>3</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, lineHeight: 1.55, color: 'rgba(255,255,255,0.82)' }}>
-                    We suggest <strong style={{ color: '#f5f5f7' }}>one accessory pack per vial</strong> ordered. Each pack includes the correct number of syringes and wipes for one vial. Choose the pack that matches your needs below.
-                  </div>
-                  {!cartHasAccessoryPack && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                      {[
-                        { prefix: 'Accessory Pack — 01', contents: 'Syringes & Wipes' },
-                        { prefix: 'Accessory Pack — 02', contents: 'Syringes, Wipes & 3ml BAC' },
-                        { prefix: 'Accessory Pack — 03', contents: 'Syringes, Wipes & 10ml BAC' },
-                        { prefix: 'Accessory Pack — 04', contents: '10 Syringes' },
-                      ].map(({ prefix, contents }) => {
-                        const label = findOptionLabel(prefix);
-                        if (!label) return null;
-                        const inCart = cart.find(i => i.label === label);
-                        const qty = inCart ? inCart.qty : 0;
-                        return (
-                          <div key={prefix} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,159,10,0.06)', border: '1px solid rgba(255,159,10,0.25)', borderRadius: 10, padding: '8px 12px' }}>
-                            <span style={{ fontSize: 13, color: '#ff9f0a', fontWeight: 500, flex: 1 }}>{prefix.replace('Accessory Pack — ', 'Pack ')} <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}>· {contents}</span></span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <button type="button" onClick={() => { if (qty > 0) updateCart(label, qty - 1); }} style={{ width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#fff', cursor: qty > 0 ? 'pointer' : 'not-allowed', opacity: qty > 0 ? 1 : 0.3, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>−</button>
-                              <span style={{ fontSize: 14, minWidth: 18, textAlign: 'center', color: qty > 0 ? '#ff9f0a' : 'rgba(255,255,255,0.4)' }}>{qty}</span>
-                              <button type="button" onClick={() => updateCart(label, qty + 1)} style={{ width: 26, height: 26, borderRadius: '50%', border: '1px solid rgba(255,159,10,0.4)', background: 'rgba(255,159,10,0.10)', color: '#ff9f0a', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>+</button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {cartHasAccessoryPack && (
-                    <div style={{ marginTop: 8, fontSize: 12, color: '#86efac', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <circle cx="7" cy="7" r="6" stroke="#86efac" strokeWidth="1.4"/>
-                        <path d="M4.5 7L6.3 8.8L9.5 5.5" stroke="#86efac" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      An accessory pack is in your cart.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
 
             <div style={{
               padding: '18px 28px 26px',
