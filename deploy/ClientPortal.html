@@ -3334,7 +3334,7 @@ const Portal = ({ userId, onLogout }) => {
       </div>
 
       {/* Main content */}
-      <main style={{ flex: 1, padding: '48px 40px', paddingBottom: 80, background: '#0a0a0a' }}>
+      <main style={{ flex: 1, minWidth: 0, padding: '48px 40px', paddingBottom: 80, background: '#0a0a0a' }}>
         <PortalPromoBanner onOpen={() => setCarnitineOpen(true)} />
         {carnitineOpen && (
           <GlutathioneModal
