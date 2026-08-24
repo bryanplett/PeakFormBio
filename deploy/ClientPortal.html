@@ -1106,6 +1106,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   };
   // Shipping method — required. Empty string = not yet chosen.
   const [shippingMethod, setShippingMethod] = React.useState('');
+  const [deliveryCity, setDeliveryCity] = React.useState('');
+  const [pickupForm, setPickupForm] = React.useState('');
   // Coupon code — optional. Validated against the `coupons` Supabase table
   // (loaded once on mount; admin manages them in Admin → Coupons).
   const [couponCode, setCouponCode] = React.useState('');
@@ -1236,6 +1238,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   );
   const cartHasBacWater     = cart.some(it => /bac water/i.test(it.label));
   const cartHasAccessoryPack = cart.some(it => /accessory pack/i.test(it.label));
+  const cartHasNasal = cart.some(it => /nasal/i.test(it.label));
   const reminderRelevant = cartNeedsReconstitution && !cartHasBacWater;
 
   // Find a label in productOptions that startsWith the given prefix. Lets us
@@ -1259,7 +1262,6 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     // Validate required shipping fields. We trim and require both — unless
     // the client is picking up / dropping off in person, in which case a
     // shipping address isn't applicable.
-    const isPickup = shippingMethod === 'Pickup San Jose' || shippingMethod === 'Pickup Morgan Hill';
     const trimmedAddress = shippingAddress.trim();
     const trimmedPhone = phone.trim();
     const errs = {};
@@ -1267,6 +1269,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       if (!trimmedAddress) errs.address = 'Shipping address is required.';
       else if (trimmedAddress.length < 8) errs.address = 'Please enter a complete shipping address.';
     }
+    if (isLocalDelivery && !deliveryCity) errs.deliveryCity = 'Please choose your city.';
+    if (isPickup && !pickupForm) errs.pickupForm = 'Please choose premixed or powder form.';
     // Phone: require exactly 10 digits (US format)
     const digitCount = (trimmedPhone.match(/\d/g) || []).length;
     if (!trimmedPhone) errs.phone = 'Phone number is required.';
@@ -1291,12 +1295,15 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
           // Per-order details captured at checkout. Until the 2026_order_details
           // migration was added, all of these were collected on the form and
           // then thrown away — admin only saw product/qty/notes. Now persisted.
+          const shippingMethodFinal = isLocalDelivery && deliveryCity
+            ? `${shippingMethod} — ${deliveryCity}`
+            : (isPickup && pickupForm ? `${shippingMethod} — ${pickupForm === 'premixed' ? 'Premixed' : 'Powder'}` : shippingMethod);
           const orderDetails = {
             client_id: user.id,
             notes: notes || null,
             status: 'pending',
           payment_method:   ((paymentMethods.find(m => m.id === paymentMethod) || {}).label) || paymentMethod || null,
-            shipping_method:  shippingMethod || null,
+            shipping_method:  shippingMethodFinal || null,
             shipping_address: shippingAddress.trim() || userData?.address || null,
             shipping_cost:    Number.isFinite(shippingCost) ? shippingCost : null,
             phone_at_order:   phone.trim() || userData?.phone || null,
@@ -1508,13 +1515,26 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   };
 
   const SHIPPING_OPTIONS = [
-    { value: 'Regular Shipping ($7)',   cost: 7,  label: 'Regular Shipping — $7' },
-    { value: 'Priority Shipping ($15)', cost: 15, label: 'Priority Shipping — $15' },
+    !cartHasNasal && { value: 'Regular Shipping ($7)',   cost: 7,  label: 'Regular Shipping — $7' },
+    !cartHasNasal && { value: 'Priority Shipping ($15)', cost: 15, label: 'Priority Shipping — $15' },
+    !cartHasNasal && { value: 'Local Delivery (temperature controlled)', cost: 0, label: 'Local Delivery (temperature controlled)' },
     pickupSettings.sanJose && (!clientPickup || clientPickup.includes('sanJose')) && { value: 'Pickup San Jose', cost: 0, label: 'Pickup San Jose' },
     pickupSettings.morganHill && (!clientPickup || clientPickup.includes('morganHill')) && { value: 'Pickup Morgan Hill', cost: 0, label: 'Pickup Morgan Hill' },
     pickupSettings.mountainView?.enabled && pickupSettings.mountainView.address && (!clientPickup || clientPickup.includes('mountainView')) && { value: 'Pickup Mountain View', cost: 0, label: 'Pickup Mountain View' },
   ].filter(Boolean);
-  const shippingCost = SHIPPING_OPTIONS.find(o => o.value === shippingMethod)?.cost ?? 0;
+
+  const LOCAL_DELIVERY_CITIES = [
+    { city: 'San Jose',      cost: 20 },
+    { city: 'Campbell',      cost: 20 },
+    { city: 'Cupertino',     cost: 25 },
+    { city: 'Sunnyvale',     cost: 25 },
+    { city: 'Mountain View', cost: 25 },
+  ];
+  const isLocalDelivery = shippingMethod === 'Local Delivery (temperature controlled)';
+  const isPickup = shippingMethod.startsWith('Pickup ');
+  const shippingCost = isLocalDelivery
+    ? (LOCAL_DELIVERY_CITIES.find(c => c.city === deliveryCity)?.cost ?? 0)
+    : (SHIPPING_OPTIONS.find(o => o.value === shippingMethod)?.cost ?? 0);
 
   // Subtotals
   const subtotalOriginal = cart.reduce((sum, item) => sum + priceFor(item.label).orig * item.qty, 0);
@@ -1888,6 +1908,12 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                 marginBottom: -6,
               }}>Shipping Details</div>
 
+              {cartHasNasal && (
+                <p style={{ fontSize: 12.5, color: '#ff9f0a', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', borderRadius: 10, padding: '10px 12px', marginBottom: -6, lineHeight: 1.5 }}>
+                  Nasal products can only be picked up in person — shipping and delivery aren't available for this order.
+                </p>
+              )}
+
               {/* Shipping Method — required */}
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
@@ -1899,6 +1925,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   onChange={e => {
                     const v = e.target.value;
                     setShippingMethod(v);
+                    setDeliveryCity('');
+                    setPickupForm('');
                     if (fieldErrors.shipping) setFieldErrors(prev => ({ ...prev, shipping: undefined }));
                     if (v === 'Pickup San Jose') setPickupModal('sj');
                     if (v === 'Pickup Morgan Hill') setPickupModal('mh');
@@ -1920,6 +1948,53 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   </p>
                 )}
               </div>
+
+              {/* Local Delivery city — required, sets the delivery fee */}
+              {isLocalDelivery && (
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                    Delivery City <span style={{ color: '#ff6b6b', fontWeight: 600 }}>*</span>
+                  </label>
+                  <select
+                    className="field-input"
+                    value={deliveryCity}
+                    onChange={e => { setDeliveryCity(e.target.value); if (fieldErrors.deliveryCity) setFieldErrors(prev => ({ ...prev, deliveryCity: undefined })); }}
+                    required
+                    aria-invalid={!!fieldErrors.deliveryCity}
+                    style={{ borderColor: fieldErrors.deliveryCity ? 'rgba(255,107,107,0.55)' : undefined }}>
+                    <option value="" disabled>Choose your city…</option>
+                    {LOCAL_DELIVERY_CITIES.map(c => (
+                      <option key={c.city} value={c.city}>{c.city} — ${c.cost}</option>
+                    ))}
+                  </select>
+                  {fieldErrors.deliveryCity && (
+                    <p style={{ fontSize: 12, color: '#ff8a8a', marginTop: 6 }}>{fieldErrors.deliveryCity}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Pickup form — required, premixed vs. powder */}
+              {isPickup && (
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                    Form <span style={{ color: '#ff6b6b', fontWeight: 600 }}>*</span>
+                  </label>
+                  <select
+                    className="field-input"
+                    value={pickupForm}
+                    onChange={e => { setPickupForm(e.target.value); if (fieldErrors.pickupForm) setFieldErrors(prev => ({ ...prev, pickupForm: undefined })); }}
+                    required
+                    aria-invalid={!!fieldErrors.pickupForm}
+                    style={{ borderColor: fieldErrors.pickupForm ? 'rgba(255,107,107,0.55)' : undefined }}>
+                    <option value="" disabled>Choose premixed or powder…</option>
+                    <option value="premixed">Premixed</option>
+                    <option value="powder">Powder</option>
+                  </select>
+                  {fieldErrors.pickupForm && (
+                    <p style={{ fontSize: 12, color: '#ff8a8a', marginTop: 6 }}>{fieldErrors.pickupForm}</p>
+                  )}
+                </div>
+              )}
 
               {/* Pickup acknowledgement reminder */}
               {shippingMethod === 'Pickup San Jose' && !pickupAcknowledged.sj && (
