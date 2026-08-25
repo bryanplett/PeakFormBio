@@ -30,7 +30,6 @@
 <script type="text/babel" src="profile-editor.jsx"></script>
 <script type="text/babel" src="client-invite.jsx"></script>
 <script type="text/babel" src="coupons-manager.jsx?v=20260821"></script>
-<script type="text/babel" src="inventory-manager.jsx"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -624,9 +623,13 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
 
   // Available pricelist tiers (standard, wholesale, …). Falls back to a
   // hard-coded pair if pricelists.js hasn't loaded for any reason.
-  const pricelistOptions = (typeof window.getPricelistOptions === 'function')
+  // Regular clients only ever get Wholesale here — Telegram is a distinct
+  // storefront tier assigned automatically to that channel, not picked per
+  // client on this screen.
+  const pricelistOptions = ((typeof window.getPricelistOptions === 'function')
     ? window.getPricelistOptions()
-    : [{ value: 'wholesale', label: 'Wholesale' }, { value: 'telegram', label: 'Telegram' }];
+    : [{ value: 'wholesale', label: 'Wholesale' }, { value: 'telegram', label: 'Telegram' }]
+  ).filter(o => o.value !== 'telegram');
 
   const updatePricelist = async (client, key) => {
     setSavingPricelist(client.id);
@@ -1721,7 +1724,6 @@ const App = () => {
   const [showRecipes, setShowRecipes] = React.useState(false);
   const [showOrders, setShowOrders] = React.useState(false);
   const [showCoupons, setShowCoupons] = React.useState(false);
-  const [showInventory, setShowInventory] = React.useState(false);
   const [showGroupBuy, setShowGroupBuy] = React.useState(false);
   const [showPickup, setShowPickup] = React.useState(false);
   const [showInquiries, setShowInquiries] = React.useState(false);
@@ -1741,7 +1743,6 @@ const App = () => {
     setShowRecipes(false);
     setShowOrders(false);
     setShowCoupons(false);
-    setShowInventory(false);
     setShowGroupBuy(false);
     setShowInquiries(false);
     setShowTelegramOrders(false);
@@ -1816,7 +1817,6 @@ const App = () => {
             { label: 'Telegram Orders', badge: newTelegramOrders, onClick: () => { clearViews(); setShowTelegramOrders(true); setNewTelegramOrders(0); } },
           ]} />
           <NavGroup label="Catalog" options={[
-            { label: 'Inventory', onClick: () => { clearViews(); setShowInventory(true); } },
             { label: 'Pricelist', onClick: () => { clearViews(); setShowPricelist(true); } },
             { label: 'Coupons', onClick: () => { clearViews(); setShowCoupons(true); } },
           ]} />
@@ -1858,8 +1858,6 @@ const App = () => {
               onOpenClient={(c) => { setShowOrders(false); setSelected(c); }} />
           : showCoupons && window.CouponsManager
           ? <window.CouponsManager sb={sb} onBack={() => setShowCoupons(false)} />
-          : showInventory && window.InventoryManager
-          ? <window.InventoryManager sb={sb} onBack={() => setShowInventory(false)} />
           : showGroupBuy
           ? <GroupBuySettings onBack={() => setShowGroupBuy(false)} />
           : showPickup

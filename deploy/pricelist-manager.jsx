@@ -93,6 +93,41 @@
     const [mode, setMode] = useState('base'); // 'base' | clientId
     const [overrides, setOverrides] = useState({}); // { clientId: { product: price } }
 
+    // Inventory — merged in from the old separate Inventory tab. Keyed by
+    // product_name, value = stock count. Only relevant in base mode.
+    const [inventory, setInventory] = useState(new Map());
+    const [stockPopover, setStockPopover] = useState(null); // { id, name, mode: 'set'|'add', value }
+
+    useEffect(() => {
+      if (!stockPopover) return;
+      const close = (e) => { if (!e.target.closest('.pl-stock-pop')) setStockPopover(null); };
+      document.addEventListener('mousedown', close);
+      return () => document.removeEventListener('mousedown', close);
+    }, [stockPopover]);
+
+    const loadInventory = async () => {
+      const { data, error } = await sb.from('inventory').select('*');
+      if (error) { console.error('Failed to load inventory:', error); return; }
+      const m = new Map();
+      (data || []).forEach(r => m.set(r.product_name, r.stock));
+      setInventory(m);
+    };
+
+    const commitStock = async () => {
+      if (!stockPopover) return;
+      const raw = parseInt(stockPopover.value, 10);
+      if (!isFinite(raw)) return;
+      const current = inventory.get(stockPopover.name) ?? 0;
+      const next = stockPopover.mode === 'add' ? current + raw : raw;
+      const { error } = await sb.from('inventory').upsert(
+        { product_name: stockPopover.name, stock: next, updated_at: new Date().toISOString() },
+        { onConflict: 'product_name' }
+      );
+      if (error) { setMsg('Error saving stock: ' + error.message); return; }
+      setInventory(prev => new Map(prev).set(stockPopover.name, next));
+      setStockPopover(null);
+    };
+
     // Base mode
     const [rows, setRows] = useState([]);
     const [meta, setMeta] = useState({ wholesale: { name: 'Wholesale', description: '' }, telegram: { name: 'Telegram', description: '' } });
@@ -123,6 +158,7 @@
           setOverrides(JSON.parse(JSON.stringify(ov || {})));
           setLoading(false);
         }
+        await loadInventory();
       })();
       return () => { cancelled = true; };
     }, []);
@@ -231,7 +267,7 @@
     };
     const clearAllClient = () => { setCEdits({}); setMsg('Cleared all custom prices for this client (not saved yet — click Save to apply).'); };
 
-    const gridCols = `1fr 180px 56px ${tierKeys.map(() => '100px').join(' ')} 34px`;
+    const gridCols = `1fr 180px 56px ${tierKeys.map(() => '100px').join(' ')} 110px 34px`;
     const cell = { padding: '7px 10px', fontSize: 13.5 };
     const priceField = (val, onChange, placeholder, width) => (
       <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
@@ -287,6 +323,21 @@
               </span>
             </div>
 
+            {/* Inventory quick stats (base mode only) */}
+            {mode === 'base' && (() => {
+              const named = rows.filter(r => (r.name || '').trim());
+              const outOfStock = named.filter(r => inventory.has(r.name) && (inventory.get(r.name) ?? 0) <= 0).length;
+              const lowStock = named.filter(r => { const s = inventory.get(r.name); return s !== undefined && s > 0 && s <= 3; }).length;
+              const tracked = named.filter(r => inventory.has(r.name)).length;
+              return (
+                <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, padding: '5px 12px', borderRadius: 980, background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)' }}>{tracked}/{named.length} tracked</span>
+                  <span style={{ fontSize: 12, padding: '5px 12px', borderRadius: 980, background: lowStock ? 'rgba(255,159,10,0.14)' : 'rgba(255,255,255,0.05)', color: lowStock ? '#ff9f0a' : 'rgba(255,255,255,0.4)' }}>{lowStock} low stock</span>
+                  <span style={{ fontSize: 12, padding: '5px 12px', borderRadius: 980, background: outOfStock ? 'rgba(255,69,58,0.14)' : 'rgba(255,255,255,0.05)', color: outOfStock ? '#ff453a' : 'rgba(255,255,255,0.4)' }}>{outOfStock} out of stock</span>
+                </div>
+              );
+            })()}
+
             <datalist id="pl-categories">{categories.map(c => <option key={c} value={c} />)}</datalist>
 
             {/* ── BASE MODE ─────────────────────────────────────────────────── */}
@@ -295,6 +346,7 @@
                 padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
                 <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span>
                 {tierKeys.map(t => <span key={t} style={{ textAlign: 'right' }}>{meta[t]?.name || t}</span>)}
+                <span style={{ textAlign: 'right' }}>Stock</span>
                 <span></span>
               </div>
               <div style={{ display: 'grid', gap: 18 }}>
@@ -316,6 +368,38 @@
                             <input type="checkbox" checked={r.public !== false} onChange={e => patchRow(r._id, { public: e.target.checked })} />
                           </label>
                           {tierKeys.map(t => <div key={t} style={{ justifySelf: 'end' }}>{priceField(r.prices[t], v => patchPrice(r._id, t, v), '—')}</div>)}
+                          <div className="pl-stock-pop" style={{ position: 'relative', justifySelf: 'end' }}>
+                            {(() => {
+                              const stock = inventory.get(r.name);
+                              const known = stock !== undefined;
+                              const tone = !known ? 'muted' : stock <= 0 ? 'err' : stock <= 3 ? 'warn' : 'ok';
+                              const bg = { muted: 'rgba(255,255,255,0.06)', ok: 'rgba(52,199,89,0.14)', warn: 'rgba(255,159,10,0.16)', err: 'rgba(255,69,58,0.16)' }[tone];
+                              const fg = { muted: 'rgba(255,255,255,0.4)', ok: '#34c759', warn: '#ff9f0a', err: '#ff453a' }[tone];
+                              return (
+                                <button type="button"
+                                  onClick={() => setStockPopover(p => (p && p.id === r._id) ? null : { id: r._id, name: r.name, mode: 'set', value: String(stock ?? 0) })}
+                                  disabled={!r.name}
+                                  style={{ minWidth: 64, padding: '6px 10px', borderRadius: 8, background: bg, color: fg, fontSize: 12.5, fontWeight: 600, border: 'none', cursor: r.name ? 'pointer' : 'default', fontVariantNumeric: 'tabular-nums', fontFamily: 'inherit' }}>
+                                  {known ? stock : '—'}
+                                </button>
+                              );
+                            })()}
+                            {stockPopover && stockPopover.id === r._id && (
+                              <div style={{ position: 'absolute', top: '110%', right: 0, zIndex: 50, background: '#1a1a1c', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: 10, minWidth: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+                                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                                  <button type="button" onClick={() => setStockPopover(p => ({ ...p, mode: 'set' }))} style={{ flex: 1, fontSize: 11, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.12)', background: stockPopover.mode === 'set' ? '#2997ff' : 'transparent', color: stockPopover.mode === 'set' ? '#fff' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit' }}>Set</button>
+                                  <button type="button" onClick={() => setStockPopover(p => ({ ...p, mode: 'add' }))} style={{ flex: 1, fontSize: 11, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.12)', background: stockPopover.mode === 'add' ? '#2997ff' : 'transparent', color: stockPopover.mode === 'add' ? '#fff' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit' }}>Restock +</button>
+                                </div>
+                                <input autoFocus type="number" value={stockPopover.value}
+                                  onChange={e => setStockPopover(p => ({ ...p, value: e.target.value }))}
+                                  onKeyDown={e => { if (e.key === 'Enter') commitStock(); }}
+                                  className="field-input" style={{ fontSize: 13, padding: '6px 8px', marginBottom: 8, width: '100%' }} />
+                                <button type="button" onClick={commitStock} className="btn-blue" style={{ width: '100%', fontSize: 12, padding: '6px' }}>
+                                  {stockPopover.mode === 'add' ? 'Add stock' : 'Save'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                           <button onClick={() => removeRow(r._id)} title="Remove product"
                             style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 15, lineHeight: 1 }}>×</button>
                         </div>
