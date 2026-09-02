@@ -13,6 +13,7 @@
     { id: 'beauty',      title: 'Skin / Beauty / Anti-Aging',                  tint: '#ff375f', blurb: 'Topical and systemic peptides for skin health, repair, and aesthetic outcomes.' },
     { id: 'hormonal',    title: 'Hormonal / Sexual Wellness',                  tint: '#ff6482', blurb: 'Compounds for hormonal balance and sexual wellness.' },
     { id: 'wellness',    title: 'Wellness',                                    tint: '#ffd60a', blurb: 'Lipotropic and wellness compounds supporting fat metabolism, energy, detoxification, and recovery.' },
+    { id: 'supplements', title: 'Supplements',                                 tint: '#30d158', blurb: 'Foundational supplements to support general health and performance.' },
     { id: 'accessories', title: 'Accessories',                                 tint: '#8e8e93', blurb: 'Reconstitution supplies and curated accessory packs.' },
     { id: 'programs',    title: 'Programs / Services',                         tint: '#5ac8fa', blurb: 'Personalized coaching plans built on bloodwork, lifestyle, and goals.' },
   ];
