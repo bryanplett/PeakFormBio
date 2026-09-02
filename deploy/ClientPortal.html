@@ -387,6 +387,10 @@ const LoginScreen = ({ onLogin }) => {
 
 const CATEGORY_MAP = [
   {
+    id: 'supplements', title: 'Supplements', tint: '#30d158',
+    matches: [], blurbs: {},
+  },
+  {
     id: 'metabolic', title: 'Metabolic / Weight Management', tint: '#ff9f0a',
     matches: ['retatrutide', 'tirzepatide', 'semaglutide', 'cagrilintide', '5 amino', 'klow', 'l-carnitine', 'carnitine'],
     blurbs: {
@@ -908,7 +912,8 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect, inventor
     productOptions.forEach(label => {
       const { categoryId, blurb } = categorize(label);
       const parsed = parseLabel(label);
-      buckets[categoryId].items.push({ parsed, blurb });
+      const bucket = buckets[categoryId] || buckets.other;
+      bucket.items.push({ parsed, blurb });
     });
 
     // Auto-collapse: any product with 2+ strengths under the same name becomes
@@ -1496,7 +1501,13 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     if (!matchedCoupon) return false;
     if (matchedCoupon.scope === 'all') return true;
     const test = COUPON_SCOPE_TESTS[matchedCoupon.scope];
-    return test ? test(label || '') : false;
+    if (!test || !test(label || '')) return false;
+    // GOGLUTA-style BOGO: only valid when exactly 2 of that item are in the cart.
+    if (matchedCoupon.scope === 'glutathione') {
+      const line = cart.find(it => it.label === label);
+      return !!line && line.qty === 2;
+    }
+    return true;
   };
 
   // Per-line effective price.
@@ -1865,7 +1876,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               )}
               {couponActive && couponHasNoTarget && (
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 6, letterSpacing: '-0.1px' }}>
-                  Code applied{COUPON_SCOPE_NAMES[matchedCoupon.scope] ? `, but no ${COUPON_SCOPE_NAMES[matchedCoupon.scope]} items in your cart yet.` : '.'}
+                  Code applied{couponHasNoTarget
+                    ? (matchedCoupon.scope === 'glutathione'
+                        ? ', but you need exactly 2 Glutathione in your cart for this discount.'
+                        : `, but no ${COUPON_SCOPE_NAMES[matchedCoupon.scope]} items in your cart yet.`)
+                    : '.'}
                 </p>
               )}
             </div>
