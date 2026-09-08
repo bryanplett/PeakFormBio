@@ -1375,7 +1375,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const cartHasBacWater     = cart.some(it => /bac water/i.test(it.label));
   const cartHasAccessoryPack = cart.some(it => /accessory pack/i.test(it.label));
   const cartHasNasal = cart.some(it => /nasal/i.test(it.label));
-  const reminderRelevant = cartNeedsReconstitution && !cartHasBacWater;
+  const reminderRelevant = cartNeedsReconstitution && !cartHasBacWater
+    && (!shippingMethod.startsWith('Pickup') || pickupForm !== 'premixed');
 
   // Find a label in productOptions that startsWith the given prefix. Lets us
   // quick-add the right BAC Water / Accessory Pack line (including price suffix).
@@ -2684,7 +2685,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 }}>
-                Got it — Place Order
+                Got it — Proceed to Payment
               </button>
             </div>
           </div>
