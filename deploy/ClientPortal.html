@@ -1229,9 +1229,19 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     })();
     return () => { cancelled = true; };
   }, []);
-  // Buyer taps "I've sent payment" → flag the order(s) for the seller to verify.
+  // Buyer taps "Place order" (after paying) → this is when the order ACTUALLY
+  // gets created for direct-payment methods (see pendingFinalizeRef below).
+  // Invoice orders are already inserted at checkout time, so this just no-ops
+  // for them (the button isn't shown in that case).
   const reportPayment = async () => {
     if (!placedOrder) return;
+    if (placedOrder.pending && pendingFinalizeRef.current && pendingOrderRef.current) {
+      const insertedOrders = await pendingFinalizeRef.current(pendingOrderRef.current);
+      setPlacedOrder(p => p ? { ...p, orderIds: insertedOrders.map(o => o && o.id).filter(Boolean), reported: true, pending: false } : p);
+      pendingOrderRef.current = null;
+      pendingFinalizeRef.current = null;
+      return;
+    }
     const ids = placedOrder.orderIds || [];
     for (const id of ids) {
       try { await sb.from('orders').update({ payment_status: 'reported' }).eq('id', id); }
@@ -1259,6 +1269,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const [showReminder, setShowReminder] = React.useState(false);
   const [accessoryPromptFor, setAccessoryPromptFor] = React.useState(null); // label just added, or null
   const reminderConfirmedRef = React.useRef(false);
+  // Direct-payment checkout doesn't insert the order until the buyer taps
+  // "Place order" on the payment-instructions screen. These hold the snapshot
+  // + finalize function needed to do that insert later.
+  const pendingOrderRef = React.useRef(null);
+  const pendingFinalizeRef = React.useRef(null);
 
   // Hydrate shipping fields from the saved profile once it arrives.
   React.useEffect(() => {
@@ -1421,148 +1436,166 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     setFieldErrors({});
     setSubmitting(true);
 
-    const insertedOrders = [];
-    // 1. Insert one order row per cart line in Supabase.
-    //    Real schema is (product, quantity, ordered_at). We try those first and fall
-    //    back to (item, qty) in case the schema ever gets renamed.
-    try {
-      const { data: { user } } = await sb.auth.getUser();
-      if (user) {
-        for (const item of cart) {
-          // Per-order details captured at checkout. Until the 2026_order_details
-          // migration was added, all of these were collected on the form and
-          // then thrown away — admin only saw product/qty/notes. Now persisted.
-          const sjDateLabel = pickupSJDateChoice === 'special'
-            ? 'By special arrangement'
-            : (pickupSJDateChoice
-              ? new Date(pickupSJDateChoice + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + ', 3:30–6:00 PM'
-              : '');
-          const shippingMethodFinal = isLocalDelivery && deliveryCity
-            ? `${shippingMethod} — ${deliveryCity}`
-            : (shippingMethod === 'Pickup San Jose' && sjDateLabel)
-              ? `${shippingMethod} — ${sjDateLabel}`
-              : (isPickup && pickupForm ? `${shippingMethod} — ${pickupForm === 'premixed' ? 'Premixed' : 'Powder'}` : shippingMethod);
-          const orderDetails = {
-            client_id: user.id,
-            notes: notes || null,
-            status: 'pending',
-          payment_method:   ((paymentMethods.find(m => m.id === paymentMethod) || {}).label) || paymentMethod || null,
-            shipping_method:  shippingMethodFinal || null,
-            shipping_address: shippingAddress.trim() || userData?.address || null,
-            shipping_cost:    Number.isFinite(shippingCost) ? shippingCost : null,
-            phone_at_order:   phone.trim() || userData?.phone || null,
-            coupon_code:      couponActive ? matchedCoupon.code : (couponCode.trim() || null),
-          };
-          const tryInsert = (lineCols) =>
-            sb.from('orders').insert({ ...orderDetails, ...lineCols }).select().single();
-
-          // 1st try: current schema (product/quantity) + new detail columns.
-          let { data, error } = await tryInsert({ product: item.label, quantity: item.qty });
-          // 2nd try: legacy line-item column names (item/qty).
-          if (error && /column .* does not exist/i.test(error.message || '')) {
-            const retry = await tryInsert({ item: item.label, qty: item.qty });
-            data = retry.data; error = retry.error;
-          }
-          // 3rd try: order_details migration not yet applied — fall back to a
-          // minimal insert so checkout still works. Admin will see product/qty
-          // only for these orders, same as before.
-          if (error && /column .* does not exist/i.test(error.message || '')) {
-            const minimal = { client_id: user.id, notes: notes || null, status: 'pending' };
-            let r = await sb.from('orders')
-              .insert({ ...minimal, product: item.label, quantity: item.qty })
-              .select().single();
-            if (r.error && /column .* does not exist/i.test(r.error.message || '')) {
-              r = await sb.from('orders')
-                .insert({ ...minimal, item: item.label, qty: item.qty })
-                .select().single();
-            }
-            data = r.data; error = r.error;
-          }
-          if (error) throw error;
-          insertedOrders.push(data);
-        }
-      } else {
-        console.warn('Order placed without a signed-in user; skipping DB insert.');
-      }
-    } catch (err) {
-      console.error('Order insert failed:', err);
-    }
-
-    // Compute a payment reference + amount due for the confirmation screen.
     const chosenM = paymentMethods.find(m => m.id === paymentMethod);
     const refPrefix = (window.PFB_PAYMENT && window.PFB_PAYMENT.refPrefix) || 'PFB';
-    const refBase = insertedOrders[0] && insertedOrders[0].id;
-    const reference = refBase
-      ? `${refPrefix}-${String(refBase).replace(/-/g, '').slice(0, 6).toUpperCase()}`
-      : `${refPrefix}-${String(Date.now()).slice(-6)}`;
+    const reference = `${refPrefix}-${String(Date.now()).slice(-6)}`;
     const amountDue = Number.isFinite(cartTotal) ? cartTotal : 0;
 
-    // 1b. Decrement inventory for each successfully inserted order. Best-
-    //     effort: a stock-update failure must NOT block the checkout flow.
-    //     The inventory_applied flag prevents double-counting if Admin later
-    //     marks the same order 'completed'.
-    if (insertedOrders.length && typeof window.decrementInventoryForOrder === 'function') {
-      for (const o of insertedOrders) {
-        try {
-          const res = await window.decrementInventoryForOrder(o);
-          if (!res.ok) console.warn('Inventory decrement failed:', res.error);
-        } catch (e) {
-          console.warn('Inventory decrement threw:', e);
+    // Per-order details captured at checkout (same for every line in this cart).
+    const sjDateLabel = pickupSJDateChoice === 'special'
+      ? 'By special arrangement'
+      : (pickupSJDateChoice
+        ? new Date(pickupSJDateChoice + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + ', 3:30–6:00 PM'
+        : '');
+    const shippingMethodFinal = isLocalDelivery && deliveryCity
+      ? `${shippingMethod} — ${deliveryCity}`
+      : (shippingMethod === 'Pickup San Jose' && sjDateLabel)
+        ? `${shippingMethod} — ${sjDateLabel}`
+        : (isPickup && pickupForm ? `${shippingMethod} — ${pickupForm === 'premixed' ? 'Premixed' : 'Powder'}` : shippingMethod);
+
+    // Snapshot everything the eventual DB insert + notification need, since
+    // cart/notes/shipping fields get cleared as soon as we move to the
+    // payment-instructions screen.
+    const snapshot = {
+      cart: cart.slice(),
+      notes,
+      shippingAddress: shippingAddress.trim() || userData?.address || null,
+      shippingMethodDisplay: shippingMethod,
+      shippingMethodFinal,
+      shippingCost,
+      phone: phone.trim() || userData?.phone || null,
+      couponCodeToStore: couponActive ? matchedCoupon.code : (couponCode.trim() || null),
+      reference, amountDue,
+      paymentMethodLabel: (chosenM && chosenM.label) || paymentMethod || null,
+      chosenKind: chosenM && chosenM.kind,
+    };
+
+    // Actually creates the order rows + decrements inventory + sends the
+    // notification. For direct-payment methods this only runs once the buyer
+    // taps "Place order" on the payment screen — NOT at checkout — so nothing
+    // is created (and no stock is touched) until payment has actually been sent.
+    const finalizeOrder = async (snap) => {
+      const insertedOrders = [];
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          for (const item of snap.cart) {
+            const orderDetails = {
+              client_id: user.id,
+              notes: snap.notes || null,
+              status: 'pending',
+              payment_method:   snap.paymentMethodLabel,
+              shipping_method:  snap.shippingMethodFinal || null,
+              shipping_address: snap.shippingAddress,
+              shipping_cost:    Number.isFinite(snap.shippingCost) ? snap.shippingCost : null,
+              phone_at_order:   snap.phone,
+              coupon_code:      snap.couponCodeToStore,
+              order_reference:  snap.reference,
+            };
+            const tryInsert = (lineCols) =>
+              sb.from('orders').insert({ ...orderDetails, ...lineCols }).select().single();
+
+            let { data, error } = await tryInsert({ product: item.label, quantity: item.qty });
+            if (error && /column .* does not exist/i.test(error.message || '')) {
+              const retry = await tryInsert({ item: item.label, qty: item.qty });
+              data = retry.data; error = retry.error;
+            }
+            if (error && /column .* does not exist/i.test(error.message || '')) {
+              const minimal = { client_id: user.id, notes: snap.notes || null, status: 'pending' };
+              let r = await sb.from('orders')
+                .insert({ ...minimal, product: item.label, quantity: item.qty })
+                .select().single();
+              if (r.error && /column .* does not exist/i.test(r.error.message || '')) {
+                r = await sb.from('orders')
+                  .insert({ ...minimal, item: item.label, qty: item.qty })
+                  .select().single();
+              }
+              data = r.data; error = r.error;
+            }
+            if (error) throw error;
+            insertedOrders.push(data);
+          }
+        } else {
+          console.warn('Order placed without a signed-in user; skipping DB insert.');
+        }
+      } catch (err) {
+        console.error('Order insert failed:', err);
+      }
+
+      if (insertedOrders.length && typeof window.decrementInventoryForOrder === 'function') {
+        for (const o of insertedOrders) {
+          try {
+            const res = await window.decrementInventoryForOrder(o);
+            if (!res.ok) console.warn('Inventory decrement failed:', res.error);
+          } catch (e) {
+            console.warn('Inventory decrement threw:', e);
+          }
         }
       }
+
+      try {
+        const summary = snap.cart.map(it => `• ${it.label} × ${it.qty}`).join('\n');
+        const totalItems = snap.cart.reduce((s, it) => s + it.qty, 0);
+        await fetch('https://formspree.io/f/mnjwvgan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            _subject: `New Order: ${snap.cart.length} item${snap.cart.length > 1 ? 's' : ''} (${totalItems} total)`,
+            client_name: userData?.name && userData.name !== userData?.email ? userData.name : '(no name on file)',
+            client_email: userData?.email || 'Unknown',
+            client_phone: snap.phone || '(no phone on file)',
+            shipping_address: snap.shippingAddress || '(no address on file — please contact client)',
+            order_summary: summary,
+            item_count: snap.cart.length,
+            total_items: totalItems,
+            notes: snap.notes || '(none)',
+            payment_method: snap.paymentMethodLabel,
+            order_reference: snap.reference,
+            shipping_method: snap.shippingMethodDisplay,
+            shipping_cost: `$${(snap.shippingCost || 0).toFixed(2)}`,
+            coupon_code: couponActive ? `${matchedCoupon.code} (${couponLabel}; saved $${couponSavings.toFixed(2)})` : (snap.couponCodeToStore || '(none)'),
+            subtotal: `$${subtotalEffective.toFixed(2)}`,
+            order_total: `$${snap.amountDue.toFixed(2)}`,
+            submitted_at: new Date().toLocaleString(),
+          }),
+        });
+      } catch (err) {
+        console.error('Notification failed:', err);
+      }
+
+      const historyStatus = snap.chosenKind === 'invoice' ? 'Invoice sent' : 'Awaiting payment';
+      snap.cart.forEach((item, i) => {
+        onOrderPlaced({
+          id: insertedOrders[i]?.id,
+          item: item.label,
+          qty: item.qty,
+          notes: snap.notes,
+          status: historyStatus,
+        });
+      });
+
+      return insertedOrders;
+    };
+
+    if (chosenM && chosenM.kind === 'invoice') {
+      // No separate confirmation step for invoice — the order is real now.
+      const insertedOrders = await finalizeOrder(snapshot);
+      setPlacedOrder({
+        reference, total: amountDue, methodId: paymentMethod,
+        orderIds: insertedOrders.map(o => o && o.id).filter(Boolean),
+        reported: true, pending: false,
+      });
+    } else {
+      // Direct payment: don't touch the database yet. The order is only
+      // created once the buyer taps "Place order" after actually sending payment.
+      pendingOrderRef.current = snapshot;
+      pendingFinalizeRef.current = finalizeOrder;
+      setPlacedOrder({
+        reference, total: amountDue, methodId: paymentMethod,
+        orderIds: [], reported: false, pending: true,
+      });
     }
 
-    // 2. Email/SMS notification via Formspree — single message with full cart
-    try {
-      const summary = cart.map(it => `• ${it.label} × ${it.qty}`).join('\n');
-      const totalItems = cart.reduce((s, it) => s + it.qty, 0);
-      await fetch('https://formspree.io/f/mnjwvgan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          _subject: `New Order: ${cart.length} item${cart.length > 1 ? 's' : ''} (${totalItems} total)`,
-          client_name: userData?.name && userData.name !== userData?.email ? userData.name : '(no name on file)',
-          client_email: userData?.email || 'Unknown',
-          client_phone: phone.trim() || userData?.phone || '(no phone on file)',
-          shipping_address: shippingAddress.trim() || userData?.address || '(no address on file — please contact client)',
-          order_summary: summary,
-          item_count: cart.length,
-          total_items: totalItems,
-          notes: notes || '(none)',
-          payment_method: (chosenM && chosenM.label) || paymentMethod,
-          order_reference: reference,
-          shipping_method: shippingMethod,
-          shipping_cost: `$${shippingCost.toFixed(2)}`,
-          coupon_code: couponActive ? `${matchedCoupon.code} (${couponLabel}; saved $${couponSavings.toFixed(2)})` : (couponCode.trim() || '(none)'),
-          subtotal: `$${subtotalEffective.toFixed(2)}`,
-          order_total: `$${cartTotal.toFixed(2)}`,
-          submitted_at: new Date().toLocaleString(),
-        }),
-      });
-    } catch (err) {
-      console.error('Notification failed:', err);
-    }
-
-    // Push each cart line into history
-    const historyStatus = (chosenM && chosenM.kind === 'invoice') ? 'Invoice sent' : 'Awaiting payment';
-    cart.forEach((item, i) => {
-      onOrderPlaced({
-        id: insertedOrders[i]?.id,
-        item: item.label,
-        qty: item.qty,
-        notes,
-        status: historyStatus,
-      });
-    });
-    // Record the placed order so the confirmation screen can show payment
-    // instructions (amount + reference + handles + “I've sent payment”).
-    setPlacedOrder({
-      reference,
-      total: amountDue,
-      methodId: paymentMethod,
-      orderIds: insertedOrders.map(o => o && o.id).filter(Boolean),
-      reported: false,
-    });
     setCart([]); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode(''); setPickupSJDateChoice('');
     setSubmitting(false);
     setSuccess(true);
