@@ -2,7 +2,7 @@
 // Pulls from the same `orders` table as AllOrders; groups line items by product
 // and sums quantity so packing/shipping can be batched.
 
-const TALLY_STATUS_EXCLUDE = ['cancelled'];
+const TALLY_STATUS_EXCLUDE = ['cancelled', 'completed'];
 
 function tallyItems(orders) {
   const byProduct = {};

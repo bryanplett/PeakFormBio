@@ -23,6 +23,7 @@
   global.PFB_PAYMENT = {
     businessName: 'PeakForm Bio',
     refPrefix: 'PFB',
+    zelleQr: { image: 'assets/zelle-qr.png', name: 'PEAK FORM BIO LLC', handle: 'peakformbio' },
     // Memo line buyers are asked to include so you can match payments to orders.
     memoNote: 'Include your order reference in the payment note so we can match it.',
     methods: [

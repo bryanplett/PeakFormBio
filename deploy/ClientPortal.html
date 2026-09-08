@@ -1246,6 +1246,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // Coupon code — optional. Validated against the `coupons` Supabase table
   // (loaded once on mount; admin manages them in Admin → Coupons).
   const [couponCode, setCouponCode] = React.useState('');
+  const [showZelleQR, setShowZelleQR] = React.useState(false);
   const [activeCoupons, setActiveCoupons] = React.useState([]);
   const [clientPastCoupons, setClientPastCoupons] = React.useState([]);
   const [inventoryMap, setInventoryMap] = React.useState({}); // name -> qty
@@ -2426,6 +2427,16 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                 {(() => {
                   const m = paymentMethods.find(x => x.id === paymentMethod);
                   if (!m || m.kind === 'invoice') return null;
+                  if (m.id === 'zelle') {
+                    return (
+                      <button type="button" onClick={() => setShowZelleQR(true)} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 10,
+                        fontSize: 13, fontWeight: 500, color: '#2997ff', textDecoration: 'none', fontFamily: 'inherit', cursor: 'pointer',
+                        background: 'rgba(41,151,255,0.10)', border: '1px solid rgba(41,151,255,0.3)',
+                        borderRadius: 980, padding: '8px 14px',
+                      }}>Show Zelle QR code</button>
+                    );
+                  }
                   const link = window.paymentLink ? window.paymentLink(m, cartTotal) : null;
                   if (!link) return null;
                   return (
@@ -2443,6 +2454,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   );
                 })()}
               </div>
+
+              {showZelleQR && window.ZelleQRModal && <window.ZelleQRModal onClose={() => setShowZelleQR(false)} />}
 
               {/* Invoice notice — always visible at checkout */}
               <div style={{

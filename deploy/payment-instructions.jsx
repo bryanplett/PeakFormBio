@@ -53,9 +53,39 @@
     );
   };
 
+  const ZelleQRModal = ({ onClose }) => {
+    const cfg = global.PFB_PAYMENT || {};
+    const qr = cfg.zelleQr || {};
+    return (
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div onClick={(e) => e.stopPropagation()} style={{
+          background: '#1a1a1c', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 32,
+          maxWidth: 360, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.6)', textAlign: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 19, fontWeight: 700, color: '#6b2fbf', letterSpacing: '-0.01em' }}>Zelle</span>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>QR Code</span>
+          </div>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 18 }}>Scan in your banking app to pay.</p>
+          {qr.image && (
+            <div style={{ background: '#fff', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+              <img src={qr.image} alt="Zelle QR code" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 6 }} />
+            </div>
+          )}
+          {qr.name && <div style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7', marginBottom: 2 }}>{qr.name}</div>}
+          {qr.handle && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 20 }}>{qr.handle}</div>}
+          <button className="btn-blue" onClick={onClose} style={{ width: '100%', padding: '12px 24px', fontSize: 15, fontWeight: 600 }}>Close</button>
+        </div>
+      </div>
+    );
+  };
+  global.ZelleQRModal = ZelleQRModal;
+
   const MethodCard = ({ m, amount, note, highlight, linksEnabled = true, onPayClick }) => {
     const isHandle = m.kind === 'handle' || m.kind === 'crypto';
     const link = global.paymentLink ? global.paymentLink(m, amount, note) : null;
+    const [showQr, setShowQr] = useState(false);
     return (
       <div style={{
         border: `1px solid ${highlight ? 'rgba(41,151,255,0.55)' : 'rgba(255,255,255,0.09)'}`,
@@ -88,9 +118,16 @@
           </div>
         )}
         {m.id === 'zelle' && (
-          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', marginTop: 7 }}>
-            Zelle is sent from inside your bank’s app — copy the detail above.
-          </div>
+          <>
+            <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', marginTop: 7 }}>
+              Zelle is sent from inside your bank’s app — copy the detail above, or scan the QR code.
+            </div>
+            <button type="button" onClick={() => setShowQr(true)} style={{
+              marginTop: 9, fontFamily: 'inherit', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+              padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(41,151,255,0.5)', background: 'transparent', color: '#2997ff',
+            }}>Show Zelle QR code</button>
+            {showQr && <ZelleQRModal onClose={() => setShowQr(false)} />}
+          </>
         )}
         {m.hint && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 8, lineHeight: 1.45 }}>{m.hint}</div>}
       </div>
