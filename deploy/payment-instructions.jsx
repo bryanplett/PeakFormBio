@@ -99,6 +99,11 @@
             {highlight && <span style={{ fontSize: 11, fontWeight: 600, color: '#2997ff' }}>· your pick</span>}
           </div>
         </div>
+        {!linksEnabled && (
+          <div style={{ fontSize: 12, color: '#ff9f0a', marginBottom: 10, lineHeight: 1.4 }}>
+            Please acknowledge and click the checkboxes above to proceed to payment.
+          </div>
+        )}
         {isHandle && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <code style={{ flex: 1, minWidth: 0, fontFamily: 'ui-monospace,monospace', fontSize: 14, color: '#fff',
