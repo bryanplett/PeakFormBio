@@ -2437,21 +2437,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                       }}>Show Zelle QR code</button>
                     );
                   }
-                  const link = window.paymentLink ? window.paymentLink(m, cartTotal) : null;
-                  if (!link) return null;
-                  return (
-                    <a href={link} target="_blank" rel="noopener noreferrer" style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 10,
-                      fontSize: 13, fontWeight: 500, color: '#2997ff', textDecoration: 'none',
-                      background: 'rgba(41,151,255,0.10)', border: '1px solid rgba(41,151,255,0.3)',
-                      borderRadius: 980, padding: '8px 14px',
-                    }}>
-                      Open {m.label} to pay {m.handle}
-                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                        <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </a>
-                  );
+                  return null;
                 })()}
               </div>
 
@@ -2498,7 +2484,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
               <button type="submit" className="btn-blue" disabled={submitting}
                 style={{ alignSelf: 'flex-start', padding: '13px 32px', fontSize: 15, opacity: submitting ? 0.6 : 1 }}>
-                {submitting ? 'Placing order…' : `Place order (${cart.reduce((s, c) => s + c.qty, 0)} ${cart.reduce((s, c) => s + c.qty, 0) === 1 ? 'item' : 'items'})`}
+                {submitting ? 'Placing order…' : `Proceed to payment (${cart.reduce((s, c) => s + c.qty, 0)} ${cart.reduce((s, c) => s + c.qty, 0) === 1 ? 'item' : 'items'})`}
               </button>
             </form>
           </div>

@@ -202,10 +202,13 @@
                 ? <>The <strong>Open Venmo</strong> button below pre-fills your order reference in the payment note — just confirm and send.</>
                 : <>Include <strong>only your order reference number</strong> in the payment note — no names, no product details.</>}
             </div>
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.82)', lineHeight: 1.45 }}>
+            <div style={{ fontSize: 12.5, color: '#ff9f0a', marginBottom: 14, lineHeight: 1.5, background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.3)', borderRadius: 10, padding: '11px 13px' }}>
+              <strong>Pay only through the handle/link above.</strong> Any payment sent outside this direct link may be lost and cannot be recovered.
+            </div>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.45 }}>
               <input type="checkbox" checked={ackName} onChange={(e) => setAckName(e.target.checked)}
                 style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
-              <span>I will include <strong>only my order reference</strong> in the payment note.</span>
+              <span>I will include <u>only my order reference</u> in the payment note, and understand payments sent outside this link may be lost.</span>
             </label>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
