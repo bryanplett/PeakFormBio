@@ -106,14 +106,14 @@
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.handle}</code>
             <CopyBtn value={m.handle} />
             {link && (
-              <a href={link} target="_blank" rel="noopener noreferrer"
-                onClick={(e) => { if (!linksEnabled) { e.preventDefault(); return; } if (onPayClick) onPayClick(); }}
-                aria-disabled={!linksEnabled}
-                style={{ flexShrink: 0, textDecoration: 'none', fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
+              <button type="button"
+                onClick={() => { if (!linksEnabled) return; if (onPayClick) onPayClick(link); }}
+                disabled={!linksEnabled}
+                style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: linksEnabled ? 'pointer' : 'not-allowed',
                   padding: '7px 14px', borderRadius: 8, border: 'none', background: '#0066cc', color: '#fff', whiteSpace: 'nowrap',
-                  pointerEvents: linksEnabled ? 'auto' : 'none', opacity: linksEnabled ? 1 : 0.4 }}>
+                  opacity: linksEnabled ? 1 : 0.4 }}>
                 Open {m.label} ↗
-              </a>
+              </button>
             )}
           </div>
         )}
@@ -145,7 +145,7 @@
   const PaymentInstructions = ({ amountDue, reference, methods, chosenId, reported, onReported, businessName }) => {
     const cfg = global.PFB_PAYMENT || {};
     const [ackName, setAckName] = useState(false);
-    const [showReturnReminder, setShowReturnReminder] = useState(false);
+    const [pendingOpen, setPendingOpen] = useState(null); // { url, label } — set right when buyer taps "Open X", before the app opens
     const list = (methods && methods.length ? methods : global.visiblePaymentMethods(cfg.methods));
     const direct = list.filter(m => m.kind === 'handle' || m.kind === 'crypto');
     const invoice = list.find(m => m.kind === 'invoice');
@@ -212,7 +212,8 @@
             </label>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-              <MethodCard m={chosen} amount={amountDue} note={reference} highlight linksEnabled={ackName} onPayClick={() => setShowReturnReminder(true)} />
+              <MethodCard m={chosen} amount={amountDue} note={reference} highlight linksEnabled={ackName}
+              onPayClick={(url) => setPendingOpen({ url, label: chosen.label })} />
             </div>
           </>
         )}
@@ -258,9 +259,9 @@
         )}
       </div>
 
-      {/* Return reminder — fires when they open the payment app */}
-      {showReturnReminder && (
-        <div onClick={() => setShowReturnReminder(false)}
+      {/* Pre-open reminder — shown BEFORE the payment app opens, so it isn't missed */}
+      {pendingOpen && (
+        <div onClick={() => setPendingOpen(null)}
           style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div onClick={(e) => e.stopPropagation()} className="card"
@@ -270,12 +271,12 @@
               One last step!
             </h3>
             <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.55, marginBottom: 20 }}>
-              After you finish paying, <strong style={{ color: '#fff' }}>come back to this screen</strong> and tap
+              After you finish paying in {pendingOpen.label}, <strong style={{ color: '#fff' }}>come back to this screen</strong> and tap
               <strong style={{ color: '#fff' }}> “Place order”</strong> so we know to verify it and ship your order.
             </p>
-            <button className="btn-blue" onClick={() => setShowReturnReminder(false)}
+            <button className="btn-blue" onClick={() => { window.open(pendingOpen.url, '_blank', 'noopener,noreferrer'); setPendingOpen(null); }}
               style={{ width: '100%', padding: '12px 24px', fontSize: 15, fontWeight: 600 }}>
-              Got it
+              Continue to {pendingOpen.label} ↗
             </button>
           </div>
         </div>
