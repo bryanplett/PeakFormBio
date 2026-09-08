@@ -1496,11 +1496,14 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               sb.from('orders').insert({ ...orderDetails, ...lineCols }).select().single();
 
             let { data, error } = await tryInsert({ product: item.label, quantity: item.qty });
+            if (error) console.error('Order insert attempt 1 failed:', error.message);
             if (error && /column .* does not exist/i.test(error.message || '')) {
               const retry = await tryInsert({ item: item.label, qty: item.qty });
               data = retry.data; error = retry.error;
+              if (error) console.error('Order insert attempt 2 failed:', error.message);
             }
             if (error && /column .* does not exist/i.test(error.message || '')) {
+              console.error('Falling back to minimal insert (payment/shipping/coupon details will be blank). Root cause:', error.message);
               const minimal = { client_id: user.id, notes: snap.notes || null, status: 'pending' };
               let r = await sb.from('orders')
                 .insert({ ...minimal, product: item.label, quantity: item.qty })
