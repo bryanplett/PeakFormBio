@@ -30,6 +30,7 @@
 <script type="text/babel" src="profile-editor.jsx"></script>
 <script type="text/babel" src="client-invite.jsx"></script>
 <script type="text/babel" src="coupons-manager.jsx?v=20260821"></script>
+<script type="text/babel" src="fulfillment-tally.jsx"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -1728,6 +1729,7 @@ const App = () => {
   const [showPickup, setShowPickup] = React.useState(false);
   const [showInquiries, setShowInquiries] = React.useState(false);
   const [showTelegramOrders, setShowTelegramOrders] = React.useState(false);
+  const [showFulfillmentTally, setShowFulfillmentTally] = React.useState(false);
   const [newInquiries, setNewInquiries] = React.useState(0);
   const [newOrders, setNewOrders] = React.useState(0);
   const [newTelegramOrders, setNewTelegramOrders] = React.useState(0);
@@ -1746,6 +1748,7 @@ const App = () => {
     setShowGroupBuy(false);
     setShowInquiries(false);
     setShowTelegramOrders(false);
+    setShowFulfillmentTally(false);
     setSelected(null);
     setEditor(null);
   };
@@ -1829,6 +1832,7 @@ const App = () => {
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPayments(true); }}>Payments</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowGroupBuy(true); }}>Group Buy</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPickup(true); }}>Pickup Locations</button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowFulfillmentTally(true); }}>Fulfillment Tally</button>
           <span className="admin-email" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{user.email}</span>
           <button className="btn-ghost" onClick={signOut}>Sign Out</button>
         </div>
@@ -1849,6 +1853,8 @@ const App = () => {
           ? <window.RecipesDB sb={sb} onBack={() => setShowRecipes(false)} />
           : showTelegramOrders
           ? <AllTelegramOrders onBack={() => setShowTelegramOrders(false)} />
+          : showFulfillmentTally && window.FulfillmentTally
+          ? <window.FulfillmentTally sb={sb} clients={clients} onBack={() => setShowFulfillmentTally(false)} />
           : showInquiries
           ? <AllInquiries onBack={() => setShowInquiries(false)} />
           : showOrders
