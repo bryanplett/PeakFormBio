@@ -322,6 +322,8 @@ const LoginScreen = ({ onLogin }) => {
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [mode, setMode] = React.useState('signin'); // 'signin' | 'reset'
+  const [resetSent, setResetSent] = React.useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -330,6 +332,17 @@ const LoginScreen = ({ onLogin }) => {
     setLoading(false);
     if (error) setError(error.message || 'Sign-in failed.');
     else if (data?.user) onLogin(data.user.id);
+  };
+
+  const submitReset = async (e) => {
+    e.preventDefault();
+    setLoading(true); setError('');
+    const { error } = await sb.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: window.location.origin + window.location.pathname,
+    });
+    setLoading(false);
+    if (error) setError(error.message || 'Could not send reset email.');
+    else setResetSent(true);
   };
 
   return (
@@ -348,31 +361,136 @@ const LoginScreen = ({ onLogin }) => {
           </p>
         </div>
 
-        <div className="card" style={{ borderRadius: 20, padding: 36 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 6, letterSpacing: '-0.02em' }}>Sign in</h2>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>
-            Enter your email and password to access your portal.
-          </p>
-          <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Email</label>
-              <input className="field-input" type="email" placeholder="you@email.com" required
-                value={email} onChange={e => { setEmail(e.target.value); setError(''); }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Password</label>
-              <input className="field-input" type="password" placeholder="••••••••" required
-                value={password} onChange={e => { setPassword(e.target.value); setError(''); }} />
-            </div>
-            {error && <p style={{ fontSize: 13, color: '#ff453a', letterSpacing: '-0.12px' }}>{error}</p>}
-            <button type="submit" className="btn-blue" disabled={loading}
-              style={{ marginTop: 4, padding: '13px', fontSize: 16, opacity: loading ? 0.6 : 1 }}>
-              {loading ? 'Signing in…' : 'Sign In'}
+        {mode === 'signin' ? (
+          <div className="card" style={{ borderRadius: 20, padding: 36 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 6, letterSpacing: '-0.02em' }}>Sign in</h2>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>
+              Enter your email and password to access your portal.
+            </p>
+            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Email</label>
+                <input className="field-input" type="email" placeholder="you@email.com" required
+                  value={email} onChange={e => { setEmail(e.target.value); setError(''); }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Password</label>
+                <input className="field-input" type="password" placeholder="••••••••" required
+                  value={password} onChange={e => { setPassword(e.target.value); setError(''); }} />
+              </div>
+              {error && <p style={{ fontSize: 13, color: '#ff453a', letterSpacing: '-0.12px' }}>{error}</p>}
+              <button type="submit" className="btn-blue" disabled={loading}
+                style={{ marginTop: 4, padding: '13px', fontSize: 16, opacity: loading ? 0.6 : 1 }}>
+                {loading ? 'Signing in…' : 'Sign In'}
+              </button>
+              <button type="button" onClick={() => { setMode('reset'); setError(''); setResetSent(false); }}
+                style={{ background: 'none', border: 'none', color: '#2997ff', fontSize: 13, cursor: 'pointer', textAlign: 'center', padding: 0 }}>
+                Forgot password?
+              </button>
+            </form>
+            <p style={{ marginTop: 20, fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 1.5 }}>
+              No account yet? Your coach will set up your access.
+            </p>
+          </div>
+        ) : (
+          <div className="card" style={{ borderRadius: 20, padding: 36 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 6, letterSpacing: '-0.02em' }}>Reset password</h2>
+            {resetSent ? (
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
+                If an account exists for <strong>{email.trim().toLowerCase()}</strong>, a reset link is on its way. Check your inbox.
+              </p>
+            ) : (
+              <React.Fragment>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>
+                  Enter your email and we'll send you a link to reset your password.
+                </p>
+                <form onSubmit={submitReset} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Email</label>
+                    <input className="field-input" type="email" placeholder="you@email.com" required
+                      value={email} onChange={e => { setEmail(e.target.value); setError(''); }} />
+                  </div>
+                  {error && <p style={{ fontSize: 13, color: '#ff453a', letterSpacing: '-0.12px' }}>{error}</p>}
+                  <button type="submit" className="btn-blue" disabled={loading}
+                    style={{ marginTop: 4, padding: '13px', fontSize: 16, opacity: loading ? 0.6 : 1 }}>
+                    {loading ? 'Sending…' : 'Send reset link'}
+                  </button>
+                </form>
+              </React.Fragment>
+            )}
+            <button type="button" onClick={() => { setMode('signin'); setError(''); }}
+              style={{ marginTop: 20, background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', display: 'block', width: '100%', textAlign: 'center', padding: 0 }}>
+              ← Back to sign in
             </button>
-          </form>
-          <p style={{ marginTop: 20, fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', lineHeight: 1.5 }}>
-            No account yet? Your coach will set up your access.
-          </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Password recovery (link from reset email lands here) ───────────────────
+const ResetPasswordScreen = ({ token, onDone }) => {
+  const [password, setPassword] = React.useState('');
+  const [confirm, setConfirm] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [done, setDone] = React.useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (password !== confirm) { setError('Passwords do not match.'); return; }
+    setLoading(true); setError('');
+    const { error } = await sb.auth.confirmPasswordReset({ token, password });
+    setLoading(false);
+    if (error) setError(error.message || 'Could not update password.');
+    else setDone(true);
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh', background: '#000',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 24,
+      backgroundImage: 'radial-gradient(ellipse at 50% 40%, rgba(0,102,204,0.18) 0%, transparent 65%)',
+    }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div className="card" style={{ borderRadius: 20, padding: 36 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 600, marginBottom: 6, letterSpacing: '-0.02em' }}>Set a new password</h2>
+          {done ? (
+            <React.Fragment>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, marginBottom: 20 }}>
+                Your password has been updated.
+              </p>
+              <button type="button" className="btn-blue" onClick={onDone} style={{ padding: '13px', fontSize: 16, width: '100%' }}>
+                Continue to portal
+              </button>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginBottom: 28 }}>
+                Choose a new password for your account.
+              </p>
+              <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>New password</label>
+                  <input className="field-input" type="password" placeholder="••••••••" required
+                    value={password} onChange={e => { setPassword(e.target.value); setError(''); }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Confirm password</label>
+                  <input className="field-input" type="password" placeholder="••••••••" required
+                    value={confirm} onChange={e => { setConfirm(e.target.value); setError(''); }} />
+                </div>
+                {error && <p style={{ fontSize: 13, color: '#ff453a', letterSpacing: '-0.12px' }}>{error}</p>}
+                <button type="submit" className="btn-blue" disabled={loading}
+                  style={{ marginTop: 4, padding: '13px', fontSize: 16, opacity: loading ? 0.6 : 1 }}>
+                  {loading ? 'Updating…' : 'Update password'}
+                </button>
+              </form>
+            </React.Fragment>
+          )}
         </div>
       </div>
     </div>
@@ -1063,6 +1181,18 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const [shippingAddress, setShippingAddress] = React.useState('');
   const [pickupModal, setPickupModal] = React.useState(null); // 'sj' | 'mh' | 'mv' | null
   const [pickupAcknowledged, setPickupAcknowledged] = React.useState({ sj: false, mh: false, mv: false });
+  const [pickupSJDateChoice, setPickupSJDateChoice] = React.useState(''); // ISO date string, or 'special'
+  // Next two San Jose pickup days (Mon/Thu). Excludes today even if today is Mon/Thu.
+  const getNextSJPickupDates = () => {
+    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+    const opts = [];
+    for (let i = 1; opts.length < 2 && i < 30; i++) {
+      const cand = new Date(startOfToday); cand.setDate(cand.getDate() + i);
+      const wd = cand.getDay();
+      if (wd === 1 || wd === 4) opts.push(cand);
+    }
+    return opts;
+  };
   const [pickupSettings, setPickupSettings] = React.useState(window.PICKUP_SETTINGS_DEFAULT);
   React.useEffect(() => { window.loadPickupSettings(sb).then(setPickupSettings); }, []);
   const clientPickup = userData?.profile?.pickup_locations; // null = no override
@@ -1300,9 +1430,16 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
           // Per-order details captured at checkout. Until the 2026_order_details
           // migration was added, all of these were collected on the form and
           // then thrown away — admin only saw product/qty/notes. Now persisted.
+          const sjDateLabel = pickupSJDateChoice === 'special'
+            ? 'By special arrangement'
+            : (pickupSJDateChoice
+              ? new Date(pickupSJDateChoice + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + ', 3:30–6:00 PM'
+              : '');
           const shippingMethodFinal = isLocalDelivery && deliveryCity
             ? `${shippingMethod} — ${deliveryCity}`
-            : (isPickup && pickupForm ? `${shippingMethod} — ${pickupForm === 'premixed' ? 'Premixed' : 'Powder'}` : shippingMethod);
+            : (shippingMethod === 'Pickup San Jose' && sjDateLabel)
+              ? `${shippingMethod} — ${sjDateLabel}`
+              : (isPickup && pickupForm ? `${shippingMethod} — ${pickupForm === 'premixed' ? 'Premixed' : 'Powder'}` : shippingMethod);
           const orderDetails = {
             client_id: user.id,
             notes: notes || null,
@@ -1424,7 +1561,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       orderIds: insertedOrders.map(o => o && o.id).filter(Boolean),
       reported: false,
     });
-    setCart([]); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode('');
+    setCart([]); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode(''); setPickupSJDateChoice('');
     setSubmitting(false);
     setSuccess(true);
   };
@@ -1942,6 +2079,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                     setShippingMethod(v);
                     setDeliveryCity('');
                     setPickupForm('');
+                    if (v !== 'Pickup San Jose') setPickupSJDateChoice('');
                     if (fieldErrors.shipping) setFieldErrors(prev => ({ ...prev, shipping: undefined }));
                     if (v === 'Pickup San Jose') setPickupModal('sj');
                     if (v === 'Pickup Morgan Hill') setPickupModal('mh');
@@ -2012,8 +2150,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               )}
 
               {/* Pickup acknowledgement reminder */}
-              {shippingMethod === 'Pickup San Jose' && !pickupAcknowledged.sj && (
-                <p style={{ fontSize: 12, color: '#ff9f0a', marginTop: -8 }}>Please acknowledge the San Jose pickup details above.</p>
+              {shippingMethod === 'Pickup San Jose' && !pickupSJDateChoice && (
+                <p style={{ fontSize: 12, color: '#ff9f0a', marginTop: -8 }}>Please choose a pickup day above.</p>
               )}
               {shippingMethod === 'Pickup Morgan Hill' && !pickupAcknowledged.mh && (
                 <p style={{ fontSize: 12, color: '#ff9f0a', marginTop: -8 }}>Please acknowledge the Morgan Hill pickup details above.</p>
@@ -2023,7 +2161,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               {pickupModal && (() => {
                 const isSJ = pickupModal === 'sj';
                 const isMV = pickupModal === 'mv';
-                const acked = pickupAcknowledged[pickupModal];
+                const acked = isSJ ? !!pickupSJDateChoice : pickupAcknowledged[pickupModal];
+                const sjDates = isSJ ? getNextSJPickupDates() : [];
                 const mv = pickupSettings.mountainView || {};
                 return (
                   <div style={{
@@ -2072,7 +2211,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                       ) : isSJ ? (
                         <>
                           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 12 }}>
-                            San Jose pickups are available <strong style={{color:'#f5f5f7'}}>Mondays and Thursdays between 3:00 PM – 5:00 PM</strong>. Extended pickup until 6:00 PM may be arranged in advance.
+                            San Jose pickups are available <strong style={{color:'#f5f5f7'}}>Mondays and Thursdays, 3:30 PM – 6:00 PM</strong>.
                           </p>
                           <div style={{
                             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
@@ -2086,6 +2225,38 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                             <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
                               1302 Lincoln Ave #201<br/>San Jose, CA 95125
                             </span>
+                          </div>
+
+                          <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'rgba(255,255,255,0.85)' }}>Choose a pickup day <span style={{ color: '#ff6b6b' }}>*</span></p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+                            {sjDates.map(d => {
+                              const iso = d.toISOString().slice(0,10);
+                              const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+                              return (
+                                <label key={iso} style={{
+                                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                                  padding: '10px 12px', borderRadius: 10,
+                                  border: `1px solid ${pickupSJDateChoice === iso ? 'rgba(41,151,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                                  background: pickupSJDateChoice === iso ? 'rgba(41,151,255,0.08)' : 'rgba(255,255,255,0.03)',
+                                }}>
+                                  <input type="radio" name="sjPickupDate" checked={pickupSJDateChoice === iso}
+                                    onChange={() => setPickupSJDateChoice(iso)}
+                                    style={{ width: 16, height: 16, accentColor: '#2997ff', flexShrink: 0 }} />
+                                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>{label}, 3:30 PM – 6:00 PM</span>
+                                </label>
+                              );
+                            })}
+                            <label style={{
+                              display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
+                              padding: '10px 12px', borderRadius: 10,
+                              border: `1px solid ${pickupSJDateChoice === 'special' ? 'rgba(41,151,255,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                              background: pickupSJDateChoice === 'special' ? 'rgba(41,151,255,0.08)' : 'rgba(255,255,255,0.03)',
+                            }}>
+                              <input type="radio" name="sjPickupDate" checked={pickupSJDateChoice === 'special'}
+                                onChange={() => setPickupSJDateChoice('special')}
+                                style={{ width: 16, height: 16, marginTop: 2, accentColor: '#2997ff', flexShrink: 0 }} />
+                              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.4 }}>By special arrangement. I acknowledge this may take one to five days.</span>
+                            </label>
                           </div>
                         </>
                       ) : (
@@ -2112,22 +2283,22 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                         </>
                       )}
 
-                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 24 }}>
-                        <input type="checkbox" checked={acked}
-                          onChange={e => setPickupAcknowledged(prev => ({ ...prev, [pickupModal]: e.target.checked }))}
-                          style={{ width: 16, height: 16, marginTop: 2, accentColor: '#2997ff', flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
-                          {isSJ
-                            ? 'I understand pickups are only available Mon/Thu 3–5 PM (or 6 PM by arrangement) at 1302 Lincoln Ave #201, San Jose.'
-                            : isMV
-                            ? (mv.ackText || 'I understand the pickup details above for Mountain View.')
-                            : 'I understand this is by appointment only and I will contact PeakFormBio to schedule before arriving at 15750 Vineyard Blvd #170, Morgan Hill.'}
-                        </span>
-                      </label>
+                      {!isSJ && (
+                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 24 }}>
+                          <input type="checkbox" checked={acked}
+                            onChange={e => setPickupAcknowledged(prev => ({ ...prev, [pickupModal]: e.target.checked }))}
+                            style={{ width: 16, height: 16, marginTop: 2, accentColor: '#2997ff', flexShrink: 0 }} />
+                          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+                            {isMV
+                              ? (mv.ackText || 'I understand the pickup details above for Mountain View.')
+                              : 'I understand this is by appointment only and I will contact PeakFormBio to schedule before arriving at 15750 Vineyard Blvd #170, Morgan Hill.'}
+                          </span>
+                        </label>
+                      )}
 
                       <div style={{ display: 'flex', gap: 10 }}>
                         <button
-                          onClick={() => { setShippingMethod(''); setPickupModal(null); }}
+                          onClick={() => { setShippingMethod(''); setPickupModal(null); if (isSJ) setPickupSJDateChoice(''); }}
                           style={{
                             flex: 1, background: 'transparent', color: 'rgba(255,255,255,0.55)',
                             border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12,
@@ -3619,6 +3790,9 @@ const GlutathioneModal = ({ onClose, onAdd }) => {
 const App = () => {
   const [userId, setUserId] = React.useState(null);
   const [checking, setChecking] = React.useState(true);
+  const [resetToken, setResetToken] = React.useState(
+    () => new URLSearchParams(window.location.search).get('reset_token')
+  );
   const [ageVerified, setAgeVerified] = React.useState(
     () => window.ageVerification ? window.ageVerification.isVerified() : false
   );
@@ -3665,9 +3839,14 @@ const App = () => {
   }
 
   // Render the portal/login first; overlay the gateway on top until verified.
-  const main = userId
-    ? <Portal userId={userId} onLogout={logout} />
-    : <LoginScreen onLogin={setUserId} />;
+  const main = resetToken
+    ? <ResetPasswordScreen token={resetToken} onDone={() => {
+        window.history.replaceState({}, '', window.location.pathname);
+        setResetToken(null);
+      }} />
+    : userId
+      ? <Portal userId={userId} onLogout={logout} />
+      : <LoginScreen onLogin={setUserId} />;
 
   return (
     <React.Fragment>
