@@ -198,18 +198,6 @@
           <>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Pay with {chosen.label}</div>
 
-            {/* Order reference reminder */}
-            <div style={{ fontSize: 13, color: '#2997ff', marginBottom: 12, lineHeight: 1.5, background: 'rgba(41,151,255,0.08)', border: '1px solid rgba(41,151,255,0.28)', borderRadius: 10, padding: '11px 13px' }}>
-              {chosen.id === 'venmo'
-                ? <>The <strong>Open Venmo</strong> button below pre-fills your order reference in the payment note — just confirm and send.</>
-                : <>Include <strong>only your order reference number</strong> in the payment note — no names, no product details.</>}
-            </div>
-            <div style={{ fontSize: 12.5, color: '#ff9f0a', marginBottom: 14, lineHeight: 1.5, background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.3)', borderRadius: 10, padding: '11px 13px' }}>
-              <strong>Pay only through the handle/link above.</strong> Any payment sent outside this direct link may be lost and cannot be recovered.
-            </div>
-            <div style={{ fontSize: 12.5, color: '#ff9f0a', marginBottom: 10, lineHeight: 1.5, background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.3)', borderRadius: 10, padding: '11px 13px' }}>
-              <strong>Pay only through the handle/link below.</strong> Any payment sent outside this direct link may be lost and cannot be recovered.
-            </div>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 10, cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.45 }}>
               <input type="checkbox" checked={ackOutsideLink} onChange={(e) => setAckOutsideLink(e.target.checked)}
                 style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
@@ -218,7 +206,7 @@
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.45 }}>
               <input type="checkbox" checked={ackName} onChange={(e) => setAckName(e.target.checked)}
                 style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
-              <span>I will include <u>only my order reference</u> in the payment note.</span>
+              <span>I will include ONLY my order reference number or full name in the payment note.</span>
             </label>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
