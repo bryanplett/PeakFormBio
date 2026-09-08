@@ -145,6 +145,8 @@
   const PaymentInstructions = ({ amountDue, reference, methods, chosenId, reported, onReported, businessName }) => {
     const cfg = global.PFB_PAYMENT || {};
     const [ackName, setAckName] = useState(false);
+    const [ackOutsideLink, setAckOutsideLink] = useState(false);
+    const [ackSentPayment, setAckSentPayment] = useState(false);
     const [pendingOpen, setPendingOpen] = useState(null); // { url, label } — set right when buyer taps "Open X", before the app opens
     const list = (methods && methods.length ? methods : global.visiblePaymentMethods(cfg.methods));
     const direct = list.filter(m => m.kind === 'handle' || m.kind === 'crypto');
@@ -205,14 +207,22 @@
             <div style={{ fontSize: 12.5, color: '#ff9f0a', marginBottom: 14, lineHeight: 1.5, background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.3)', borderRadius: 10, padding: '11px 13px' }}>
               <strong>Pay only through the handle/link above.</strong> Any payment sent outside this direct link may be lost and cannot be recovered.
             </div>
+            <div style={{ fontSize: 12.5, color: '#ff9f0a', marginBottom: 10, lineHeight: 1.5, background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.3)', borderRadius: 10, padding: '11px 13px' }}>
+              <strong>Pay only through the handle/link below.</strong> Any payment sent outside this direct link may be lost and cannot be recovered.
+            </div>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 10, cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.45 }}>
+              <input type="checkbox" checked={ackOutsideLink} onChange={(e) => setAckOutsideLink(e.target.checked)}
+                style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
+              <span>I understand payments sent outside the handle/link below may be lost and cannot be recovered.</span>
+            </label>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.45 }}>
               <input type="checkbox" checked={ackName} onChange={(e) => setAckName(e.target.checked)}
                 style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
-              <span>I will include <u>only my order reference</u> in the payment note, and understand payments sent outside this link may be lost.</span>
+              <span>I will include <u>only my order reference</u> in the payment note.</span>
             </label>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-              <MethodCard m={chosen} amount={amountDue} note={reference} highlight linksEnabled={ackName}
+              <MethodCard m={chosen} amount={amountDue} note={reference} highlight linksEnabled={ackName && ackOutsideLink}
               onPayClick={(url) => setPendingOpen({ url, label: chosen.label })} />
             </div>
           </>
@@ -244,12 +254,17 @@
             </div>
           ) : (
             <>
-              <button className="btn-blue" onClick={onReported} disabled={!ackName}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.45 }}>
+                <input type="checkbox" checked={ackSentPayment} onChange={(e) => setAckSentPayment(e.target.checked)}
+                  style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
+                <span>I confirm I have sent payment.</span>
+              </label>
+              <button className="btn-blue" onClick={onReported} disabled={!ackName || !ackOutsideLink || !ackSentPayment}
                 style={{ width: '100%', padding: '13px 24px', fontSize: 15, fontWeight: 600,
-                  opacity: ackName ? 1 : 0.4, cursor: ackName ? 'pointer' : 'not-allowed' }}>
+                  opacity: (ackName && ackOutsideLink && ackSentPayment) ? 1 : 0.4, cursor: (ackName && ackOutsideLink && ackSentPayment) ? 'pointer' : 'not-allowed' }}>
                 Place order
               </button>
-              {!ackName && (
+              {(!ackName || !ackOutsideLink || !ackSentPayment) && (
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 8 }}>
                   Check the box above to continue.
                 </div>
