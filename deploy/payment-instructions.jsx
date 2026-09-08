@@ -109,7 +109,6 @@
             <code style={{ flex: 1, minWidth: 0, fontFamily: 'ui-monospace,monospace', fontSize: 14, color: '#fff',
               background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 11px',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.handle}</code>
-            <CopyBtn value={m.handle} />
             {link && (
               <button type="button"
                 onClick={() => { if (!linksEnabled) return; if (onPayClick) onPayClick(link); }}
