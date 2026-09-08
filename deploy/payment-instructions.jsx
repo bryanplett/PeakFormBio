@@ -169,7 +169,7 @@
         <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 18 }}>
           {chosenIsInvoice
             ? `We’ll email and text a secure invoice shortly. Your order is reserved.`
-            : `Your order is reserved. Send payment using any method below, then tap “I’ve sent payment.” We’ll confirm and ship.`}
+            : `Your order is reserved. Send payment using any method below, then tap “Place order.” We’ll confirm and ship.`}
         </p>
 
         {/* Amount + reference */}
@@ -222,7 +222,7 @@
           <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start', background: 'rgba(255,159,10,0.07)', border: '1px solid rgba(255,159,10,0.2)', borderRadius: 10, padding: '11px 13px', marginBottom: 16 }}>
             <span style={{ fontSize: 14 }}>📝</span>
             <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.72)', lineHeight: 1.5 }}>
-              After you send payment, tap <strong style={{ color: '#fff' }}>“I’ve sent payment”</strong> below so we can match it to your order and ship it out.
+              After you send payment, tap <strong style={{ color: '#fff' }}>“Place order”</strong> below so we can match it to your order and ship it out.
             </div>
           </div>
         )}
@@ -246,7 +246,7 @@
               <button className="btn-blue" onClick={onReported} disabled={!ackName}
                 style={{ width: '100%', padding: '13px 24px', fontSize: 15, fontWeight: 600,
                   opacity: ackName ? 1 : 0.4, cursor: ackName ? 'pointer' : 'not-allowed' }}>
-                I’ve sent payment
+                Place order
               </button>
               {!ackName && (
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', textAlign: 'center', marginTop: 8 }}>
@@ -271,7 +271,7 @@
             </h3>
             <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.55, marginBottom: 20 }}>
               After you finish paying, <strong style={{ color: '#fff' }}>come back to this screen</strong> and tap
-              <strong style={{ color: '#fff' }}> “I’ve sent payment”</strong> so we know to verify it and ship your order.
+              <strong style={{ color: '#fff' }}> “Place order”</strong> so we know to verify it and ship your order.
             </p>
             <button className="btn-blue" onClick={() => setShowReturnReminder(false)}
               style={{ width: '100%', padding: '12px 24px', fontSize: 15, fontWeight: 600 }}>
