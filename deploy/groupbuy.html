@@ -232,13 +232,15 @@ function MethodSelector({ methods, chosen, onChange }) {
 }
 
 function GroupBuyPage() {
-  const [settings, setSettings] = useState(GB_DEFAULTS);
+  const [settings, setSettings] = useState(Object.assign({ stock: { reta10: 60, reta20: 35, lc526: 8 } }, GB_DEFAULTS));
   useEffect(() => {
     fetch('/api/public/groupbuy-settings')
       .then(r => r.json())
-      .then(s => setSettings(Object.assign({}, GB_DEFAULTS, s)))
+      .then(s => setSettings(prev => Object.assign({}, prev, GB_DEFAULTS, s, { stock: Object.assign({}, prev.stock, s.stock) })))
       .catch(() => {});
   }, []);
+  const stock = settings.stock || {};
+  const allSoldOut = KITS.every(kit => (stock[kit.id] || 0) <= 0);
 
   const now = new Date();
   const openDate  = new Date(settings.openDate  + 'T00:00:00');
@@ -266,7 +268,8 @@ function GroupBuyPage() {
     return ref;
   });
 
-  const setQty = (id, qty) => setKitQty(k => Object.assign({}, k, { [id]: Math.max(0, Math.min(20, qty)) }));
+  const setQty = (id, qty) => setKitQty(k => Object.assign({}, k, { [id]: Math.max(0, Math.min(stock[id] ?? 20, qty)) }));
+  const [orderError, setOrderError] = useState('');
 
   const save = (s, f, m, k) => {
     sessionStorage.setItem('pfb_gb_step', s);
@@ -286,17 +289,29 @@ function GroupBuyPage() {
   const grandTotal  = kitTotal + shippingCost;
 
   const handleReported = async () => {
+    setOrderError('');
     try {
-      await fetch('/api/notifications/groupbuy-order', {
+      const r = await fetch('/api/notifications/groupbuy-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name, email: form.email, phone: form.phone, address: form.address,
-          qty: totalKits, product: lines.map(l => `${l.kit.name} x${l.qty}`).join(', '),
+          kits: lines.reduce((acc, l) => Object.assign(acc, { [l.kit.id]: l.qty }), {}),
           payment_method: chosenMethod, order_ref: orderRef, total: grandTotal,
         }),
       });
-    } catch (e) { console.warn('Order submission failed:', e.message); }
+      if (r.status === 409) {
+        const body = await r.json().catch(() => ({}));
+        const names = (body.insufficient || []).map(id => (KITS.find(k => k.id === id) || {}).name || id).join(', ');
+        setOrderError(`${names || 'One of your kits'} just sold out — look out for the next banger from PeakFormBio!`);
+        fetch('/api/public/groupbuy-settings').then(res => res.json()).then(s => setSettings(prev => Object.assign({}, prev, s, { stock: Object.assign({}, prev.stock, s.stock) }))).catch(() => {});
+        return;
+      }
+      if (!r.ok) { setOrderError('Something went wrong submitting your order. Please try again.'); return; }
+    } catch (e) {
+      setOrderError('Something went wrong submitting your order. Please try again.');
+      return;
+    }
     setReported(true);
     sessionStorage.setItem('pfb_gb_reported', '1');
   };
@@ -349,12 +364,17 @@ function GroupBuyPage() {
           <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', marginBottom: 28 }}>Reta 10 &middot; Reta 20 &middot; Fatblaster LC526</p>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
-            {KITS.map(kit => (
-              <div key={kit.id} style={{ borderRadius: 16, padding: '16px 20px', textAlign: 'center', minWidth: 148,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            {KITS.map(kit => {
+              const remaining = stock[kit.id] ?? 0;
+              const soldOut = remaining <= 0;
+              return (
+              <div key={kit.id} style={{ borderRadius: 16, padding: '16px 20px', textAlign: 'center', minWidth: 148, position: 'relative',
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', opacity: soldOut ? 0.5 : 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{kit.name}</div>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 10 }}>{kit.subtitle}</div>
-                {kit.tiers.map((price, i) => (
+                {soldOut ? (
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#ff453a', padding: '8px 0' }}>SOLD OUT</div>
+                ) : kit.tiers.map((price, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5,
                     color: i === 0 ? '#fff' : 'rgba(255,255,255,0.55)', fontWeight: i === 0 ? 700 : 400, padding: '2px 0' }}>
                     <span>{i + 1}{i === 2 ? '+' : ''} kit{i > 0 ? 's' : ''}</span>
@@ -362,7 +382,8 @@ function GroupBuyPage() {
                   </div>
                 ))}
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 28, lineHeight: 1.55 }}>
@@ -379,7 +400,7 @@ function GroupBuyPage() {
         </div>
       </div>
 
-      {isOpen ? (
+      {isOpen && !allSoldOut ? (
         <div style={{ maxWidth: 520, margin: '0 auto', padding: '40px 20px 100px' }}>
           <div style={{ display: 'flex', gap: 5, marginBottom: 32 }}>
             {[1,2,3].map((s) => (
@@ -398,25 +419,30 @@ function GroupBuyPage() {
                 {KITS.map(kit => {
                   const qty = kitQty[kit.id] || 0;
                   const unit = kitUnitPrice(kit, qty);
+                  const remaining = stock[kit.id] ?? 0;
+                  const soldOut = remaining <= 0;
                   return (
                     <div key={kit.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-                      borderRadius: 12, border: qty > 0 ? '1px solid rgba(41,151,255,0.5)' : '1px solid rgba(255,255,255,0.09)',
+                      borderRadius: 12, opacity: soldOut ? 0.5 : 1,
+                      border: qty > 0 ? '1px solid rgba(41,151,255,0.5)' : '1px solid rgba(255,255,255,0.09)',
                       background: qty > 0 ? 'rgba(41,151,255,0.06)' : 'rgba(255,255,255,0.03)' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7' }}>{kit.name}</div>
                         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
-                          {kit.subtitle} &middot; {qty > 0 ? `$${unit}/kit` : `from $${kit.tiers[2]}/kit`}
+                          {soldOut ? <span style={{ color: '#ff453a', fontWeight: 600 }}>Sold out</span> : (
+                            <>{kit.subtitle} &middot; {qty > 0 ? `$${unit}/kit` : `from $${kit.tiers[2]}/kit`} &middot; {remaining} left</>
+                          )}
                         </div>
                       </div>
-                      <button type="button" onClick={() => setQty(kit.id, qty - 1)}
+                      <button type="button" disabled={soldOut} onClick={() => setQty(kit.id, qty - 1)}
                         style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
-                          background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 18, cursor: 'pointer',
+                          background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 18, cursor: soldOut ? 'not-allowed' : 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>-</button>
                       <span style={{ fontSize: 18, fontWeight: 700, color: '#fff', minWidth: 22, textAlign: 'center' }}>{qty}</span>
-                      <button type="button" onClick={() => setQty(kit.id, qty + 1)}
+                      <button type="button" disabled={soldOut || qty >= remaining} onClick={() => setQty(kit.id, qty + 1)}
                         style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
-                          background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 18, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>+</button>
+                          background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 18, cursor: (soldOut || qty >= remaining) ? 'not-allowed' : 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', opacity: (soldOut || qty >= remaining) ? 0.4 : 1 }}>+</button>
                     </div>
                   );
                 })}
@@ -530,6 +556,9 @@ function GroupBuyPage() {
                 onReported={handleReported}
                 businessName="PeakForm Bio"
               />
+              {orderError && (
+                <p style={{ fontSize: 13, color: '#ff453a', marginTop: 14, textAlign: 'center', lineHeight: 1.5 }}>{orderError}</p>
+              )}
               {!reported && (
                 <button className="btn-ghost" onClick={() => { setStep(2); save(2, form, chosenMethod, kitQty); }}
                   style={{ marginTop: 14, width: '100%' }}>Back to payment method</button>
@@ -537,13 +566,18 @@ function GroupBuyPage() {
             </div>
           )}
         </div>
-      ) : (
+      ) : !isOpen ? (
         <div style={{ textAlign: 'center', padding: '60px 24px 100px' }}>
           <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.4)' }}>
             {isClosed
               ? 'This group buy has closed. Check back for the next cycle.'
               : 'This group buy opens ' + fmtDate(settings.openDate) + '.'}
           </p>
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '60px 24px 100px' }}>
+          <p style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 10 }}>All kits are sold out!</p>
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)' }}>Look out for the next banger from PeakFormBio!</p>
         </div>
       )}
     </div>

@@ -1327,6 +1327,7 @@ const GroupBuySettings = ({ onBack }) => {
     testResultsIn: false,
     openDate:      '2026-08-13',
     closeDate:     '2026-08-27',
+    stock:         { reta10: 60, reta20: 35, lc526: 8 },
   });
   const [saved, setSaved] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -1338,7 +1339,7 @@ const GroupBuySettings = ({ onBack }) => {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(r => r.ok ? r.json() : null)
-      .then(s => { if (s) setCfg(c => Object.assign({}, c, s)); })
+      .then(s => { if (s) setCfg(c => Object.assign({}, c, s, { stock: Object.assign({}, c.stock, s.stock) })); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -1400,6 +1401,23 @@ const GroupBuySettings = ({ onBack }) => {
               <input className="field-input" type="date" value={cfg.closeDate}
                 onChange={e => setCfg(c => ({ ...c, closeDate: e.target.value }))} />
             </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Kit Stock Remaining</label>
+            <div style={{ display: 'flex', gap: 14 }}>
+              {[['reta10','Reta 10'],['reta20','Reta 20'],['lc526','Fatblaster LC526']].map(([id, label]) => (
+                <div key={id} style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>{label}</div>
+                  <input className="field-input" type="number" min="0" step="1"
+                    value={cfg.stock?.[id] ?? 0}
+                    onChange={e => setCfg(c => ({ ...c, stock: { ...c.stock, [id]: Math.max(0, Number(e.target.value) || 0) } }))} />
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 6 }}>
+              Decrements automatically as orders come in. Raise a number here to restock.
+            </p>
           </div>
 
           <div>
