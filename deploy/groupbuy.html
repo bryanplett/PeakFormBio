@@ -74,26 +74,28 @@
 <script type="text/babel">
 
 const GB_METHODS = [
-  { id: 'venmo',    label: 'Venmo',    kind: 'handle', handle: '@Pepsoc',               hint: 'Send as Friends and Family if prompted.', enabled: true },
-  { id: 'cashapp',  label: 'Cash App', kind: 'handle', handle: '$santacruzstyle',       hint: '', enabled: true },
-  { id: 'bitcoin',  label: 'Bitcoin',  kind: 'crypto',  network: 'BTC',          handle: 'bc1qna0z3mj42ha00cn7uh0zaw3yvn24dluh6qn8u2', hint: 'Send only Bitcoin (BTC) to this address.', enabled: true },
-  { id: 'usdt_sol', label: 'USDT',     kind: 'crypto',  network: 'Solana (SPL)', handle: '6KZy1tJnBG7YASdCFCtETyXtS8KQLMPaj7hbH5NTwjTn', hint: 'Send only on the Solana network.', enabled: true },
-  { id: 'pyusd_sol',label: 'PYUSD',    kind: 'crypto',  network: 'Solana (SPL)', handle: '6KZy1tJnBG7YASdCFCtETyXtS8KQLMPaj7hbH5NTwjTn', hint: 'Send only on the Solana network.', enabled: true },
+  { id: 'venmo',    label: 'Venmo',    kind: 'handle', handle: '@Pepsoc',              hint: 'Send as Friends and Family if prompted.', enabled: true },
+  { id: 'paypal',   label: 'PayPal',   kind: 'handle', handle: '@bryanplett',          hint: 'Use Friends & Family to avoid fees.',      enabled: true },
+  { id: 'cashapp',  label: 'Cash App', kind: 'handle', handle: '$santacruzstyle',      hint: '', enabled: true },
+  { id: 'zelle',    label: 'Zelle',    kind: 'handle', handle: 'peakformbio',          hint: 'Scan the QR code below to send.', enabled: true },
 ];
 
-const PRODUCT = {
-  name:        'Retatrutide',
-  subtitle:    '10 Vial Kit / 10mg each vial',
-  desc:        'Research-grade. Priority shipping on every order.',
-  priceEarly:  85,
-  priceFull:   90,
-  shipping:    15,
-  maxPerOrder: 10,
-};
+// Each kit's price per unit steps down at 2 and again at 3+ (matches the flyer's
+// "1 kit / 2 kits / 3 kits" pricing rows). Quantities above 3 keep the 3+ price.
+const KITS = [
+  { id: 'reta10', name: 'Reta 10',         subtitle: '10 Vial Kit', tiers: [90, 89, 87] },
+  { id: 'reta20', name: 'Reta 20',         subtitle: '10 Vial Kit', tiers: [150, 147, 145] },
+  { id: 'lc526',  name: 'Fatblaster LC526', subtitle: '10 Vial Kit', tiers: [90, 89, 87] },
+];
+function kitUnitPrice(kit, qty) {
+  if (qty <= 0) return 0;
+  return kit.tiers[Math.min(qty, 3) - 1];
+}
+// $10 shipping for 1-3 kits total (across all products), $15 for 4 or more.
+function shippingFor(totalQty) { return totalQty <= 0 ? 0 : (totalQty <= 3 ? 10 : 15); }
 
 const GB_DEFAULTS = {
-  round:         2,
-  testResultsIn: false,
+  round:         3,
   openDate:      '2026-08-13',
   closeDate:     '2026-08-27',
 };
@@ -244,12 +246,15 @@ function GroupBuyPage() {
   const isOpen  = now >= openDate && now <= closeDate;
   const isClosed = now > closeDate;
   const notYet  = now < openDate;
-  const price   = settings.testResultsIn ? PRODUCT.priceFull : PRODUCT.priceEarly;
 
   const [step, setStep] = useState(() => Number(sessionStorage.getItem('pfb_gb_step') || 1));
   const [form, setForm] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem('pfb_gb_form') || '{"name":"","email":"","phone":"","address":"","qty":1}'); }
-    catch (e) { return { name: '', email: '', phone: '', address: '', qty: 1 }; }
+    try { return JSON.parse(sessionStorage.getItem('pfb_gb_form') || '{"name":"","email":"","phone":"","address":""}'); }
+    catch (e) { return { name: '', email: '', phone: '', address: '' }; }
+  });
+  const [kitQty, setKitQty] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('pfb_gb_kits') || '{}'); }
+    catch (e) { return {}; }
   });
   const [chosenMethod, setChosenMethod] = useState(() => sessionStorage.getItem('pfb_gb_method') || '');
   const [reported, setReported] = useState(() => sessionStorage.getItem('pfb_gb_reported') === '1');
@@ -261,11 +266,24 @@ function GroupBuyPage() {
     return ref;
   });
 
-  const save = (s, f, m) => {
+  const setQty = (id, qty) => setKitQty(k => Object.assign({}, k, { [id]: Math.max(0, Math.min(20, qty)) }));
+
+  const save = (s, f, m, k) => {
     sessionStorage.setItem('pfb_gb_step', s);
     sessionStorage.setItem('pfb_gb_form', JSON.stringify(f));
     if (m !== undefined) sessionStorage.setItem('pfb_gb_method', m);
+    if (k !== undefined) sessionStorage.setItem('pfb_gb_kits', JSON.stringify(k));
   };
+
+  const lines = KITS.map(kit => {
+    const qty = kitQty[kit.id] || 0;
+    const unit = kitUnitPrice(kit, qty);
+    return { kit, qty, unit, lineTotal: unit * qty };
+  }).filter(l => l.qty > 0);
+  const totalKits  = lines.reduce((s, l) => s + l.qty, 0);
+  const kitTotal    = lines.reduce((s, l) => s + l.lineTotal, 0);
+  const shippingCost = shippingFor(totalKits);
+  const grandTotal  = kitTotal + shippingCost;
 
   const handleReported = async () => {
     try {
@@ -274,7 +292,7 @@ function GroupBuyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name, email: form.email, phone: form.phone, address: form.address,
-          qty: form.qty, product: PRODUCT.name + ' ' + PRODUCT.subtitle,
+          qty: totalKits, product: lines.map(l => `${l.kit.name} x${l.qty}`).join(', '),
           payment_method: chosenMethod, order_ref: orderRef, total: grandTotal,
         }),
       });
@@ -282,9 +300,6 @@ function GroupBuyPage() {
     setReported(true);
     sessionStorage.setItem('pfb_gb_reported', '1');
   };
-
-  const kitTotal   = price * form.qty;
-  const grandTotal = kitTotal + PRODUCT.shipping;
 
   const fmtDate = (str) => new Date(str + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 
@@ -329,49 +344,30 @@ function GroupBuyPage() {
             borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 600, color: '#ff9f0a' }}>
             OPENS {fmtDate(settings.openDate).toUpperCase()}</div>}
 
-          <h1 style={{ fontSize: 'clamp(40px,7vw,68px)', fontWeight: 700, color: '#fff',
-            letterSpacing: '-0.035em', lineHeight: 1.02, marginBottom: 8 }}>{PRODUCT.name}</h1>
-          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', marginBottom: 28 }}>{PRODUCT.subtitle}</p>
+          <h1 style={{ fontSize: 'clamp(36px,6vw,56px)', fontWeight: 700, color: '#fff',
+            letterSpacing: '-0.035em', lineHeight: 1.02, marginBottom: 8 }}>Group Buy</h1>
+          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', marginBottom: 28 }}>Reta 10 &middot; Reta 20 &middot; Fatblaster LC526</p>
 
-          <div style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 28 }}>
-            <div style={{ borderRadius: 16, padding: '14px 22px', textAlign: 'center',
-              background: !settings.testResultsIn ? 'rgba(41,151,255,0.14)' : 'rgba(255,255,255,0.05)',
-              border: !settings.testResultsIn ? '1px solid rgba(41,151,255,0.5)' : '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: !settings.testResultsIn ? '#2997ff' : 'rgba(255,255,255,0.3)', marginBottom: 4 }}>
-                {!settings.testResultsIn ? 'Early Bird' : 'Early Bird'}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
+            {KITS.map(kit => (
+              <div key={kit.id} style={{ borderRadius: 16, padding: '16px 20px', textAlign: 'center', minWidth: 148,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{kit.name}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 10 }}>{kit.subtitle}</div>
+                {kit.tiers.map((price, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5,
+                    color: i === 0 ? '#fff' : 'rgba(255,255,255,0.55)', fontWeight: i === 0 ? 700 : 400, padding: '2px 0' }}>
+                    <span>{i + 1}{i === 2 ? '+' : ''} kit{i > 0 ? 's' : ''}</span>
+                    <span>${price}</span>
+                  </div>
+                ))}
               </div>
-              <div style={{ fontSize: 28, fontWeight: 700,
-                color: !settings.testResultsIn ? '#fff' : 'rgba(255,255,255,0.35)',
-                letterSpacing: '-0.02em',
-                textDecoration: settings.testResultsIn ? 'line-through' : 'none' }}>
-                ${PRODUCT.priceEarly}
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>pre-test results</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 18 }}>to</div>
-            <div style={{ borderRadius: 16, padding: '14px 22px', textAlign: 'center',
-              background: settings.testResultsIn ? 'rgba(41,151,255,0.14)' : 'rgba(255,255,255,0.05)',
-              border: settings.testResultsIn ? '1px solid rgba(41,151,255,0.5)' : '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: settings.testResultsIn ? '#2997ff' : 'rgba(255,255,255,0.3)', marginBottom: 4 }}>
-                {settings.testResultsIn ? 'Active' : 'Standard'}
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 700,
-                color: settings.testResultsIn ? '#fff' : 'rgba(255,255,255,0.35)', letterSpacing: '-0.02em' }}>
-                ${PRODUCT.priceFull}
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>after test results</div>
-            </div>
+            ))}
           </div>
 
-          {!settings.testResultsIn && (
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 28, lineHeight: 1.55 }}>
-              {settings.round > 1
-                ? `Early bird pricing carries over from Round 1 - $${PRODUCT.priceEarly}/kit while this round is open.`
-                : `A sample has been sent for testing. Order before results return and lock in $${PRODUCT.priceEarly}/kit.`}
-            </p>
-          )}
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 28, lineHeight: 1.55 }}>
+            All kits ship from California, same day. Shipping is ${shippingFor(1)} for 1&ndash;3 kits, ${shippingFor(4)} for 4 or more.
+          </p>
 
           {isOpen && (
             <div>
@@ -396,10 +392,35 @@ function GroupBuyPage() {
           {step === 1 && (
             <div className="fade-up">
               <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em', marginBottom: 6 }}>Your order</h2>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 28 }}>
-                Price: <strong style={{ color: '#fff' }}>${price}/kit</strong>
-                {!settings.testResultsIn && <span style={{ color: '#2997ff' }}> - early bird</span>}
-              </p>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>Choose your kits, then fill in your info.</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+                {KITS.map(kit => {
+                  const qty = kitQty[kit.id] || 0;
+                  const unit = kitUnitPrice(kit, qty);
+                  return (
+                    <div key={kit.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+                      borderRadius: 12, border: qty > 0 ? '1px solid rgba(41,151,255,0.5)' : '1px solid rgba(255,255,255,0.09)',
+                      background: qty > 0 ? 'rgba(41,151,255,0.06)' : 'rgba(255,255,255,0.03)' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7' }}>{kit.name}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                          {kit.subtitle} &middot; {qty > 0 ? `$${unit}/kit` : `from $${kit.tiers[2]}/kit`}
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setQty(kit.id, qty - 1)}
+                        style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
+                          background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 18, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>-</button>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: '#fff', minWidth: 22, textAlign: 'center' }}>{qty}</span>
+                      <button type="button" onClick={() => setQty(kit.id, qty + 1)}
+                        style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
+                          background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 18, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>+</button>
+                    </div>
+                  );
+                })}
+              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
                 <div>
@@ -423,42 +444,35 @@ function GroupBuyPage() {
                     value={form.address} onChange={(e) => setForm(f => Object.assign({}, f, { address: e.target.value }))}
                     style={{ resize: 'vertical', minHeight: 80, lineHeight: 1.5 }} />
                 </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 }}>Kits</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <button type="button" onClick={() => setForm(f => Object.assign({}, f, { qty: Math.max(1, f.qty - 1) }))}
-                      style={{ width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
-                        background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 22, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>-</button>
-                    <span style={{ fontSize: 24, fontWeight: 700, color: '#fff', minWidth: 30, textAlign: 'center' }}>{form.qty}</span>
-                    <button type="button" onClick={() => setForm(f => Object.assign({}, f, { qty: Math.min(PRODUCT.maxPerOrder, f.qty + 1) }))}
-                      style={{ width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
-                        background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: 22, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>+</button>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>max {PRODUCT.maxPerOrder}</span>
-                  </div>
-                </div>
               </div>
 
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: 14, padding: '16px 18px', marginBottom: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>{PRODUCT.name} x {form.qty}</span>
-                  <span style={{ fontSize: 14, color: '#f5f5f7' }}>${kitTotal}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>Priority Shipping</span>
-                  <span style={{ fontSize: 14, color: '#f5f5f7' }}>${PRODUCT.shipping}</span>
-                </div>
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10,
-                  display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7' }}>Total</span>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>${grandTotal}</span>
-                </div>
+                {lines.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Choose at least one kit above.</p>
+                ) : (
+                  <>
+                    {lines.map(l => (
+                      <div key={l.kit.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>{l.kit.name} x {l.qty}</span>
+                        <span style={{ fontSize: 14, color: '#f5f5f7' }}>${l.lineTotal}</span>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>Shipping ({totalKits} kit{totalKits > 1 ? 's' : ''})</span>
+                      <span style={{ fontSize: 14, color: '#f5f5f7' }}>${shippingCost}</span>
+                    </div>
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10,
+                      display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7' }}>Total</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>${grandTotal}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <button className="btn-primary" disabled={!form.name || !form.email || !form.phone || !form.address}
-                onClick={() => { const n = 2; setStep(n); save(n, form, chosenMethod); }}
+              <button className="btn-primary" disabled={!form.name || !form.email || !form.phone || !form.address || lines.length === 0}
+                onClick={() => { const n = 2; setStep(n); save(n, form, chosenMethod, kitQty); }}
                 style={{ width: '100%', padding: '16px', fontSize: 17 }}>
                 Continue to Payment
               </button>
@@ -474,9 +488,9 @@ function GroupBuyPage() {
               </p>
               <MethodSelector methods={GB_METHODS} chosen={chosenMethod} onChange={setChosenMethod} />
               <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-                <button className="btn-ghost" onClick={() => { setStep(1); save(1, form, chosenMethod); }}>Back</button>
+                <button className="btn-ghost" onClick={() => { setStep(1); save(1, form, chosenMethod, kitQty); }}>Back</button>
                 <button className="btn-primary" disabled={!chosenMethod}
-                  onClick={() => { const n = 3; setStep(n); save(n, form, chosenMethod); }}
+                  onClick={() => { const n = 3; setStep(n); save(n, form, chosenMethod, kitQty); }}
                   style={{ flex: 1, padding: '15px', fontSize: 16 }}>Continue</button>
               </div>
             </div>
@@ -517,7 +531,7 @@ function GroupBuyPage() {
                 businessName="PeakForm Bio"
               />
               {!reported && (
-                <button className="btn-ghost" onClick={() => { setStep(2); save(2, form, chosenMethod); }}
+                <button className="btn-ghost" onClick={() => { setStep(2); save(2, form, chosenMethod, kitQty); }}
                   style={{ marginTop: 14, width: '100%' }}>Back to payment method</button>
               )}
             </div>
