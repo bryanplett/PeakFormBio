@@ -29,7 +29,7 @@ function OrderCard({ group, clientById, couponsByCode, onOpen }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 9, flexWrap: 'wrap' }}>
           <StatusPill status={fulfillment} />
-          <StatusPill status={payment} />
+          {fulfillment !== 'cancelled' && <StatusPill status={payment} />}
           <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-45)' }}>{fmtDate(first.created_at || first.ordered_at)}</span>
         </div>
       </div>
@@ -193,8 +193,7 @@ function OrdersScreen({ sb, clients, initialFilter }) {
       if (fulfillment === 'cancelled') { ct.cancelled++; return; }
       if (ct[fulfillment] != null) ct[fulfillment]++;
       if (ct[payment] != null) ct[payment]++;
-    });
-    return ct;
+    });    return ct;
   }, [allGroups, nonCancelledGroups]);
 
   const visible = React.useMemo(() => {
