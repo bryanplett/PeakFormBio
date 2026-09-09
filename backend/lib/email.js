@@ -1,12 +1,11 @@
 // Lightweight email helper. Sends via Resend's HTTP API using built-in fetch,
 // so we don't need to install another npm package.
 //
-// Required env vars on Railway:
+// Required env vars:
 //   RESEND_API_KEY        — your Resend API key (starts with "re_")
-//   ADMIN_NOTIFY_EMAIL    — where admin notifications get sent
 //   EMAIL_FROM (optional) — sender address; defaults to "onboarding@resend.dev"
 //                           for testing. Set to "noreply@peakformbio.com" once
-//                           you've verified the domain in Resend.
+//                           the domain is verified in Resend.
 
 const RESEND_API = 'https://api.resend.com/emails';
 
@@ -49,11 +48,11 @@ export async function sendEmail({ to, subject, html, text, from }) {
   }
 }
 
-export function notifyAdmin({ subject, html, text }) {
+export async function notifyAdmin({ subject, html, text }) {
   const to = process.env.ADMIN_NOTIFY_EMAIL;
   if (!to) {
     console.warn('notifyAdmin: ADMIN_NOTIFY_EMAIL not set; skipping');
-    return Promise.resolve({ ok: false, skipped: true });
+    return { ok: false, skipped: true };
   }
   return sendEmail({ to, subject, html, text });
 }
@@ -65,4 +64,3 @@ export function escHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
-
