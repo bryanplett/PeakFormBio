@@ -563,6 +563,12 @@ function GroupBuyPage() {
                 <button className="btn-ghost" onClick={() => { setStep(2); save(2, form, chosenMethod, kitQty); }}
                   style={{ marginTop: 14, width: '100%' }}>Back to payment method</button>
               )}
+              {reported && (
+                <button className="btn-primary" onClick={() => {
+                  ['pfb_gb_step','pfb_gb_form','pfb_gb_kits','pfb_gb_method','pfb_gb_reported','pfb_gb_ref'].forEach(k => sessionStorage.removeItem(k));
+                  window.location.reload();
+                }} style={{ marginTop: 14, width: '100%', padding: '15px' }}>Start a new order</button>
+              )}
             </div>
           )}
         </div>
