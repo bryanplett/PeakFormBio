@@ -1138,7 +1138,7 @@ const AllOrders = ({ clients, onOpenClient, onBack }) => {
       c.all += 1;
       const { fulfillment, payment } = readStatuses(o);
       if (c[fulfillment] !== undefined) c[fulfillment] += 1;
-      if (payment !== 'unpaid' && c[payment] !== undefined) c[payment] += 1;
+      if (fulfillment !== 'cancelled' && payment !== 'unpaid' && c[payment] !== undefined) c[payment] += 1;
     });
     return c;
   }, [orders]);
