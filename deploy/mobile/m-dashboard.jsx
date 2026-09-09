@@ -49,7 +49,7 @@
       groups.forEach(g => {
         const { fulfillment, payment } = P.readStatuses(g.orders[0]);
         if (fulfillment === 'pending') pending++;
-        if (payment === 'unpaid' || payment === 'reported') unpaid++;
+        if (payment === 'unpaid' || payment === 'reported') { if (fulfillment !== 'cancelled') unpaid++; }
         const t = new Date(g.orders[0].created_at || g.orders[0].ordered_at || 0).getTime();
         if (t >= weekAgo && fulfillment !== 'cancelled') weekRev += P.computeGroupTotals(g.orders, couponsByCode).total;
       });

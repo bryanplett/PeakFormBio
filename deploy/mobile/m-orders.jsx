@@ -174,28 +174,38 @@ function OrdersScreen({ sb, clients, initialFilter }) {
 
   React.useEffect(() => { load(); }, [load]);
 
-  const STATUSES = ['all', 'pending', 'shipped', 'delivered', 'completed', 'unpaid', 'paid'];
+  const STATUSES = ['all', 'pending', 'shipped', 'delivered', 'completed', 'unpaid', 'paid', 'cancelled'];
 
-  // group everything first for counts + display
+  // group everything first for counts + display. "all" and every status EXCEPT
+  // the explicit "cancelled" chip hide cancelled orders — they only show up
+  // when that chip is tapped, and never count toward payment/fulfillment totals.
   const allGroups = React.useMemo(() => P.sortAndGroup(orders || []), [orders]);
+  const nonCancelledGroups = React.useMemo(
+    () => allGroups.filter(g => P.readStatuses(g.orders[0]).fulfillment !== 'cancelled'),
+    [allGroups]
+  );
 
   const counts = React.useMemo(() => {
-    const ct = { all: allGroups.length };
-    STATUSES.slice(1).forEach(s => ct[s] = 0);
+    const ct = { all: nonCancelledGroups.length, cancelled: 0 };
+    STATUSES.slice(1).forEach(s => { if (ct[s] == null) ct[s] = 0; });
     allGroups.forEach(g => {
       const { fulfillment, payment } = P.readStatuses(g.orders[0]);
+      if (fulfillment === 'cancelled') { ct.cancelled++; return; }
       if (ct[fulfillment] != null) ct[fulfillment]++;
       if (ct[payment] != null) ct[payment]++;
     });
     return ct;
-  }, [allGroups]);
+  }, [allGroups, nonCancelledGroups]);
 
   const visible = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    return allGroups.filter(g => {
+    const pool = filter === 'cancelled'
+      ? allGroups.filter(g => P.readStatuses(g.orders[0]).fulfillment === 'cancelled')
+      : nonCancelledGroups;
+    return pool.filter(g => {
       const first = g.orders[0];
       const { fulfillment, payment } = P.readStatuses(first);
-      if (filter !== 'all' && fulfillment !== filter && payment !== filter) return false;
+      if (filter !== 'all' && filter !== 'cancelled' && fulfillment !== filter && payment !== filter) return false;
       if (!q) return true;
       const c = clientById[first.client_id];
       const hay = [
@@ -204,7 +214,7 @@ function OrdersScreen({ sb, clients, initialFilter }) {
       ].filter(Boolean).join(' ').toLowerCase();
       return hay.includes(q);
     });
-  }, [allGroups, filter, query, clientById]);
+  }, [allGroups, nonCancelledGroups, filter, query, clientById]);
 
   const onChanged = React.useCallback(() => { load(); }, [load]);
 
