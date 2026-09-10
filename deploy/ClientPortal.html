@@ -1663,20 +1663,17 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
   const couponActive = !!matchedCoupon && !couponError;
 
-  // Which cart lines a scoped coupon may discount. Mirrors COUPON_SCOPES in
-  // coupons-manager.jsx — add a key here when adding a scope there.
-  const COUPON_SCOPE_TESTS = {
-    retatrutide:  (label) => /\bretatrutide\b/i.test(label),
-    carnitine:    (label) => /\bl[\s-]?carnitine\b/i.test(label),
-    glutathione:  (label) => /\bglutathione\b/i.test(label),
-  };
-  const COUPON_SCOPE_NAMES = { retatrutide: 'Retatrutide', carnitine: 'L-Carnitine', glutathione: 'Glutathione' };
-
+  // Which cart lines a scoped coupon may discount. Coupon scopes now store the
+  // literal peptide name (e.g. "Retatrutide", "L-Carnitine") chosen from the
+  // dropdown in coupons-manager.jsx, so matching is just a case-insensitive
+  // whole-word test against that name — no per-product hardcoding needed.
+  const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const lineMatchesCoupon = (label) => {
     if (!matchedCoupon) return false;
     if (matchedCoupon.scope === 'all') return true;
-    const test = COUPON_SCOPE_TESTS[matchedCoupon.scope];
-    if (!test || !test(label || '')) return false;
+    const scope = matchedCoupon.scope || '';
+    const test = new RegExp('\\b' + escapeRegExp(scope) + '\\b', 'i');
+    if (!test.test(label || '')) return false;
     // GOGLUTA-style BOGO: only valid when exactly 2 of that item are in the cart.
     if (matchedCoupon.scope === 'glutathione') {
       const line = cart.find(it => it.label === label);
@@ -1748,7 +1745,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
   // Human-readable summary of the matched coupon (for the totals row).
   const couponLabel = matchedCoupon
-    ? `${matchedCoupon.kind === 'percent' ? matchedCoupon.amount + '%' : '$' + matchedCoupon.amount} off${COUPON_SCOPE_NAMES[matchedCoupon.scope] ? ' ' + COUPON_SCOPE_NAMES[matchedCoupon.scope] : ''}${matchedCoupon.max_discount > 0 ? ' (max $' + matchedCoupon.max_discount + ')' : ''}`
+    ? `${matchedCoupon.kind === 'percent' ? matchedCoupon.amount + '%' : '$' + matchedCoupon.amount} off${matchedCoupon.scope !== 'all' ? ' ' + matchedCoupon.scope : ''}${matchedCoupon.max_discount > 0 ? ' (max $' + matchedCoupon.max_discount + ')' : ''}`
     : '';
   // Whether the matched coupon couldn't apply because no qualifying items
   // are in the cart (e.g. Retatrutide-only coupon but no Retatrutide line).
@@ -2054,7 +2051,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   Code applied{couponHasNoTarget
                     ? (matchedCoupon.scope === 'glutathione'
                         ? ', but you need exactly 2 Glutathione in your cart for this discount.'
-                        : `, but no ${COUPON_SCOPE_NAMES[matchedCoupon.scope]} items in your cart yet.`)
+                        : `, but no ${matchedCoupon.scope} items in your cart yet.`)
                     : '.'}
                 </p>
               )}

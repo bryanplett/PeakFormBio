@@ -14,13 +14,20 @@
 //   carnitine    → discount applies only to L-Carnitine line items.
 
 // Shared scope table. ClientPortal.html mirrors these keys when it decides
-// which cart lines a coupon may discount.
-const COUPON_SCOPES = [
-  { val: 'all',         label: 'Entire order',  short: 'Entire order' },
-  { val: 'retatrutide', label: 'Retatrutide',   short: 'Retatrutide only' },
-  { val: 'carnitine',   label: 'L-Carnitine',   short: 'L-Carnitine only' },
-  { val: 'glutathione', label: 'Glutathione',   short: 'Glutathione only' },
-];
+// which cart lines a coupon may discount. Peptide entries are pulled live
+// from the wholesale pricelist so every product shows up here automatically —
+// add a peptide to the pricelist and it's selectable as a coupon scope too.
+const COUPON_SCOPES = (() => {
+  const products = (window.PRICELISTS && window.PRICELISTS.wholesale && window.PRICELISTS.wholesale.products) || [];
+  const names = products
+    .filter(p => p.category !== 'Programs / Services')
+    .map(p => p.name.replace(/\s*—\s*.+$/, '').trim());
+  const unique = Array.from(new Set(names)).sort();
+  return [
+    { val: 'all', label: 'Entire order', short: 'Entire order' },
+    ...unique.map(name => ({ val: name, label: name, short: name + ' only' })),
+  ];
+})();
 
 const { useState: useCouponState, useEffect: useCouponEffect } = React;
 
