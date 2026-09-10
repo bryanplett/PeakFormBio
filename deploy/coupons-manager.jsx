@@ -15,9 +15,12 @@
 
 // Shared scope table. ClientPortal.html mirrors these keys when it decides
 // which cart lines a coupon may discount. Peptide entries are pulled live
-// from the wholesale pricelist so every product shows up here automatically —
-// add a peptide to the pricelist and it's selectable as a coupon scope too.
-const COUPON_SCOPES = (() => {
+// from the pricelist so every product shows up here automatically — add a
+// peptide via Admin → Pricelist and it's selectable as a coupon scope too.
+// Computed from window.PRICELISTS at call time (not module load) since the
+// live DB-saved pricelist replaces window.PRICELISTS asynchronously via
+// window.loadPricelists(sb) — see the effect in CouponsManager below.
+function buildCouponScopes() {
   const products = (window.PRICELISTS && window.PRICELISTS.wholesale && window.PRICELISTS.wholesale.products) || [];
   const names = products
     .filter(p => p.category !== 'Programs / Services')
@@ -27,7 +30,7 @@ const COUPON_SCOPES = (() => {
     { val: 'all', label: 'Entire order', short: 'Entire order' },
     ...unique.map(name => ({ val: name, label: name, short: name + ' only' })),
   ];
-})();
+}
 
 const { useState: useCouponState, useEffect: useCouponEffect } = React;
 
@@ -35,6 +38,13 @@ function CouponsManager({ sb, onBack }) {
   const [coupons, setCoupons] = useCouponState(null); // null = loading
   const [editing, setEditing] = useCouponState(null); // null | {} (new) | {id,...}
   const [msg, setMsg] = useCouponState(null);
+  const [scopes, setScopes] = useCouponState(buildCouponScopes());
+
+  useCouponEffect(() => {
+    if (window.loadPricelists) {
+      window.loadPricelists(sb).then(() => setScopes(buildCouponScopes()));
+    }
+  }, [sb]);
 
   const load = async () => {
     setCoupons(null);
@@ -164,7 +174,7 @@ function CouponsManager({ sb, onBack }) {
                       {c.kind === 'percent' ? `${c.amount}% off` : `$${c.amount} off`}
                     </td>
                     <td style={{ padding: '14px 18px', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-                      {(COUPON_SCOPES.find(s => s.val === c.scope) || COUPON_SCOPES[0]).short}
+                      {(scopes.find(s => s.val === c.scope) || scopes[0]).short}
                     </td>
                     <td style={{ padding: '14px 18px', fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.8 }}>
                       {c.one_time_use && <div style={{ color: '#ff9f0a' }}>One-time use</div>}
@@ -246,7 +256,7 @@ function CouponForm({ editing, setEditing, onSave, onCancel }) {
         <div>
           <label style={labelStyle}>Applies to</label>
           <select className="field-input" value={editing.scope || 'all'} onChange={e => set('scope', e.target.value)}>
-            {COUPON_SCOPES.map(opt => (
+            {scopes.map(opt => (
               <option key={opt.val} value={opt.val}>{opt.label}</option>
             ))}
           </select>
