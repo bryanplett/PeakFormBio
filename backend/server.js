@@ -136,6 +136,44 @@ app.post('/api/admin/groupbuy-settings', async (req, res) => {
   }
 });
 
+// ── Weekly Specials (BOGO) — replaces the old Group Buy admin button ────────
+app.get('/api/public/special-settings', async (_req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT value FROM app_settings WHERE key = 'weekly_special'");
+    const s = rows[0]?.value || {};
+    res.json({
+      active:      !!s.active,
+      peptideName: s.peptideName || '',
+      couponCode:  s.couponCode || '',
+      bannerTextOverride: s.bannerTextOverride || '',
+    });
+  } catch (e) {
+    res.json({ active: false, peptideName: '', couponCode: '', bannerTextOverride: '' });
+  }
+});
+
+app.post('/api/admin/special-settings', async (req, res) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const jwt = await import('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'change-me-in-production';
+    const user = jwt.default.verify(token, secret);
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
+    const { active, peptideName, couponCode, bannerTextOverride } = req.body || {};
+    const value = { active, peptideName, couponCode, bannerTextOverride };
+    await pool.query(
+      `INSERT INTO app_settings (key, value) VALUES ('weekly_special', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1`,
+      [JSON.stringify(value)]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 // Read settings (admin auth required)
 app.get('/api/admin/groupbuy-settings', async (req, res) => {
   const auth = req.headers.authorization || '';
