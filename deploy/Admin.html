@@ -1321,7 +1321,7 @@ const PickupSettings = ({ onBack }) => {
 };
 
 // ─── Weekly Specials (BOGO) — replaces the old Group Buy admin button ───────
-const SpecialsSettings = ({ onBack }) => {
+const SpecialsSettings = ({ onBack, embedded }) => {
   const [cfg, setCfg] = React.useState({ active: false, peptideName: '', couponCode: '', bannerTextOverride: '' });
   const [useCustomText, setUseCustomText] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -1371,11 +1371,13 @@ const SpecialsSettings = ({ onBack }) => {
   const labelStyle = { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: 8 };
 
   return (
-    <div className="fade-in">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-        <button className="btn-ghost" onClick={onBack}>← Back</button>
-        <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em' }}>Weekly Specials</h2>
-      </div>
+    <div className={embedded ? '' : 'fade-in'}>
+      {!embedded && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
+          <button className="btn-ghost" onClick={onBack}>← Back</button>
+          <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em' }}>Weekly Specials</h2>
+        </div>
+      )}
 
       {loading ? (
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Loading…</p>
@@ -1434,7 +1436,29 @@ const SpecialsSettings = ({ onBack }) => {
   );
 };
 
-const GroupBuySettings = ({ onBack }) => {
+// ─── Specials hub — sub-tabs for Weekly Specials + Group Buy ────────────────
+const SpecialsHub = ({ onBack }) => {
+  const [tab, setTab] = React.useState('weekly');
+  return (
+    <div className="fade-in">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+        <button className="btn-ghost" onClick={onBack}>← Back</button>
+        <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em' }}>Specials</h2>
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        {[['weekly', 'Weekly Specials'], ['groupbuy', 'Group Buy']].map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)}
+            style={{ background: 'transparent', border: 'none', color: tab === key ? '#fff' : 'rgba(255,255,255,0.5)',
+              padding: '10px 16px', fontSize: 14, fontWeight: tab === key ? 600 : 400, cursor: 'pointer',
+              borderBottom: tab === key ? '2px solid #2997ff' : '2px solid transparent' }}>{label}</button>
+        ))}
+      </div>
+      {tab === 'weekly' ? <SpecialsSettings onBack={null} embedded /> : <GroupBuySettings onBack={null} embedded />}
+    </div>
+  );
+};
+
+const GroupBuySettings = ({ onBack, embedded }) => {
   const [cfg, setCfg] = React.useState({
     password:      'PFBVIP2026',
     round:         2,
@@ -1478,11 +1502,13 @@ const GroupBuySettings = ({ onBack }) => {
   const labelStyle = { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', display: 'block', marginBottom: 8 };
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-        <button className="btn-ghost" onClick={onBack}>← Back</button>
-        <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em' }}>Group Buy Settings</h2>
-      </div>
+    <div className={embedded ? '' : 'fade-in'}>
+      {!embedded && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
+          <button className="btn-ghost" onClick={onBack}>← Back</button>
+          <h2 style={{ fontSize: 22, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.02em' }}>Group Buy Settings</h2>
+        </div>
+      )}
 
       {loading ? (
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>Loading settings...</p>
@@ -1997,7 +2023,7 @@ const App = () => {
           : showCoupons && window.CouponsManager
           ? <window.CouponsManager sb={sb} onBack={() => setShowCoupons(false)} />
           : showGroupBuy
-          ? <SpecialsSettings onBack={() => setShowGroupBuy(false)} />
+          ? <SpecialsHub onBack={() => setShowGroupBuy(false)} />
           : showPickup
           ? <PickupSettings onBack={() => setShowPickup(false)} />
           : editor
