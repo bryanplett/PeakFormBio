@@ -1529,7 +1529,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
         for (const o of insertedOrders) {
           try {
             const res = await window.decrementInventoryForOrder(o);
-            if (!res.ok) console.warn('Inventory decrement failed:', res.error);
+            if (!res.ok) console.warn('Inventory decrement failed (likely sold out):', res.error);
           } catch (e) {
             console.warn('Inventory decrement threw:', e);
           }
@@ -3632,14 +3632,15 @@ const Portal = ({ userId, onLogout }) => {
 
       {/* Main content */}
       <main style={{ flex: 1, minWidth: 0, padding: '48px 40px', paddingBottom: 80, background: '#0a0a0a' }}>
-        <PortalPromoBanner onOpen={() => setCarnitineOpen(true)} />
+        <SpecialPromoBanner onOpen={() => setCarnitineOpen(true)} />
         {carnitineOpen && (
-          <GlutathioneModal
+          <SpecialModal
             onClose={() => setCarnitineOpen(false)}
-            onAdd={() => {
+            onAdd={(peptideName, couponCode) => {
               setCarnitineOpen(false);
               switchTab('order');
-              window.history.replaceState({}, '', window.location.pathname + '?add=Glutathione&qty=2&coupon=GOGLUTA' + window.location.hash);
+              const couponPart = couponCode ? `&coupon=${encodeURIComponent(couponCode)}` : '';
+              window.history.replaceState({}, '', window.location.pathname + `?add=${encodeURIComponent(peptideName)}&qty=2${couponPart}` + window.location.hash);
               window.dispatchEvent(new CustomEvent('pfb-deep-link'));
             }} />
         )}
@@ -3729,12 +3730,21 @@ const EmptyState = ({ title, message }) => (
 );
 
 // ─── App ─────────────────────────────────────────────────────────────────────
-// ─── August Promo Banner (portal) ───────────────────────────────────────────
-const PortalPromoBanner = ({ onOpen }) => {
+// ─── Weekly Special Promo Banner (portal) ───────────────────────────────────
+// Content is set weekly in Admin → Specials, no code changes needed.
+const SpecialPromoBanner = ({ onOpen }) => {
+  const [special, setSpecial] = React.useState(null);
+  React.useEffect(() => {
+    fetch('/api/public/special-settings').then(r => r.json()).then(setSpecial).catch(() => setSpecial({ active: false }));
+  }, []);
+
+  if (!special || !special.active || !special.peptideName) return null;
+  const text = special.bannerTextOverride || `BOGO · ${special.peptideName} · Buy One Get One`;
+
   const item = (
     <span className="portal-promo-item">
       <span className="portal-promo-pct">BOGO</span>
-      <span>Glutathione 1200 &middot; Buy One Get One</span>
+      <span>{text.replace(/^BOGO\s*·\s*/, '')}</span>
       <span className="portal-promo-cta">Learn more</span>
       <span className="portal-promo-dot" />
     </span>
@@ -3742,7 +3752,7 @@ const PortalPromoBanner = ({ onOpen }) => {
   const run = Array.from({ length: 6 }, (_, i) => <React.Fragment key={i}>{item}</React.Fragment>);
   return (
     <div className="portal-promo-banner" role="button" tabIndex={0}
-      aria-label="Buy one get one free on Glutathione 1200mg. Open details."
+      aria-label={text + '. Open details.'}
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
       <div className="portal-promo-track">{run}{run}</div>
@@ -3750,16 +3760,13 @@ const PortalPromoBanner = ({ onOpen }) => {
   );
 };
 
-// ─── Glutathione BOGO Modal (portal) ─────────────────────────────────────────
-const GlutathioneModal = ({ onClose, onAdd }) => {
-  const benefits = [
-    { title: 'Master antioxidant', body: 'The most abundant intracellular antioxidant, neutralizing free radicals and regenerating other antioxidants like vitamins C and E.' },
-    { title: 'Detoxification', body: 'Central to phase II liver detoxification, conjugating with toxins and heavy metals so they can be cleared from the body.' },
-    { title: 'Immune function', body: 'Supports lymphocyte proliferation and immune cell function, an area of active research interest.' },
-    { title: 'Cellular protection', body: 'Protects mitochondria and cell membranes from oxidative stress, a process implicated in aging and chronic disease research.' },
-    { title: 'Skin research', body: 'Studied for its role in melanin pathways and skin brightening, one of its more widely discussed applications.' },
-    { title: 'Synthesis and depletion', body: 'Made from cysteine, glutamine, and glycine. Levels decline with age, chronic stress, and toxin exposure, prompting interest in supplementation.' },
-  ];
+// ─── Weekly Special BOGO Modal (portal) ──────────────────────────────────────
+const SpecialModal = ({ onClose, onAdd }) => {
+  const [special, setSpecial] = React.useState(null);
+  React.useEffect(() => {
+    fetch('/api/public/special-settings').then(r => r.json()).then(setSpecial).catch(() => {});
+  }, []);
+  if (!special || !special.peptideName) return null;
 
   return (
     <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{
@@ -3769,7 +3776,7 @@ const GlutathioneModal = ({ onClose, onAdd }) => {
     }}>
       <div style={{
         background: '#161617', border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 20, width: '100%', maxWidth: 680, padding: 40,
+        borderRadius: 20, width: '100%', maxWidth: 560, padding: 40,
         position: 'relative', maxHeight: '90vh', overflowY: 'auto',
       }}>
         <button onClick={onClose} aria-label="Close" style={{
@@ -3785,20 +3792,10 @@ const GlutathioneModal = ({ onClose, onAdd }) => {
           fontSize: 11, fontWeight: 700, color: '#2997ff', letterSpacing: '0.08em', textTransform: 'uppercase',
         }}>Buy One Get One</div>
 
-        <h2 style={{ fontSize: 30, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 14 }}>Glutathione — 1200mg</h2>
-        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 30, maxWidth: 540 }}>
-          A tripeptide antioxidant central to cellular defense and detoxification. Below is a summary of the
-          mechanisms and research areas most often associated with it.
+        <h2 style={{ fontSize: 28, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 14 }}>{special.peptideName} — This Week's Special</h2>
+        <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 26, maxWidth: 480 }}>
+          Order two of {special.peptideName} this week and the second is on us — add it to your cart below to lock in the deal.
         </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginBottom: 30 }}>
-          {benefits.map(b => (
-            <div key={b.title}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7', marginBottom: 6, letterSpacing: '-0.01em' }}>{b.title}</div>
-              <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)', lineHeight: 1.55, textWrap: 'pretty' }}>{b.body}</p>
-            </div>
-          ))}
-        </div>
 
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '16px 18px', marginBottom: 26 }}>
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>
@@ -3808,15 +3805,17 @@ const GlutathioneModal = ({ onClose, onAdd }) => {
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button onClick={onAdd} className="btn-primary" style={{ padding: '13px 26px', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-            Add Glutathione to cart
+          <button onClick={() => onAdd(special.peptideName, special.couponCode)} className="btn-primary" style={{ padding: '13px 26px', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 9 }}>
+            Add {special.peptideName} to cart
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
               <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
-            Discount code <strong style={{ color: '#f5f5f7', fontWeight: 600, letterSpacing: '0.02em' }}>GOGLUTA</strong> at checkout — add two, second one's free
-          </span>
+          {special.couponCode && (
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
+              Discount code <strong style={{ color: '#f5f5f7', fontWeight: 600, letterSpacing: '0.02em' }}>{special.couponCode}</strong> applies automatically
+            </span>
+          )}
         </div>
       </div>
     </div>
