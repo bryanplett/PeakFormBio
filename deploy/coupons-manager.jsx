@@ -147,7 +147,7 @@ function CouponsManager({ sb, onBack }) {
         }}>{msg.text}</div>
       )}
 
-      {editing && <CouponForm editing={editing} setEditing={setEditing} onSave={saveCoupon} onCancel={cancelEdit} />}
+      {editing && <CouponForm editing={editing} setEditing={setEditing} onSave={saveCoupon} onCancel={cancelEdit} scopes={scopes} />}
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {coupons.length === 0 ? (
@@ -205,7 +205,7 @@ function CouponsManager({ sb, onBack }) {
   );
 }
 
-function CouponForm({ editing, setEditing, onSave, onCancel }) {
+function CouponForm({ editing, setEditing, onSave, onCancel, scopes }) {
   const set = (k, v) => setEditing(prev => ({ ...prev, [k]: v }));
   return (
     <div className="card" style={{ marginBottom: 20, padding: 22 }}>
