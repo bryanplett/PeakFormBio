@@ -1373,6 +1373,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
   const updateQty = (label, qty) => {
     if (qty < 1) return;
+    const stockCheckKey = label.toLowerCase().replace(/\s*—\s*\$[\d,.]+/, '').trim();
+    const stock = inventoryMap.hasOwnProperty(stockCheckKey) ? inventoryMap[stockCheckKey] : null;
+    if (stock !== null && qty > stock) qty = Math.max(1, stock);
     setCart(prev => prev.map(item => item.label === label ? { ...item, qty } : item));
   };
 
@@ -1434,6 +1437,28 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       return;
     }
     setFieldErrors({});
+
+    // Re-check stock right before checkout — inventoryMap was loaded once on
+    // mount, so a client sitting on this screen for a while (or two clients
+    // racing for the last unit) could otherwise still submit against a
+    // number that's gone stale. This is what was letting sold-out items
+    // like Reta 12 still go through.
+    try {
+      const { data: freshInv } = await sb.from('inventory').select('product_name,stock');
+      const freshMap = {};
+      (freshInv || []).forEach(r => { freshMap[(r.product_name || '').trim().toLowerCase()] = Number(r.stock); });
+      const oos = cart.find(item => {
+        const key = item.label.toLowerCase().replace(/\s*—\s*\$[\d,.]+/, '').trim();
+        const stock = freshMap.hasOwnProperty(key) ? freshMap[key] : null;
+        return stock !== null && item.qty > stock;
+      });
+      if (oos) {
+        setInventoryMap(freshMap);
+        setFieldErrors({ stock: `${oos.label} is out of stock or has fewer units left than you've selected. Please update your cart.` });
+        return;
+      }
+    } catch (e) { console.warn('Pre-checkout stock check failed:', e); }
+
     setSubmitting(true);
 
     const chosenM = paymentMethods.find(m => m.id === paymentMethod);
@@ -2516,6 +2541,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                 </div>
               )}
 
+              {fieldErrors.stock && (
+                <p style={{ fontSize: 13, color: '#ff8a8a', marginTop: -8 }}>{fieldErrors.stock}</p>
+              )}
               <button type="submit" className="btn-blue" disabled={submitting}
                 style={{ alignSelf: 'flex-start', padding: '13px 32px', fontSize: 15, opacity: submitting ? 0.6 : 1 }}>
                 {submitting ? 'Placing order…' : `Proceed to payment (${cart.reduce((s, c) => s + c.qty, 0)} ${cart.reduce((s, c) => s + c.qty, 0) === 1 ? 'item' : 'items'})`}
