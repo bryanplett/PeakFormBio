@@ -1501,6 +1501,29 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     // is created (and no stock is touched) until payment has actually been sent.
     const finalizeOrder = async (snap) => {
       const insertedOrders = [];
+      // Re-verify one-time-use coupons right before the order is actually
+      // created — not just at checkout time. Direct-payment orders are only
+      // inserted once the buyer taps "Place order" (which can happen much
+      // later, or from a second tab opened before the first order landed),
+      // so the mount-time pastOrders check alone let the same one-time code
+      // be reused. This closes that gap by checking fresh, right at insert.
+      if (snap.couponCodeToStore) {
+        try {
+          const { data: { user: freshUser } } = await sb.auth.getUser();
+          if (freshUser) {
+            const coupon = activeCoupons.find(c => (c.code || '').toLowerCase() === snap.couponCodeToStore.toLowerCase());
+            if (coupon && coupon.one_time_use) {
+              const { data: priorOrders } = await sb.from('orders').select('coupon_code').eq('client_id', freshUser.id);
+              const alreadyUsed = (priorOrders || []).some(o => (o.coupon_code || '').toLowerCase().split(' ')[0] === coupon.code.toLowerCase());
+              if (alreadyUsed) {
+                console.warn(`Coupon ${coupon.code} already used by this client — flagging this order for manual review instead of recording a second redemption.`);
+                snap.notes = `${snap.notes ? snap.notes + ' | ' : ''}⚠ Coupon ${coupon.code} reused — verify discount before fulfilling.`;
+                snap.couponCodeToStore = coupon.code + ' (REUSED — review)';
+              }
+            }
+          }
+        } catch (e) { console.warn('One-time coupon re-check failed:', e); }
+      }
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (user) {
