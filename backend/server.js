@@ -95,6 +95,8 @@ app.post('/api/public/groupbuy-verify', async (req, res) => {
 // that, the real remaining counts live in app_settings.value.stock and are
 // decremented atomically as orders come in (see routes/notifications.js).
 const DEFAULT_STOCK = { reta10: 60, reta20: 35, lc526: 8 };
+// Per-kit price tiers [1 kit, 2 kits, 3+ kits] — editable in Admin → Specials → Group Buy.
+const DEFAULT_PRICES = { reta10: [90, 89, 87], reta20: [150, 147, 145], lc526: [90, 89, 87] };
 
 // Return non-sensitive settings (dates + test status + remaining stock, no password)
 app.get('/api/public/groupbuy-settings', async (_req, res) => {
@@ -107,9 +109,10 @@ app.get('/api/public/groupbuy-settings', async (_req, res) => {
       openDate:      s.openDate      || '2026-08-13',
       closeDate:     s.closeDate     || '2026-08-27',
       stock:         Object.assign({}, DEFAULT_STOCK, s.stock || {}),
+      prices:        Object.assign({}, DEFAULT_PRICES, s.prices || {}),
     });
   } catch (e) {
-    res.json({ round: 2, testResultsIn: false, openDate: '2026-08-13', closeDate: '2026-08-27', stock: DEFAULT_STOCK });
+    res.json({ round: 2, testResultsIn: false, openDate: '2026-08-13', closeDate: '2026-08-27', stock: DEFAULT_STOCK, prices: DEFAULT_PRICES });
   }
 });
 
@@ -123,8 +126,8 @@ app.post('/api/admin/groupbuy-settings', async (req, res) => {
     const secret = process.env.JWT_SECRET || 'change-me-in-production';
     const user = jwt.default.verify(token, secret);
     if (user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
-    const { password, round, testResultsIn, openDate, closeDate, stock } = req.body || {};
-    const value = { password, round, testResultsIn, openDate, closeDate, stock };
+    const { password, round, testResultsIn, openDate, closeDate, stock, prices } = req.body || {};
+    const value = { password, round, testResultsIn, openDate, closeDate, stock, prices };
     await pool.query(
       `INSERT INTO app_settings (key, value) VALUES ('groupbuy_settings', $1)
        ON CONFLICT (key) DO UPDATE SET value = $1`,
@@ -193,6 +196,7 @@ app.get('/api/admin/groupbuy-settings', async (req, res) => {
       openDate:      s.openDate      || '2026-08-13',
       closeDate:     s.closeDate     || '2026-08-27',
       stock:         Object.assign({}, DEFAULT_STOCK, s.stock || {}),
+      prices:        Object.assign({}, DEFAULT_PRICES, s.prices || {}),
     });
   } catch (e) {
     res.status(500).json({ message: e.message });
