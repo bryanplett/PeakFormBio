@@ -82,7 +82,9 @@ const GB_METHODS = [
 
 // Each kit's price per unit steps down at 2 and again at 3+ (matches the flyer's
 // "1 kit / 2 kits / 3 kits" pricing rows). Quantities above 3 keep the 3+ price.
-const KITS = [
+// Default prices only — live prices come from Admin → Specials → Group Buy
+// (settings.prices) and override these inside GroupBuyPage.
+const KITS_BASE = [
   { id: 'reta10', name: 'Reta 10',         subtitle: '10 Vial Kit', tiers: [90, 89, 87] },
   { id: 'reta20', name: 'Reta 20',         subtitle: '10 Vial Kit', tiers: [150, 147, 145] },
   { id: 'lc526',  name: 'Fatblaster LC526', subtitle: '10 Vial Kit', tiers: [90, 89, 87] },
@@ -240,6 +242,10 @@ function GroupBuyPage() {
       .catch(() => {});
   }, []);
   const stock = settings.stock || {};
+  const KITS = KITS_BASE.map(k => {
+    const t = settings.prices && settings.prices[k.id];
+    return Array.isArray(t) && t.length === 3 ? Object.assign({}, k, { tiers: t.map(Number) }) : k;
+  });
   const allSoldOut = KITS.every(kit => (stock[kit.id] || 0) <= 0);
 
   const now = new Date();

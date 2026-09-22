@@ -1466,6 +1466,7 @@ const GroupBuySettings = ({ onBack, embedded }) => {
     openDate:      '2026-08-13',
     closeDate:     '2026-08-27',
     stock:         { reta10: 60, reta20: 35, lc526: 8 },
+    prices:        { reta10: [90, 89, 87], reta20: [150, 147, 145], lc526: [90, 89, 87] },
   });
   const [saved, setSaved] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -1477,7 +1478,7 @@ const GroupBuySettings = ({ onBack, embedded }) => {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(r => r.ok ? r.json() : null)
-      .then(s => { if (s) setCfg(c => Object.assign({}, c, s, { stock: Object.assign({}, c.stock, s.stock) })); })
+      .then(s => { if (s) setCfg(c => Object.assign({}, c, s, { stock: Object.assign({}, c.stock, s.stock), prices: Object.assign({}, c.prices, s.prices) })); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -1557,6 +1558,40 @@ const GroupBuySettings = ({ onBack, embedded }) => {
             </div>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 6 }}>
               Decrements automatically as orders come in. Raise a number here to restock.
+            </p>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Kit Prices (per kit)</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[['reta10','Reta 10'],['reta20','Reta 20'],['lc526','Fatblaster LC526']].map(([id, label]) => (
+                <div key={id}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>{label}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
+                    {['1 kit', '2 kits', '3+ kits'].map((tierLabel, i) => (
+                      <div key={i}>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>{tierLabel}</div>
+                        <div style={{ position: 'relative' }}>
+                          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>$</span>
+                          <input className="field-input" type="number" min="0" step="1" style={{ paddingLeft: 24 }}
+                            value={cfg.prices?.[id]?.[i] ?? 0}
+                            onChange={e => {
+                              const v = Math.max(0, Number(e.target.value) || 0);
+                              setCfg(c => {
+                                const tiers = [...((c.prices && c.prices[id]) || [0, 0, 0])];
+                                tiers[i] = v;
+                                return { ...c, prices: { ...c.prices, [id]: tiers } };
+                              });
+                            }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 6 }}>
+              Price per kit based on how many of that kit the customer orders. Updates the group buy page as soon as you save.
             </p>
           </div>
 
