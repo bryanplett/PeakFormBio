@@ -31,6 +31,7 @@
 <script type="text/babel" src="client-invite.jsx"></script>
 <script type="text/babel" src="coupons-manager.jsx?v=20260821"></script>
 <script type="text/babel" src="fulfillment-tally.jsx"></script>
+<script type="text/babel" src="referrals-report.jsx"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -170,9 +171,11 @@ function priceFromLabel(label) {
 
 function couponMatchesLabel(coupon, label) {
   if (!coupon) return false;
-  if (coupon.scope === 'all') return true;
-  if (coupon.scope === 'retatrutide') return /\bretatrutide\b/i.test(label || '');
-  return false;
+  if (!coupon.scope || coupon.scope === 'all') return true;
+  // Scopes store the peptide name (e.g. "ARA-290"); legacy keys like
+  // 'retatrutide' / 'glutathione' / 'carnitine' match the same way.
+  const esc = String(coupon.scope).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('\\b' + esc + '\\b', 'i').test(label || '');
 }
 
 // Compute pricing for a single order *group* (one checkout, possibly N lines).
@@ -242,6 +245,9 @@ function groupOrders(sorted) {
   }
   return groups;
 }
+
+// Shared with referrals-report.jsx (separate Babel scope).
+Object.assign(window, { readStatuses, computeGroupTotals, groupOrders });
 
 // ─── Inventory helper ────────────────────────────────────────────────────────────────
 // Cart labels look like "Retatrutide — 10mg — $160". The inventory table is
@@ -1923,6 +1929,7 @@ const App = () => {
   const [showInquiries, setShowInquiries] = React.useState(false);
   const [showTelegramOrders, setShowTelegramOrders] = React.useState(false);
   const [showFulfillmentTally, setShowFulfillmentTally] = React.useState(false);
+  const [showReferrals, setShowReferrals] = React.useState(false);
   const [newInquiries, setNewInquiries] = React.useState(0);
   const [newOrders, setNewOrders] = React.useState(0);
   const [newTelegramOrders, setNewTelegramOrders] = React.useState(0);
@@ -1942,6 +1949,7 @@ const App = () => {
     setShowInquiries(false);
     setShowTelegramOrders(false);
     setShowFulfillmentTally(false);
+    setShowReferrals(false);
     setSelected(null);
     setEditor(null);
   };
@@ -2011,6 +2019,7 @@ const App = () => {
             { label: 'Orders', badge: newOrders, onClick: () => { clearViews(); setShowOrders(true); localStorage.setItem('pfb_orders_last_seen', new Date().toISOString()); setNewOrders(0); } },
             { label: 'Inquiries', badge: newInquiries, onClick: () => { clearViews(); setShowInquiries(true); setNewInquiries(0); } },
             { label: 'Telegram Orders', badge: newTelegramOrders, onClick: () => { clearViews(); setShowTelegramOrders(true); setNewTelegramOrders(0); } },
+            { label: 'Referrals', onClick: () => { clearViews(); setShowReferrals(true); } },
           ]} />
           <NavGroup label="Catalog" options={[
             { label: 'Pricelist', onClick: () => { clearViews(); setShowPricelist(true); } },
@@ -2048,6 +2057,8 @@ const App = () => {
           ? <AllTelegramOrders onBack={() => setShowTelegramOrders(false)} />
           : showFulfillmentTally && window.FulfillmentTally
           ? <window.FulfillmentTally sb={sb} clients={clients} onBack={() => setShowFulfillmentTally(false)} />
+          : showReferrals && window.ReferralsReport
+          ? <window.ReferralsReport sb={sb} clients={clients} onBack={() => setShowReferrals(false)} />
           : showInquiries
           ? <AllInquiries onBack={() => setShowInquiries(false)} />
           : showOrders
