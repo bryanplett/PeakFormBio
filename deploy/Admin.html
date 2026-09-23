@@ -2019,7 +2019,6 @@ const App = () => {
             { label: 'Orders', badge: newOrders, onClick: () => { clearViews(); setShowOrders(true); localStorage.setItem('pfb_orders_last_seen', new Date().toISOString()); setNewOrders(0); } },
             { label: 'Inquiries', badge: newInquiries, onClick: () => { clearViews(); setShowInquiries(true); setNewInquiries(0); } },
             { label: 'Telegram Orders', badge: newTelegramOrders, onClick: () => { clearViews(); setShowTelegramOrders(true); setNewTelegramOrders(0); } },
-            { label: 'Referrals', onClick: () => { clearViews(); setShowReferrals(true); } },
           ]} />
           <NavGroup label="Catalog" options={[
             { label: 'Pricelist', onClick: () => { clearViews(); setShowPricelist(true); } },
@@ -2035,6 +2034,7 @@ const App = () => {
           <button className="btn-ghost" onClick={() => { clearViews(); setShowGroupBuy(true); }}>Specials</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPickup(true); }}>Pickup Locations</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowFulfillmentTally(true); }}>Fulfillment Tally</button>
+          <button className="btn-ghost" onClick={() => { clearViews(); setShowReferrals(true); }}>Referrals</button>
           <span className="admin-email" style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{user.email}</span>
           <button className="btn-ghost" onClick={signOut}>Sign Out</button>
         </div>
