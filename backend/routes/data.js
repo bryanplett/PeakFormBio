@@ -32,6 +32,24 @@ function validateTable(table) {
   return CLIENT_READABLE.has(table);
 }
 
+// Account access levels (clients.status): 'active' / 'invited' = normal,
+// 'restricted' = can log in and view, but can't place orders,
+// 'disabled' = can't log in at all (enforced in middleware/auth.js).
+// Clients may never change their own status.
+const ADMIN_ONLY_CLIENT_COLS = new Set(['status']);
+function stripAdminOnlyCols(table, role, row) {
+  if (table !== 'clients' || role === 'admin' || !row || typeof row !== 'object') return row;
+  const out = { ...row };
+  ADMIN_ONLY_CLIENT_COLS.forEach(c => { delete out[c]; });
+  return out;
+}
+async function clientIsRestricted(user) {
+  if (!user || user.role === 'admin') return false;
+  const r = await pool.query('SELECT status FROM clients WHERE id = $1', [user.id]);
+  const s = r.rows[0]?.status;
+  return s === 'restricted' || s === 'disabled';
+}
+
 function parseFilters(query) {
   const eq = {};
   const inFilter = {};
@@ -128,9 +146,12 @@ router.post('/:table', requireAuth, async (req, res) => {
 
   const { _single } = req.query;
   const data = req.body;
-  const rows = Array.isArray(data) ? data : [data];
+  const rows = (Array.isArray(data) ? data : [data]).map(r => stripAdminOnlyCols(table, req.user.role, r));
 
   if (rows.length === 0) return res.status(400).json({ message: 'No data provided.' });
+  if (table === 'orders' && await clientIsRestricted(req.user)) {
+    return res.status(403).json({ message: 'Ordering is paused on your account. Please contact PeakFormBio.' });
+  }
 
   const results = [];
   for (const row of rows) {
@@ -162,7 +183,7 @@ router.patch('/:table', requireAuth, async (req, res) => {
   }
 
   const { _single } = req.query;
-  const data = req.body;
+  const data = stripAdminOnlyCols(table, req.user.role, req.body);
   const cols = Object.keys(data).filter(k => VALID_IDENTIFIER.test(k));
   if (cols.length === 0) return res.status(400).json({ message: 'No valid columns to update.' });
 
@@ -194,7 +215,7 @@ router.put('/:table', requireAuth, async (req, res) => {
 
   const { _onConflict } = req.query;
   const data = req.body;
-  const rows = Array.isArray(data) ? data : [data];
+  const rows = (Array.isArray(data) ? data : [data]).map(r => stripAdminOnlyCols(table, req.user.role, r));
   if (rows.length === 0) return res.status(400).json({ message: 'No data provided.' });
 
   const firstRow = rows[0];

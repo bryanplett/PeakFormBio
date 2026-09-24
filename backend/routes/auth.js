@@ -34,6 +34,7 @@ router.post('/login', async (req, res) => {
   if (!client.password_hash) return res.status(401).json({ message: 'No password set. Contact your coach.' });
   const valid = await bcrypt.compare(password, client.password_hash);
   if (!valid) return res.status(401).json({ message: 'Invalid email or password.' });
+  if (client.status === 'disabled') return res.status(403).json({ message: 'This account has been disabled. Please contact PeakFormBio.' });
   const token = signToken({ id: client.id, email: client.email, role: 'client' });
   res.json({ token, user: { id: client.id, email: client.email, role: 'client' } });
 });
