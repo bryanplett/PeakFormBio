@@ -604,14 +604,14 @@ const CATEGORY_MAP = [
     matches: ['accessory pack', 'bac water'],
     blurbs: {
       'accessory pack': 'Add the supplies you need to your order. Each pack price is listed below.',
-      'accessory pack — 01': 'Syringes & Wipes.',
-      'accessory pack — 02': 'Syringes, Wipes & 3ml BAC Water.',
-      'accessory pack — 03': 'Syringes, Wipes & 10ml BAC Water.',
+      'accessory pack — 01': '4 Syringes & Wipes.',
+      'accessory pack — 02': '4 Syringes, Wipes & 3ml BAC Water.',
+      'accessory pack — 03': '4 Syringes, Wipes & 10ml BAC Water.',
       'accessory pack — 04': '10 Syringes.',
       'bac water': 'Bacteriostatic water for reconstituting lyophilized peptides.',
-      'pack \u2014 01':    'Syringes and alcohol wipes.',
-      'pack \u2014 02':    'BAC water.',
-      'pack \u2014 03':    'Syringes, alcohol wipes, and BAC water.',
+      'pack \u2014 01':    '4 syringes and alcohol wipes.',
+      'pack \u2014 02':    '4 syringes, alcohol wipes, and 3ml BAC water.',
+      'pack \u2014 03':    '4 syringes, alcohol wipes, and 10ml BAC water.',
     },
   },
 ];
@@ -1856,9 +1856,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
               {[
-                { prefix: 'Accessory Pack — 01', contents: 'Syringes & Wipes' },
-                { prefix: 'Accessory Pack — 02', contents: 'Syringes, Wipes & 3ml BAC' },
-                { prefix: 'Accessory Pack — 03', contents: 'Syringes, Wipes & 10ml BAC' },
+                { prefix: 'Accessory Pack — 01', contents: '4 Syringes & Wipes' },
+                { prefix: 'Accessory Pack — 02', contents: '4 Syringes, Wipes & 3ml BAC' },
+                { prefix: 'Accessory Pack — 03', contents: '4 Syringes, Wipes & 10ml BAC' },
                 { prefix: 'Accessory Pack — 04', contents: '10 Syringes' },
               ].map(({ prefix, contents }) => {
                 const label = findOptionLabel(prefix);
@@ -1972,9 +1972,10 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               borderRadius: 10, fontSize: 12.5, color: 'rgba(255,255,255,0.7)', lineHeight: 1.55,
             }}>
               <span style={{ fontWeight: 600, color: '#f5f5f7' }}>Need supplies?</span>{' '}
-              If you need <strong style={{ color: '#f5f5f7' }}>Syringes and Wipes</strong>, choose <strong style={{ color: '#f5f5f7' }}>Accessory Pack 01</strong>.{' '}
-              If you need <strong style={{ color: '#f5f5f7' }}>BAC Water</strong>, choose <strong style={{ color: '#f5f5f7' }}>Accessory Pack 02</strong>.{' '}
-              If you need <strong style={{ color: '#f5f5f7' }}>Syringes, Wipes, and BAC Water</strong>, choose <strong style={{ color: '#f5f5f7' }}>Accessory Pack 03</strong>.
+              <strong style={{ color: '#f5f5f7' }}>Pack 01</strong>: 4 syringes and wipes.{' '}
+              <strong style={{ color: '#f5f5f7' }}>Pack 02</strong>: 4 syringes, wipes, and 3ml BAC water.{' '}
+              <strong style={{ color: '#f5f5f7' }}>Pack 03</strong>: 4 syringes, wipes, and 10ml BAC water.{' '}
+              <strong style={{ color: '#f5f5f7' }}>Pack 04</strong>: 10 syringes.
             </div>
 
             {/* Cart lines */}
