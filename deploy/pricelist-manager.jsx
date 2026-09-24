@@ -321,6 +321,24 @@
                   ? `${productCount} products · ${tierKeys.length} tiers${source === 'saved' ? ' · saved version' : source === 'default' ? ' · using defaults' : ''}`
                   : `${clientProducts.length} products · blank = uses tier price`}
               </span>
+              {mode === 'base' && (
+                <button className="btn-ghost" style={{ padding: '8px 14px', fontSize: 13 }} onClick={() => {
+                  const tier = tierKeys.includes('wholesale') ? 'wholesale' : tierKeys[0];
+                  const esc = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+                  const lines = [['Product', 'Category', 'Price'].join(',')];
+                  rows.filter(r => (r.name || '').trim())
+                    .slice().sort((a, b) => (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name))
+                    .forEach(r => {
+                      const p = r.prices[tier];
+                      lines.push([esc(r.name.trim()), esc(r.category || ''), (p === '' || p == null) ? '' : Number(p).toFixed(2)].join(','));
+                    });
+                  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                  const a = document.createElement('a');
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `PeakFormBio-Products-${new Date().toISOString().slice(0, 10)}.csv`;
+                  document.body.appendChild(a); a.click(); a.remove();
+                }}>Export spreadsheet</button>
+              )}
             </div>
 
             {/* Inventory quick stats (base mode only) */}
