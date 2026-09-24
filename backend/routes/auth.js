@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import pool from '../db.js';
 import { signToken, requireAdmin } from '../middleware/auth.js';
+import { sendEmail, escHtml } from '../lib/email.js';
 
 const router = Router();
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+function hashToken(raw) { return crypto.createHash('sha256').update(raw).digest('hex'); }
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -45,14 +49,74 @@ router.post('/signup', requireAdmin, async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO clients (email, password_hash, name, phone, status)
-       VALUES ($1, $2, $3, $4, 'invited')
+      `INSERT INTO clients (email, password_hash, name, phone, status, pricelist)
+       VALUES ($1, $2, $3, $4, 'invited', 'wholesale')
        ON CONFLICT (email) DO UPDATE SET password_hash = $2, name = COALESCE($3, clients.name), phone = COALESCE($4, clients.phone), status = 'invited'`,
       [lowerEmail, hash, name || lowerEmail, phone || null]
     );
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+});
+
+// POST /api/auth/request-password-reset — client self-serve: email a reset link.
+// Always responds ok:true (even if the email isn't on file) to avoid leaking
+// which emails have accounts.
+router.post('/request-password-reset', async (req, res) => {
+  const { email, redirectTo } = req.body || {};
+  if (!email) return res.status(400).json({ message: 'Email required.' });
+  const lowerEmail = email.trim().toLowerCase();
+
+  try {
+    const clientRes = await pool.query('SELECT id, name FROM clients WHERE email = $1', [lowerEmail]);
+    if (clientRes.rows.length > 0) {
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const expires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+      await pool.query(
+        'UPDATE clients SET reset_token_hash = $1, reset_token_expires = $2 WHERE id = $3',
+        [hashToken(rawToken), expires, clientRes.rows[0].id]
+      );
+      const base = (redirectTo || '').split('?')[0] || 'https://www.peakformbio.com/portal';
+      const link = `${base}?reset_token=${rawToken}`;
+      const name = clientRes.rows[0].name || 'there';
+      await sendEmail({
+        to: lowerEmail,
+        subject: 'Reset your PeakFormBio password',
+        html: `<p>Hi ${escHtml(name)},</p><p>Click below to set a new password. This link expires in 1 hour.</p><p><a href="${link}">${link}</a></p><p>If you didn't request this, you can ignore this email.</p>`,
+        text: `Reset your password: ${link} (expires in 1 hour)`,
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/auth/reset-password — client self-serve: consume the token from the email link.
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body || {};
+  if (!token || !password) return res.status(400).json({ message: 'Token and password required.' });
+  if (password.length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+
+  try {
+    const r = await pool.query(
+      'SELECT id, reset_token_expires FROM clients WHERE reset_token_hash = $1',
+      [hashToken(token)]
+    );
+    if (r.rows.length === 0) return res.status(400).json({ message: 'Invalid or expired reset link.' });
+    const row = r.rows[0];
+    if (!row.reset_token_expires || new Date(row.reset_token_expires) < new Date()) {
+      return res.status(400).json({ message: 'This reset link has expired. Request a new one.' });
+    }
+    const hash = await bcrypt.hash(password, 12);
+    await pool.query(
+      'UPDATE clients SET password_hash = $1, reset_token_hash = NULL, reset_token_expires = NULL WHERE id = $2',
+      [hash, row.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
