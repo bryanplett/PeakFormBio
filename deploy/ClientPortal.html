@@ -1406,6 +1406,10 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const submit = async (e) => {
     e.preventDefault();
     if (cart.length === 0 || submitting) return;
+    if (userData?.profile?.status === 'restricted') {
+      setFieldErrors({ stock: 'Ordering is paused on your account. Please contact PeakFormBio at 669-333-6600.' });
+      return;
+    }
 
     // Pre-checkout reminder: lyophilized form / BAC water / accessory pack.
     // Only fires once per checkout (confirmed via ref so it survives re-render).
@@ -3513,6 +3517,18 @@ const Portal = ({ userId, onLogout }) => {
     return (
       <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)' }}>
         Loading…
+      </div>
+    );
+  }
+
+  if (userData.profile?.status === 'disabled') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div className="card" style={{ maxWidth: 420, textAlign: 'center' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Account disabled</h2>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 20 }}>This account has been disabled. Please contact PeakFormBio at 669-333-6600.</p>
+          <button className="btn-blue" onClick={onLogout} style={{ width: '100%' }}>Sign out</button>
+        </div>
       </div>
     );
   }

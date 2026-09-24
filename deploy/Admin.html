@@ -626,6 +626,7 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
   const [savingPricelist, setSavingPricelist] = React.useState(null); // client id mid-save
   const [pickupEditorId, setPickupEditorId] = React.useState(null);
   const [savingPickup, setSavingPickup] = React.useState(null);
+  const [savingStatus, setSavingStatus] = React.useState(null);
   const [exportMsg, setExportMsg] = React.useState('');
 
   // Available pricelist tiers (standard, wholesale, …). Falls back to a
@@ -648,6 +649,16 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
     }
     // Mutate locally so the dropdown reflects the new value without a full refetch.
     client.pricelist = key;
+    onRefresh && onRefresh();
+  };
+
+  const updateStatus = async (client, status) => {
+    if (status === 'disabled' && !confirm(`Disable ${client.name || client.email}? They'll be signed out and won't be able to log in until you set them back to Active.`)) return;
+    setSavingStatus(client.id);
+    const { error } = await sb.from('clients').update({ status }).eq('id', client.id);
+    setSavingStatus(null);
+    if (error) { alert('Failed to update status: ' + error.message); return; }
+    client.status = status;
     onRefresh && onRefresh();
   };
 
@@ -823,9 +834,26 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
                   </div>
                 </td>
                 <td style={{ padding: '16px 20px' }}>
-                  <span className="tag" style={{ background: c.status === 'active' ? 'rgba(52,199,89,0.14)' : 'rgba(255,255,255,0.08)', color: c.status === 'active' ? '#34c759' : 'rgba(255,255,255,0.6)' }}>
-                    {c.status || 'active'}
-                  </span>
+                  {(() => {
+                    const s = c.status || 'active';
+                    const tone = s === 'disabled' ? { bg: 'rgba(255,69,58,0.14)', fg: '#ff453a' }
+                      : s === 'restricted' ? { bg: 'rgba(255,159,10,0.14)', fg: '#ff9f0a' }
+                      : s === 'active' ? { bg: 'rgba(52,199,89,0.14)', fg: '#34c759' }
+                      : { bg: 'rgba(255,255,255,0.08)', fg: 'rgba(255,255,255,0.7)' };
+                    return (
+                      <select value={s} disabled={savingStatus === c.id}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => updateStatus(c, e.target.value)}
+                        title="Active: full access. Restricted: can log in but can't order. Disabled: can't log in."
+                        style={{ background: tone.bg, color: tone.fg, border: 'none', borderRadius: 980, padding: '5px 12px',
+                          fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', appearance: 'none', textTransform: 'capitalize' }}>
+                        {s === 'invited' && <option value="invited" style={{ background: '#1a1a1c', color: '#fff' }}>Invited</option>}
+                        <option value="active" style={{ background: '#1a1a1c', color: '#fff' }}>Active</option>
+                        <option value="restricted" style={{ background: '#1a1a1c', color: '#fff' }}>Restricted</option>
+                        <option value="disabled" style={{ background: '#1a1a1c', color: '#fff' }}>Disabled</option>
+                      </select>
+                    );
+                  })()}
                 </td>
                 <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
