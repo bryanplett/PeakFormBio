@@ -1453,7 +1453,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
     // Pre-checkout reminder: lyophilized form / BAC water / accessory pack.
     // Only fires once per checkout (confirmed via ref so it survives re-render).
-    if (reminderRelevant && !reminderConfirmedRef.current) {
+    if (false && reminderRelevant && !reminderConfirmedRef.current) {
       setShowReminder(true);
       return;
     }
@@ -1681,13 +1681,15 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
         reported: true, pending: false,
       });
     } else {
-      // Direct payment: don't touch the database yet. The order is only
-      // created once the buyer taps "Place order" after actually sending payment.
-      pendingOrderRef.current = snapshot;
-      pendingFinalizeRef.current = finalizeOrder;
+      // Direct payment: the order is created as soon as the buyer taps
+      // "Place order" (status: awaiting payment). "Payment completed" on the
+      // payment screen then just flags it as reported. Many buyers never make it
+      // back from Venmo/PayPal/etc., so we no longer wait for that tap.
+      const insertedOrders = await finalizeOrder(snapshot);
       setPlacedOrder({
         reference, total: amountDue, methodId: paymentMethod,
-        orderIds: [], reported: false, pending: true,
+        orderIds: insertedOrders.map(o => o && o.id).filter(Boolean),
+        reported: false, pending: false,
       });
     }
 
@@ -2579,7 +2581,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   {(() => {
                     const m = paymentMethods.find(x => x.id === paymentMethod);
                     if (m && m.kind === 'invoice') return <>Once we receive your order, you'll be sent an invoice via <strong style={{ color: '#f5f5f7' }}>email and SMS</strong>. No payment is collected at this step.</>;
-                    return <>When you place the order, you'll get <strong style={{ color: '#f5f5f7' }}>direct payment instructions</strong> with the exact amount and an order reference. Send payment, tap “I've sent payment,” and we'll confirm and ship.</>;
+                    return <>When you place the order, you'll get <strong style={{ color: '#f5f5f7' }}>direct payment instructions</strong> with the exact amount and an order reference. Send payment, tap “Payment completed,” and we'll confirm and ship.</>;
                   })()}
                 </div>
               </div>
@@ -2606,7 +2608,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               )}
               <button type="submit" className="btn-blue" disabled={submitting}
                 style={{ alignSelf: 'flex-start', padding: '13px 32px', fontSize: 15, opacity: submitting ? 0.6 : 1 }}>
-                {submitting ? 'Placing order…' : `Proceed to payment (${cart.reduce((s, c) => s + c.qty, 0)} ${cart.reduce((s, c) => s + c.qty, 0) === 1 ? 'item' : 'items'})`}
+                {submitting ? 'Placing order…' : `Place order (${cart.reduce((s, c) => s + c.qty, 0)} ${cart.reduce((s, c) => s + c.qty, 0) === 1 ? 'item' : 'items'})`}
               </button>
             </form>
           </div>
