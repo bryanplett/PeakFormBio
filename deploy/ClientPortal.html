@@ -15,6 +15,7 @@
 <script src="inventory-helper.js"></script>
 <script src="payment-config.js"></script>
 <script src="peptide-data.js"></script>
+<script src="accessory-kits.js"></script>
 <script type="text/babel" src="weighin.jsx"></script>
 <script type="text/babel" src="onboarding-quiz.jsx"></script>
 <script type="text/babel" src="age-verification.jsx"></script>
@@ -1267,7 +1268,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // BAC water requirement, and syringes/wipes accessory pack. Shown ONCE per
   // checkout, only when the cart contains a reconstitution-needed product.
   const [showReminder, setShowReminder] = React.useState(false);
-  const [accessoryPromptFor, setAccessoryPromptFor] = React.useState(null); // label just added, or null
+  const [accessoryPromptFor, setAccessoryPromptFor] = React.useState(null); // { product, kitLabel, kitNum } or null
+  const [kitOptOut, setKitOptOut] = React.useState(false);
+  const kitOptedOutRef = React.useRef(new Set());
   const reminderConfirmedRef = React.useRef(false);
   // Direct-payment checkout doesn't insert the order until the buyer taps
   // "Place order" on the payment-instructions screen. These hold the snapshot
@@ -1313,13 +1316,31 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       return [...prev, { label, qty: 1 }];
     });
     showToast(label.replace(/\s*—\s*\$[\d,.]+/, '').trim() + ' added');
-    // Prompt for an accessory pack right after adding a dosed peptide, unless
-    // one is already in the cart or the item added IS an accessory/BAC item.
-    const isDosedPeptide = /\b\d+(?:\.\d+)?\s*(?:mg|IU)\b/i.test(label) && !/accessory pack|bac water/i.test(label);
-    const alreadyHasPack = cart.some(it => /accessory pack/i.test(it.label)) || /accessory pack/i.test(label);
-    if (isDosedPeptide && !alreadyHasPack) {
-      setAccessoryPromptFor(label);
+    // Auto-add the matching accessory kit (one kit per vial), per the
+    // "Accessory Kit Number" column in accessory-kits.js.
+    const kitNum = window.getAccessoryKitFor ? window.getAccessoryKitFor(label) : null;
+    const kitLabel = kitNum ? findOptionLabel('Accessory Pack — ' + kitNum) : null;
+    if (kitLabel && !kitOptedOutRef.current.has(label)) {
+      setCart(prev => {
+        const ex = prev.find(i => i.label === kitLabel);
+        if (ex) return prev.map(i => i.label === kitLabel ? { ...i, qty: i.qty + 1 } : i);
+        return [...prev, { label: kitLabel, qty: 1 }];
+      });
+      setKitOptOut(false);
+      setAccessoryPromptFor({ product: label, kitLabel, kitNum });
     }
+  };
+
+  const closeKitPopup = () => {
+    const p = accessoryPromptFor;
+    if (p && kitOptOut) {
+      kitOptedOutRef.current.add(p.product);
+      setCart(prev => prev
+        .map(i => i.label === p.kitLabel ? { ...i, qty: i.qty - 1 } : i)
+        .filter(i => i.qty > 0));
+    }
+    setKitOptOut(false);
+    setAccessoryPromptFor(null);
   };
 
   const goToCart = () => {
@@ -1376,11 +1397,30 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     const stockCheckKey = label.toLowerCase().replace(/\s*—\s*\$[\d,.]+/, '').trim();
     const stock = inventoryMap.hasOwnProperty(stockCheckKey) ? inventoryMap[stockCheckKey] : null;
     if (stock !== null && qty > stock) qty = Math.max(1, stock);
+    const prevQty = (cart.find(i => i.label === label) || {}).qty || 0;
     setCart(prev => prev.map(item => item.label === label ? { ...item, qty } : item));
+    adjustKitFor(label, qty - prevQty);
+  };
+
+  // Keep accessory kits in step with vial quantity (+/- buttons, remove).
+  // Skipped for products where the customer opted out of the kit.
+  const adjustKitFor = (label, delta) => {
+    if (!delta || kitOptedOutRef.current.has(label)) return;
+    const kitNum = window.getAccessoryKitFor ? window.getAccessoryKitFor(label) : null;
+    const kitLabel = kitNum ? findOptionLabel('Accessory Pack — ' + kitNum) : null;
+    if (!kitLabel) return;
+    setCart(prev => {
+      const ex = prev.find(i => i.label === kitLabel);
+      if (!ex) return delta > 0 ? [...prev, { label: kitLabel, qty: delta }] : prev;
+      return prev.map(i => i.label === kitLabel ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0);
+    });
   };
 
   const removeFromCart = (label) => {
+    const prevQty = (cart.find(i => i.label === label) || {}).qty || 0;
     setCart(prev => prev.filter(item => item.label !== label));
+    adjustKitFor(label, -prevQty);
+    kitOptedOutRef.current.delete(label);
   };
 
   const cartLabels = cart.map(c => c.label);
@@ -1651,7 +1691,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       });
     }
 
-    setCart([]); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode(''); setPickupSJDateChoice('');
+    setCart([]); kitOptedOutRef.current.clear(); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode(''); setPickupSJDateChoice('');
     setSubmitting(false);
     setSuccess(true);
   };
@@ -1830,7 +1870,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       {/* Post-add accessory pack prompt */}
       {accessoryPromptFor && (
         <div
-          onClick={() => setAccessoryPromptFor(null)}
+          onClick={closeKitPopup}
           style={{
             position: 'fixed', inset: 0, zIndex: 340,
             background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
@@ -1852,45 +1892,37 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               </svg>
             </div>
             <h3 style={{ fontSize: 17, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.01em', marginBottom: 8 }}>
-              Add an accessory pack?
+              Accessory kit added
             </h3>
-            <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 16 }}>
-              Would you like to add an accessory pack (bacteriostatic water, syringes and/or alcohol wipes) to your purchase?{' '}
-              <strong style={{ color: 'rgba(255,255,255,0.8)' }}>One accessory pack supplies one vial.</strong>
+            <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 14 }}>
+              We've added the accessory kit that matches{' '}
+              <strong style={{ color: 'rgba(255,255,255,0.85)' }}>{accessoryPromptFor.product.replace(/\s*—\s*\$[\d,.]+\s*$/, '')}</strong>.
+              It includes everything needed to accompany your purchase.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
-              {[
-                { prefix: 'Accessory Pack — 01', contents: '4 Syringes & Wipes' },
-                { prefix: 'Accessory Pack — 02', contents: '4 Syringes, Wipes & 3ml BAC' },
-                { prefix: 'Accessory Pack — 03', contents: '4 Syringes, Wipes & 10ml BAC' },
-                { prefix: 'Accessory Pack — 04', contents: '10 Syringes' },
-              ].map(({ prefix, contents }) => {
-                const label = findOptionLabel(prefix);
-                if (!label) return null;
-                const price = label.match(/\$[\d.]+/)?.[0] || '';
-                return (
-                  <button key={prefix} type="button"
-                    onClick={() => { addToCart(label); setAccessoryPromptFor(null); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                      background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.28)',
-                      borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit',
-                      textAlign: 'left', width: '100%',
-                    }}>
-                    <span style={{ fontSize: 13, color: '#ff9f0a', fontWeight: 500 }}>
-                      {prefix.replace('Accessory Pack — ', 'Pack ')} <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}>· {contents}</span>
-                    </span>
-                    <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)' }}>{price}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <button type="button" onClick={() => setAccessoryPromptFor(null)} style={{
-              width: '100%', background: 'transparent', color: 'rgba(255,255,255,0.5)',
-              border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '10px',
-              fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit',
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+              background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.28)',
+              borderRadius: 10, padding: '11px 12px', marginBottom: 16,
+              opacity: kitOptOut ? 0.45 : 1, transition: 'opacity .15s',
             }}>
-              No thanks
+              <span style={{ fontSize: 13, color: '#ff9f0a', fontWeight: 500 }}>
+                Pack {accessoryPromptFor.kitNum}{' '}
+                <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 400 }}>· {(window.ACCESSORY_KIT_CONTENTS || {})[accessoryPromptFor.kitNum]}</span>
+              </span>
+              <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>{accessoryPromptFor.kitLabel.match(/\$[\d.]+/)?.[0] || ''}</span>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 18 }}>
+              <input type="checkbox" checked={kitOptOut} onChange={e => setKitOptOut(e.target.checked)}
+                style={{ width: 18, height: 18, marginTop: 1, accentColor: '#2997ff', flexShrink: 0, cursor: 'pointer' }} />
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                Remove the accessory kit. I understand my vial will come without any syringes, wipes, or BAC water.
+              </span>
+            </label>
+            <button type="button" onClick={closeKitPopup} className="btn-primary" style={{
+              width: '100%', borderRadius: 10, padding: '11px', fontSize: 14, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              {kitOptOut ? 'Remove kit & continue' : 'Continue'}
             </button>
           </div>
         </div>
@@ -1963,7 +1995,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   {cart.length} {cart.length === 1 ? 'item' : 'items'}
                 </h3>
               </div>
-              <button type="button" onClick={() => setCart([])} style={{
+              <button type="button" onClick={() => { setCart([]); kitOptedOutRef.current.clear(); }} style={{
                 background: 'transparent', color: 'rgba(255,255,255,0.5)', border: 'none',
                 fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', padding: 4,
               }}>Clear cart</button>
@@ -3701,11 +3733,11 @@ const Portal = ({ userId, onLogout }) => {
         {carnitineOpen && (
           <SpecialModal
             onClose={() => setCarnitineOpen(false)}
-            onAdd={(peptideName, couponCode) => {
+            onAdd={(peptideName, couponCode, qty) => {
               setCarnitineOpen(false);
               switchTab('order');
               const couponPart = couponCode ? `&coupon=${encodeURIComponent(couponCode)}` : '';
-              window.history.replaceState({}, '', window.location.pathname + `?add=${encodeURIComponent(peptideName)}&qty=2${couponPart}` + window.location.hash);
+              window.history.replaceState({}, '', window.location.pathname + `?add=${encodeURIComponent(peptideName)}&qty=${qty || 2}${couponPart}` + window.location.hash);
               window.dispatchEvent(new CustomEvent('pfb-deep-link'));
             }} />
         )}
@@ -3804,12 +3836,17 @@ const SpecialPromoBanner = ({ onOpen }) => {
   }, []);
 
   if (!special || !special.active || !special.peptideName) return null;
-  const text = special.bannerTextOverride || `BOGO · ${special.peptideName} · Buy One Get One`;
+  const isBogo = special.dealType !== 'discount';
+  const badge = isBogo ? 'BOGO' : (special.badgeText || '').trim();
+  const autoText = isBogo
+    ? `${special.peptideName} · Buy One Get One`
+    : `${special.peptideName}${special.couponCode ? ` · Use code ${special.couponCode}` : ''}`;
+  const text = (special.bannerTextOverride || autoText).replace(/^BOGO\s*·\s*/, '');
 
   const item = (
     <span className="portal-promo-item">
-      <span className="portal-promo-pct">BOGO</span>
-      <span>{text.replace(/^BOGO\s*·\s*/, '')}</span>
+      {badge && <span className="portal-promo-pct">{badge}</span>}
+      <span>{text}</span>
       <span className="portal-promo-cta">Learn more</span>
       <span className="portal-promo-dot" />
     </span>
@@ -3832,6 +3869,7 @@ const SpecialModal = ({ onClose, onAdd }) => {
     fetch('/api/public/special-settings').then(r => r.json()).then(setSpecial).catch(() => {});
   }, []);
   if (!special || !special.peptideName) return null;
+  const isBogo = special.dealType !== 'discount';
 
   return (
     <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{
@@ -3855,11 +3893,13 @@ const SpecialModal = ({ onClose, onAdd }) => {
           padding: '5px 12px', borderRadius: 980,
           background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.3)',
           fontSize: 11, fontWeight: 700, color: '#2997ff', letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>Buy One Get One</div>
+        }}>{isBogo ? 'Buy One Get One' : (special.badgeText || 'This Week\'s Special')}</div>
 
         <h2 style={{ fontSize: 28, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 14 }}>{special.peptideName} — This Week's Special</h2>
         <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, marginBottom: 26, maxWidth: 480 }}>
-          Order two of {special.peptideName} this week and the second is on us — add it to your cart below to lock in the deal.
+          {isBogo
+            ? `Order two of ${special.peptideName} this week and the second is on us — add it to your cart below to lock in the deal.`
+            : `${special.peptideName} is on special this week. Add it to your cart below${special.couponCode ? ' and the discount code is applied for you' : ''}.`}
         </p>
 
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '16px 18px', marginBottom: 26 }}>
@@ -3870,7 +3910,7 @@ const SpecialModal = ({ onClose, onAdd }) => {
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button onClick={() => onAdd(special.peptideName, special.couponCode)} className="btn-primary" style={{ padding: '13px 26px', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 9 }}>
+          <button onClick={() => onAdd(special.peptideName, special.couponCode, isBogo ? 2 : 1)} className="btn-primary" style={{ padding: '13px 26px', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 9 }}>
             Add {special.peptideName} to cart
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
               <path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
