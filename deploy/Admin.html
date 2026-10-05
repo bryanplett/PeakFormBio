@@ -32,6 +32,8 @@
 <script type="text/babel" src="coupons-manager.jsx?v=20260821"></script>
 <script type="text/babel" src="fulfillment-tally.jsx"></script>
 <script type="text/babel" src="referrals-report.jsx"></script>
+<script src="recon-presets.js"></script>
+<script type="text/babel" src="recon-presets-manager.jsx"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -1356,20 +1358,23 @@ const PickupSettings = ({ onBack }) => {
 
 // ─── Weekly Specials (BOGO) — replaces the old Group Buy admin button ───────
 const SpecialsSettings = ({ onBack, embedded }) => {
-  const [cfg, setCfg] = React.useState({ active: false, peptideName: '', couponCode: '', bannerTextOverride: '' });
+  const [cfg, setCfg] = React.useState({ active: false, dealType: 'bogo', badgeText: '', peptideName: '', couponCode: '', bannerTextOverride: '' });
   const [useCustomText, setUseCustomText] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
 
+  const [pricelistTick, setPricelistTick] = React.useState(0);
   React.useEffect(() => {
     fetch('/api/public/special-settings')
       .then(r => r.json())
-      .then(s => { if (s) { setCfg(c => ({ ...c, ...s })); setUseCustomText(!!(s.bannerTextOverride)); } })
+      .then(s => { if (s) { setCfg(c => ({ ...c, ...s, dealType: s.dealType || 'bogo' })); setUseCustomText(!!(s.bannerTextOverride)); } })
       .finally(() => setLoading(false));
+    // Load the live (admin-saved) pricelist so newly added products show up.
+    if (window.loadPricelists) window.loadPricelists(sb).then(() => setPricelistTick(t => t + 1));
   }, []);
 
-  // Peptide names pulled straight from the wholesale pricelist, deduped and
+  // Peptide names pulled from the live pricelist, deduped and
   // stripped of their dosage suffix ("Selank — 10mg" -> "Selank").
   const peptideOptions = React.useMemo(() => {
     const products = (window.PRICELISTS && window.PRICELISTS.wholesale && window.PRICELISTS.wholesale.products) || [];
@@ -1377,15 +1382,20 @@ const SpecialsSettings = ({ onBack, embedded }) => {
       .filter(p => p.category !== 'Programs / Services')
       .map(p => p.name.replace(/\s*—\s*.+$/, '').trim());
     return Array.from(new Set(names)).sort();
-  }, []);
+  }, [pricelistTick]);
 
-  const autoText = cfg.peptideName ? `BOGO · ${cfg.peptideName} · Buy One Get One` : '';
+  const isBogo = cfg.dealType !== 'discount';
+  const autoText = !cfg.peptideName ? ''
+    : isBogo ? `${cfg.peptideName} · Buy One Get One`
+    : `${cfg.peptideName}${cfg.couponCode ? ` · Use code ${cfg.couponCode}` : ''}`;
 
   const save = async () => {
     setSaving(true); setSaved(false);
     const token = localStorage.getItem('_pfb_token');
     const body = {
       active: cfg.active,
+      dealType: cfg.dealType || 'bogo',
+      badgeText: cfg.badgeText || '',
       peptideName: cfg.peptideName,
       couponCode: cfg.couponCode,
       bannerTextOverride: useCustomText ? cfg.bannerTextOverride : '',
@@ -1425,7 +1435,28 @@ const SpecialsSettings = ({ onBack, embedded }) => {
           </label>
 
           <div>
-            <label style={labelStyle}>This week's BOGO peptide</label>
+            <label style={labelStyle}>Type of special</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[['bogo', 'Buy one get one'], ['discount', 'Discount code']].map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setCfg(c => ({ ...c, dealType: v }))}
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: 10, fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
+                    border: `1px solid ${cfg.dealType === v || (v === 'bogo' && !cfg.dealType) ? 'rgba(41,151,255,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                    background: cfg.dealType === v || (v === 'bogo' && !cfg.dealType) ? 'rgba(41,151,255,0.12)' : 'rgba(255,255,255,0.03)',
+                    color: '#f5f5f7' }}>{l}</button>
+              ))}
+            </div>
+          </div>
+
+          {!isBogo && (
+            <div>
+              <label style={labelStyle}>Badge on the banner (optional)</label>
+              <input className="field-input" type="text" placeholder="e.g. 15% OFF — leave blank for no badge" maxLength={16}
+                value={cfg.badgeText} onChange={e => setCfg(c => ({ ...c, badgeText: e.target.value.toUpperCase() }))} />
+            </div>
+          )}
+
+          <div>
+            <label style={labelStyle}>This week's featured peptide</label>
             <select className="field-input" value={cfg.peptideName}
               onChange={e => setCfg(c => ({ ...c, peptideName: e.target.value }))}>
               <option value="">— Select a peptide —</option>
@@ -1445,7 +1476,7 @@ const SpecialsSettings = ({ onBack, embedded }) => {
           <div>
             <label style={labelStyle}>Scrolling banner text</label>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '9px 12px' }}>
-              {autoText || '(pick a peptide above to generate text)'}
+              {autoText ? <>{(isBogo ? 'BOGO' : cfg.badgeText) && <strong style={{ color: '#2997ff', marginRight: 8 }}>{isBogo ? 'BOGO' : cfg.badgeText}</strong>}{autoText}</> : '(pick a peptide above to generate text)'}
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', marginBottom: 10 }}>
               <input type="checkbox" checked={useCustomText} onChange={e => setUseCustomText(e.target.checked)}
@@ -1958,6 +1989,7 @@ const App = () => {
   const [showTelegramOrders, setShowTelegramOrders] = React.useState(false);
   const [showFulfillmentTally, setShowFulfillmentTally] = React.useState(false);
   const [showReferrals, setShowReferrals] = React.useState(false);
+  const [showReconGuide, setShowReconGuide] = React.useState(false);
   const [newInquiries, setNewInquiries] = React.useState(0);
   const [newOrders, setNewOrders] = React.useState(0);
   const [newTelegramOrders, setNewTelegramOrders] = React.useState(0);
@@ -1978,6 +2010,7 @@ const App = () => {
     setShowTelegramOrders(false);
     setShowFulfillmentTally(false);
     setShowReferrals(false);
+    setShowReconGuide(false);
     setSelected(null);
     setEditor(null);
   };
@@ -2057,6 +2090,7 @@ const App = () => {
             { label: 'Macros Calculator', onClick: () => { clearViews(); setShowCalculator(true); } },
             { label: 'Meal Planner', onClick: () => { clearViews(); setShowPlanner(true); } },
             { label: 'Recipes', onClick: () => { clearViews(); setShowRecipes(true); } },
+            { label: 'Calculator Guide', onClick: () => { clearViews(); setShowReconGuide(true); } },
           ]} />
           <button className="btn-ghost" onClick={() => { clearViews(); setShowPayments(true); }}>Payments</button>
           <button className="btn-ghost" onClick={() => { clearViews(); setShowGroupBuy(true); }}>Specials</button>
@@ -2087,6 +2121,8 @@ const App = () => {
           ? <window.FulfillmentTally sb={sb} clients={clients} onBack={() => setShowFulfillmentTally(false)} />
           : showReferrals && window.ReferralsReport
           ? <window.ReferralsReport sb={sb} clients={clients} onBack={() => setShowReferrals(false)} />
+          : showReconGuide && window.ReconPresetsManager
+          ? <window.ReconPresetsManager onBack={() => setShowReconGuide(false)} />
           : showInquiries
           ? <AllInquiries onBack={() => setShowInquiries(false)} />
           : showOrders
