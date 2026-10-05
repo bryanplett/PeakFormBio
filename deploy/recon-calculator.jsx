@@ -223,6 +223,16 @@
                 </ol>
               </div>
 
+              <div style={{ marginTop: 22 }}>
+                <span style={rcLabel}>Watch how it's done</span>
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', borderRadius: 12, overflow: 'hidden', background: '#000', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <iframe src="https://www.youtube.com/embed/6NWvdXJ0G4s?si=d0991Ib9N6x4E_PY&rel=0" title="How to reconstitute a peptide" frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin" allowFullScreen
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}></iframe>
+                </div>
+              </div>
+
               <div style={{ marginTop: 20, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 {[
                   ['Strength after mixing', isIU ? `${fmt(conc, 1)} IU per mL` : `${fmt(conc, 2)} mg per mL`],
