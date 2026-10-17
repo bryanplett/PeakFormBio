@@ -31,7 +31,7 @@
 <script type="text/babel" src="client-invite.jsx"></script>
 <script type="text/babel" src="coupons-manager.jsx?v=20260821"></script>
 <script type="text/babel" src="fulfillment-tally.jsx"></script>
-<script type="text/babel" src="fulfillment-assign.jsx?v=2"></script>
+<script type="text/babel" src="fulfillment-assign.jsx?v=3"></script>
 <script type="text/babel" src="referrals-report.jsx"></script>
 <script src="recon-presets.js"></script>
 <script type="text/babel" src="recon-presets-manager.jsx"></script>
@@ -144,6 +144,8 @@ const STATUS_COLORS = {
   'Sent Kaia':    { bg: 'rgba(100,210,255,0.14)', fg: '#64d2ff' },
   'Sent Victor':  { bg: 'rgba(100,210,255,0.14)', fg: '#64d2ff' },
   'Sent Melissa': { bg: 'rgba(100,210,255,0.14)', fg: '#64d2ff' },
+  'Sent Christi': { bg: 'rgba(100,210,255,0.14)', fg: '#64d2ff' },
+  'Sent Bryan':   { bg: 'rgba(100,210,255,0.14)', fg: '#64d2ff' },
 };
 
 // Legacy combined list (kept for the status-filter chips on All Orders, which
@@ -153,7 +155,7 @@ const STATUS_OPTIONS = ['pending', 'invoiced', 'paid', 'shipped', 'delivered', '
 // Split status: one dropdown for fulfillment, one for payment.
 // Migration 2026_payment_status.sql moved 'invoiced'/'paid' off of `status`
 // onto its own `payment_status` column.
-const FULFILLMENT_OPTIONS = ['pending', 'Sent Kaia', 'Sent Victor', 'Sent Melissa', 'shipped', 'Packed SJ', 'Packed MH', 'completed', 'cancelled'];
+const FULFILLMENT_OPTIONS = ['pending', 'Sent Kaia', 'Sent Victor', 'Sent Melissa', 'Sent Christi', 'Sent Bryan', 'shipped', 'Packed SJ', 'Packed MH', 'completed', 'cancelled'];
 const PAYMENT_OPTIONS     = ['unpaid', 'reported', 'invoiced', 'paid'];
 
 // Read effective fulfillment + payment from an order row, transparently
@@ -334,7 +336,7 @@ const OrdersTable = ({
 
   const [sendTo, setSendTo] = React.useState(null); // { orders, assignee, clientName }
   const pickFulfillment = (g, value, c) => {
-    if (/^Sent (Kaia|Victor|Melissa)$/.test(value) && window.FulfillmentChecklistModal) {
+    if (/^Sent (Kaia|Victor|Melissa|Christi|Bryan)$/.test(value) && window.FulfillmentChecklistModal) {
       setSendTo({ orders: g.orders, assignee: value.slice(5), clientName: c ? (c.name || c.email) : '' });
       return;
     }

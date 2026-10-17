@@ -2,7 +2,7 @@
 // Persists to the backend (/api/admin/fulfillment/*), which stores in app_settings
 // and sends the email + SMS.
 
-const FA_TEAM = ['Kaia', 'Victor', 'Melissa'];
+const FA_TEAM = ['Kaia', 'Victor', 'Melissa', 'Christi', 'Bryan'];
 const FA_EXTRAS = ['Syringes/Wipes', 'BAC water', 'Reconstitution syringe', 'Recon sticker', 'Info Sheet', 'Pickup SJ', 'Pickup MH', 'Pickup MV'];
 const faToken = () => localStorage.getItem('_pfb_token');
 const faApi = async (path, opts = {}) => {
