@@ -31,6 +31,7 @@
 <script type="text/babel" src="client-invite.jsx"></script>
 <script type="text/babel" src="coupons-manager.jsx?v=20260821"></script>
 <script type="text/babel" src="fulfillment-tally.jsx"></script>
+<script type="text/babel" src="fulfillment-assign.jsx?v=1"></script>
 <script type="text/babel" src="referrals-report.jsx"></script>
 <script src="recon-presets.js"></script>
 <script type="text/babel" src="recon-presets-manager.jsx"></script>
@@ -140,6 +141,9 @@ const STATUS_COLORS = {
   completed: { bg: 'rgba(52,199,89,0.14)', fg: '#34c759' },
   cancelled: { bg: 'rgba(255,69,58,0.14)', fg: '#ff453a' },
   unpaid:    { bg: 'rgba(255,159,10,0.14)', fg: '#ff9f0a' },
+  'Sent Kaia':    { bg: 'rgba(100,210,255,0.14)', fg: '#64d2ff' },
+  'Sent Victor':  { bg: 'rgba(100,210,255,0.14)', fg: '#64d2ff' },
+  'Sent Melissa': { bg: 'rgba(100,210,255,0.14)', fg: '#64d2ff' },
 };
 
 // Legacy combined list (kept for the status-filter chips on All Orders, which
@@ -149,7 +153,7 @@ const STATUS_OPTIONS = ['pending', 'invoiced', 'paid', 'shipped', 'delivered', '
 // Split status: one dropdown for fulfillment, one for payment.
 // Migration 2026_payment_status.sql moved 'invoiced'/'paid' off of `status`
 // onto its own `payment_status` column.
-const FULFILLMENT_OPTIONS = ['pending', 'shipped', 'Packed SJ', 'Packed MH', 'completed', 'cancelled'];
+const FULFILLMENT_OPTIONS = ['pending', 'Sent Kaia', 'Sent Victor', 'Sent Melissa', 'shipped', 'Packed SJ', 'Packed MH', 'completed', 'cancelled'];
 const PAYMENT_OPTIONS     = ['unpaid', 'reported', 'invoiced', 'paid'];
 
 // Read effective fulfillment + payment from an order row, transparently
@@ -328,8 +332,27 @@ const OrdersTable = ({
     ? ['85px', '95px', '150px', '250px', '100px', '180px', '110px', '130px', '115px', '115px']
     : ['85px', '95px',         '250px', '100px', '180px', '110px', '130px', '115px', '115px'];
 
+  const [sendTo, setSendTo] = React.useState(null); // { orders, assignee, clientName }
+  const pickFulfillment = (g, value, c) => {
+    if (/^Sent (Kaia|Victor|Melissa)$/.test(value) && window.FulfillmentChecklistModal) {
+      setSendTo({ orders: g.orders, assignee: value.slice(5), clientName: c ? (c.name || c.email) : '' });
+      return;
+    }
+    onSetGroupStatus && onSetGroupStatus(g.orders, value);
+  };
+
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {sendTo && (
+        <window.FulfillmentChecklistModal {...sendTo}
+          onCancel={() => setSendTo(null)}
+          onDone={(res) => {
+            const s = sendTo; setSendTo(null);
+            onSetGroupStatus && onSetGroupStatus(s.orders, 'Sent ' + s.assignee);
+            const warn = [res.emailStatus, res.smsStatus].filter(x => x && x !== 'sent');
+            if (warn.length) window.alert(`Saved, but delivery had a problem:\nEmail: ${res.emailStatus}\nSMS: ${res.smsStatus}`);
+          }} />
+      )}
       <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 0, tableLayout: 'fixed' }}>
           <colgroup>
@@ -487,7 +510,7 @@ const OrdersTable = ({
                   <td style={{ padding: '14px 18px' }}>
                     <select
                       value={fulfillment}
-                      onChange={e => onSetGroupStatus && onSetGroupStatus(g.orders, e.target.value)}
+                      onChange={e => pickFulfillment(g, e.target.value, c)}
                       title="Fulfillment status"
                       style={{
                         background: sc.bg, color: sc.fg, fontWeight: 600, fontSize: 12.5,
@@ -1988,6 +2011,7 @@ const App = () => {
   const [showInquiries, setShowInquiries] = React.useState(false);
   const [showTelegramOrders, setShowTelegramOrders] = React.useState(false);
   const [showFulfillmentTally, setShowFulfillmentTally] = React.useState(false);
+  const [showFulfillmentBoard, setShowFulfillmentBoard] = React.useState(false);
   const [showReferrals, setShowReferrals] = React.useState(false);
   const [showReconGuide, setShowReconGuide] = React.useState(false);
   const [newInquiries, setNewInquiries] = React.useState(0);
@@ -2009,6 +2033,7 @@ const App = () => {
     setShowInquiries(false);
     setShowTelegramOrders(false);
     setShowFulfillmentTally(false);
+    setShowFulfillmentBoard(false);
     setShowReferrals(false);
     setShowReconGuide(false);
     setSelected(null);
@@ -2080,6 +2105,7 @@ const App = () => {
             { label: 'Orders', badge: newOrders, onClick: () => { clearViews(); setShowOrders(true); localStorage.setItem('pfb_orders_last_seen', new Date().toISOString()); setNewOrders(0); } },
             { label: 'Inquiries', badge: newInquiries, onClick: () => { clearViews(); setShowInquiries(true); setNewInquiries(0); } },
             { label: 'Telegram Orders', badge: newTelegramOrders, onClick: () => { clearViews(); setShowTelegramOrders(true); setNewTelegramOrders(0); } },
+            { label: 'Fulfillment', onClick: () => { clearViews(); setShowFulfillmentBoard(true); } },
           ]} />
           <NavGroup label="Catalog" options={[
             { label: 'Pricelist', onClick: () => { clearViews(); setShowPricelist(true); } },
@@ -2117,6 +2143,8 @@ const App = () => {
           ? <window.RecipesDB sb={sb} onBack={() => setShowRecipes(false)} />
           : showTelegramOrders
           ? <AllTelegramOrders onBack={() => setShowTelegramOrders(false)} />
+          : showFulfillmentBoard && window.FulfillmentBoard
+          ? <window.FulfillmentBoard sb={sb} clients={clients} onBack={() => setShowFulfillmentBoard(false)} />
           : showFulfillmentTally && window.FulfillmentTally
           ? <window.FulfillmentTally sb={sb} clients={clients} onBack={() => setShowFulfillmentTally(false)} />
           : showReferrals && window.ReferralsReport
