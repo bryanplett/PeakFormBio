@@ -179,6 +179,96 @@ app.post('/api/admin/special-settings', async (req, res) => {
   }
 });
 
+// ── Fulfillment assignments (Sent Kaia / Victor / Melissa) ──────────────────
+// Email via Resend (RESEND_API_KEY, EMAIL_FROM). SMS via Twilio
+// (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM). Recipients are set in
+// Admin → Orders → Fulfillment → Team contacts (falls back to env vars
+// FULFILL_EMAIL_KAIA, FULFILL_SMS_KAIA, etc.).
+async function faAdmin(req) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (!token) return false;
+  const jwt = await import('jsonwebtoken');
+  const user = jwt.default.verify(token, process.env.JWT_SECRET || 'change-me-in-production');
+  return user.role === 'admin';
+}
+async function faGet(key, fallback) {
+  const { rows } = await pool.query('SELECT value FROM app_settings WHERE key = $1', [key]);
+  return rows[0]?.value || fallback;
+}
+async function faSet(key, value) {
+  await pool.query(`INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2`, [key, JSON.stringify(value)]);
+}
+async function faSendEmail(to, subject, text) {
+  if (!to) return 'no email on file';
+  if (!process.env.RESEND_API_KEY) return 'email not set up (RESEND_API_KEY missing)';
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'PeakFormBio <onboarding@resend.dev>', to: [to], subject, text }),
+  });
+  return r.ok ? 'sent' : 'failed (' + (await r.text()).slice(0, 120) + ')';
+}
+async function faSendSms(to, body) {
+  if (!to) return 'no number on file';
+  const { TWILIO_ACCOUNT_SID: sid, TWILIO_AUTH_TOKEN: tok, TWILIO_FROM: from } = process.env;
+  if (!sid || !tok || !from) return 'SMS not set up (Twilio keys missing)';
+  let num = String(to).replace(/[^\d+]/g, '');
+  if (!num.startsWith('+')) num = (num.length === 10 ? '+1' : '+') + num;
+  const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Basic ' + Buffer.from(sid + ':' + tok).toString('base64'), 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ To: num, From: from, Body: body }),
+  });
+  return r.ok ? 'sent' : 'failed (' + (await r.text()).slice(0, 120) + ')';
+}
+
+app.get('/api/admin/fulfillment/assignments', async (req, res) => {
+  try {
+    if (!(await faAdmin(req))) return res.status(403).json({ message: 'Admin access required.' });
+    res.json({ assignments: await faGet('fulfillment_assignments', {}), team: await faGet('fulfillment_team', {}) });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+app.post('/api/admin/fulfillment/team', async (req, res) => {
+  try {
+    if (!(await faAdmin(req))) return res.status(403).json({ message: 'Admin access required.' });
+    await faSet('fulfillment_team', req.body?.team || {});
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+app.post('/api/admin/fulfillment/assign', async (req, res) => {
+  try {
+    if (!(await faAdmin(req))) return res.status(403).json({ message: 'Admin access required.' });
+    const { key, assignee, orderRef, clientName, items, note, shippingMethod, address } = req.body || {};
+    if (!key || !assignee || !Array.isArray(items) || !items.length) return res.status(400).json({ message: 'Missing order, person, or items.' });
+    const team = await faGet('fulfillment_team', {});
+    const up = String(assignee).toUpperCase();
+    const email = team[assignee]?.email || process.env['FULFILL_EMAIL_' + up];
+    const phone = team[assignee]?.phone || process.env['FULFILL_SMS_' + up];
+
+    const lines = [
+      `PeakFormBio order ${orderRef || ''}`.trim(),
+      clientName ? `Client: ${clientName}` : '',
+      shippingMethod ? `Method: ${shippingMethod}` : '',
+      '', 'Pack:', ...items.map(i => '- ' + i),
+      address ? `\nShip to:\n${address}` : '',
+      note ? `\nNote: ${note}` : '',
+    ].filter((l, i, a) => l !== '' || a[i - 1] !== '');
+    const text = lines.join('\n');
+
+    const [emailStatus, smsStatus] = await Promise.all([
+      faSendEmail(email, `Order ${orderRef || ''} to pack`, text).catch(e => 'failed (' + e.message + ')'),
+      faSendSms(phone, text).catch(e => 'failed (' + e.message + ')'),
+    ]);
+
+    const all = await faGet('fulfillment_assignments', {});
+    all[key] = { assignee, orderRef, clientName, items, note: note || '', shippingMethod, address: address || '', sentAt: new Date().toISOString(), emailStatus, smsStatus };
+    await faSet('fulfillment_assignments', all);
+    res.json({ ok: true, emailStatus, smsStatus });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 // Read settings (admin auth required)
 // ── Reconstitution calculator recommendations (Admin → Calculator Guide) ─────
 app.get('/api/public/recon-presets', async (_req, res) => {
