@@ -240,7 +240,7 @@ app.post('/api/admin/fulfillment/team', async (req, res) => {
 app.post('/api/admin/fulfillment/assign', async (req, res) => {
   try {
     if (!(await faAdmin(req))) return res.status(403).json({ message: 'Admin access required.' });
-    const { key, assignee, orderRef, clientName, items, note, shippingMethod, address } = req.body || {};
+    const { key, assignee, orderRef, clientName, items, note, shippingMethod, address, prep, recon, reconMissing, reconSteps } = req.body || {};
     if (!key || !assignee || !Array.isArray(items) || !items.length) return res.status(400).json({ message: 'Missing order, person, or items.' });
     const team = await faGet('fulfillment_team', {});
     const up = String(assignee).toUpperCase();
@@ -251,6 +251,10 @@ app.post('/api/admin/fulfillment/assign', async (req, res) => {
       `PeakFormBio order ${orderRef || ''}`.trim(),
       clientName ? `Client: ${clientName}` : '',
       shippingMethod ? `Method: ${shippingMethod}` : '',
+      prep ? `Vials: ${prep.toUpperCase()}` : '',
+      ...(Array.isArray(recon) && recon.length ? ['', 'Reconstitution:', ...recon.map(r => '- ' + r)] : []),
+      ...(Array.isArray(reconMissing) && reconMissing.length ? reconMissing.map(r => `- ${r}: no calculator recommendation, check with Bryan`) : []),
+      ...(Array.isArray(reconSteps) && reconSteps.length ? ['', 'How to reconstitute:', ...reconSteps.map((s, i) => `${i + 1}. ${s}`)] : []),
       '', 'Pack:', ...items.map(i => '- ' + i),
       address ? `\nShip to:\n${address}` : '',
       note ? `\nNote: ${note}` : '',
@@ -263,7 +267,7 @@ app.post('/api/admin/fulfillment/assign', async (req, res) => {
     ]);
 
     const all = await faGet('fulfillment_assignments', {});
-    all[key] = { assignee, orderRef, clientName, items, note: note || '', shippingMethod, address: address || '', sentAt: new Date().toISOString(), emailStatus, smsStatus };
+    all[key] = { assignee, orderRef, clientName, items, note: note || '', shippingMethod, address: address || '', prep: prep || '', recon: Array.isArray(recon) ? recon : [], sentAt: new Date().toISOString(), emailStatus, smsStatus };
     await faSet('fulfillment_assignments', all);
     res.json({ ok: true, emailStatus, smsStatus });
   } catch (e) { res.status(500).json({ message: e.message }); }
