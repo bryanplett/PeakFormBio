@@ -3,6 +3,7 @@
 // and sends the email + SMS.
 
 const FA_TEAM = ['Kaia', 'Victor', 'Melissa', 'Christi', 'Bryan'];
+const FA_SELF = ['Kaia', 'Victor', 'Melissa', 'Christi'];
 const FA_EXTRAS = ['Syringes/Wipes', 'BAC water', 'Reconstitution syringe', 'Recon sticker', 'Info Sheet', 'Pickup SJ', 'Pickup MH', 'Pickup MV'];
 const faToken = () => localStorage.getItem('_pfb_token');
 const faApi = async (path, opts = {}) => {
@@ -170,12 +171,14 @@ window.FulfillmentBoard = ({ sb, clients, onBack }) => {
   const [team, setTeam] = React.useState({});
   const [showTeam, setShowTeam] = React.useState(false);
   const [saveMsg, setSaveMsg] = React.useState('');
+  const [selfAssign, setSelfAssign] = React.useState(null); // { orders, assignee, clientName }
   const clientById = React.useMemo(() => Object.fromEntries((clients || []).map(c => [c.id, c])), [clients]);
 
   const load = React.useCallback(async () => {
     setOrders(null);
     const [{ data }, a] = await Promise.all([sb.from('orders').select('*'), faApi('assignments').catch(() => ({}))]);
-    setOrders((data || []).filter(o => !['completed', 'cancelled'].includes(o.status)));
+    // Only pending orders (and ones already sent to a team member) belong here.
+    setOrders((data || []).filter(o => { const s = o.status || 'pending'; return s === 'pending' || /^Sent /.test(s); }));
     setAssign(a.assignments || {});
     setTeam(a.team || {});
   }, []);
@@ -197,10 +200,12 @@ window.FulfillmentBoard = ({ sb, clients, onBack }) => {
     setTimeout(() => setSaveMsg(''), 2500);
   };
 
+  // An order only counts as assigned while its status is still "Sent <name>".
+  const aOf = (g) => /^Sent /.test(g[0].status || '') ? (assign[faGroupKey(g)] || { assignee: g[0].status.slice(5), items: [], sentAt: g[0].created_at }) : null;
   const filters = ['All', ...FA_TEAM, 'Unassigned'];
   const [filter, setFilter] = React.useState('All');
   const shown = groups.filter(g => {
-    const a = assign[faGroupKey(g)];
+    const a = aOf(g);
     if (filter === 'All') return true;
     if (filter === 'Unassigned') return !a;
     return a && a.assignee === filter;
@@ -211,7 +216,7 @@ window.FulfillmentBoard = ({ sb, clients, onBack }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
           <h2 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.025em' }}>Fulfillment</h2>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>Open orders (not completed) and the instructions sent to each person.</p>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>Pending orders and the instructions sent to each person. Tap a name on any unassigned order to take it.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn-ghost" onClick={() => setShowTeam(s => !s)}>{showTeam ? 'Hide' : 'Team contacts'}</button>
@@ -219,6 +224,18 @@ window.FulfillmentBoard = ({ sb, clients, onBack }) => {
           <button className="btn-ghost" onClick={onBack}>← Back</button>
         </div>
       </div>
+
+      {selfAssign && window.FulfillmentChecklistModal && (
+        <window.FulfillmentChecklistModal {...selfAssign}
+          onCancel={() => setSelfAssign(null)}
+          onDone={async (res) => {
+            const sa = selfAssign; setSelfAssign(null);
+            await Promise.all(sa.orders.map(o => sb.from('orders').update({ status: 'Sent ' + sa.assignee }).eq('id', o.id)));
+            const warn = [res.emailStatus, res.smsStatus].filter(x => x && x !== 'sent');
+            if (warn.length) window.alert(`Saved, but delivery had a problem:\nEmail: ${res.emailStatus}\nSMS: ${res.smsStatus}`);
+            load();
+          }} />
+      )}
 
       {showTeam && (
         <div className="card" style={{ marginBottom: 20 }}>
@@ -242,7 +259,7 @@ window.FulfillmentBoard = ({ sb, clients, onBack }) => {
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 20 }}>
         {filters.map(f => {
           const active = filter === f;
-          const n = f === 'All' ? groups.length : f === 'Unassigned' ? groups.filter(g => !assign[faGroupKey(g)]).length : groups.filter(g => assign[faGroupKey(g)]?.assignee === f).length;
+          const n = f === 'All' ? groups.length : f === 'Unassigned' ? groups.filter(g => !aOf(g)).length : groups.filter(g => aOf(g)?.assignee === f).length;
           return (
             <button key={f} onClick={() => setFilter(f)} style={{
               background: active ? 'rgba(41,151,255,0.18)' : 'rgba(255,255,255,0.04)', color: active ? '#2997ff' : 'rgba(255,255,255,0.7)',
@@ -258,7 +275,7 @@ window.FulfillmentBoard = ({ sb, clients, onBack }) => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
         {shown.map(g => {
           const first = g[0];
-          const a = assign[faGroupKey(g)];
+          const a = aOf(g);
           const c = clientById[first.client_id];
           return (
             <div key={faGroupKey(g)} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -284,6 +301,17 @@ window.FulfillmentBoard = ({ sb, clients, onBack }) => {
               ) : (
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>
                   {faItemLines(g).map(l => <div key={l}>{l}</div>)}
+                </div>
+              )}
+              {!a && (
+                <div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600, marginBottom: 8 }}>I'll take it</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {FA_SELF.map(n => (
+                      <button key={n} type="button" onClick={() => setSelfAssign({ orders: g, assignee: n, clientName: c ? (c.name || c.email) : '' })}
+                        style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#2997ff', background: 'rgba(41,151,255,0.1)', border: '1px solid rgba(41,151,255,0.3)', borderRadius: 980, padding: '7px 14px', cursor: 'pointer' }}>{n}</button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
