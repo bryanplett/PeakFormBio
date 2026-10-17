@@ -3,7 +3,7 @@
 // and sends the email + SMS.
 
 const FA_TEAM = ['Kaia', 'Victor', 'Melissa'];
-const FA_EXTRAS = ['Syringes/Wipes', 'BAC water', 'Reconstitution syringe', 'Recon sticker', 'Info Sheet', 'Pack for shipment', 'Pickup SJ', 'Pickup MH', 'Pickup MV'];
+const FA_EXTRAS = ['Syringes/Wipes', 'BAC water', 'Reconstitution syringe', 'Recon sticker', 'Info Sheet', 'Pickup SJ', 'Pickup MH', 'Pickup MV'];
 const faToken = () => localStorage.getItem('_pfb_token');
 const faApi = async (path, opts = {}) => {
   const r = await fetch('/api/admin/fulfillment/' + path, {
@@ -20,6 +20,43 @@ const faItemLines = (orders) => orders.map(o => {
   return `${qty}× ${o.product || o.item || 'Item'}`;
 });
 const faGroupKey = (orders) => String(orders[0].order_reference || orders[0].id);
+
+// Match an order line ("Semaglutide — 10mg — $95") to a calculator preset by
+// peptide name + vial size, then build the same instructions the client
+// portal's Reconstitution Calculator shows.
+const faFmt = (n, d = 2) => Number(n).toLocaleString(undefined, { maximumFractionDigits: d });
+const faReconFor = (orders) => {
+  const presets = window.RECON_PRESETS || [];
+  const out = [];
+  orders.forEach(o => {
+    const label = String(o.product || o.item || '');
+    const parts = label.split(/\s*—\s*/);
+    const base = (parts[0] || '').trim().toLowerCase();
+    const sizeSeg = parts.slice(1).find(s => /\d\s*(mg|iu)\b/i.test(s)) || '';
+    const m = sizeSeg.match(/([\d.]+)\s*(mg|iu)/i);
+    if (!base || !m) return;
+    const vial = parseFloat(m[1]);
+    const p = presets.find(x => x.name.replace(/\s*—.*$/, '').trim().toLowerCase() === base && +x.vial === vial);
+    if (!p) { out.push({ label: `${parts[0]} ${m[1]}${m[2]}`, missing: true }); return; }
+    const d = window.reconDoseOf ? window.reconDoseOf(p) : null;
+    const isIU = p.vialUnit === 'IU';
+    const units = d && window.reconUnitsFor ? window.reconUnitsFor(p.vial, p.vialUnit, p.bac, d.amt, isIU ? 'IU' : d.unit) : p.units;
+    const syr = window.reconSyringeFor ? window.reconSyringeFor(units, p.syringe) : (p.syringe || 1);
+    const doseTxt = p.doseText || (d ? `${faFmt(d.amt)} ${d.unit}` : '');
+    out.push({
+      label: `${parts[0]} ${faFmt(p.vial)}${p.vialUnit || 'mg'}`,
+      text: `${parts[0]} ${faFmt(p.vial)}${p.vialUnit || 'mg'}: add ${faFmt(p.bac)} mL BAC water. Dose ${doseTxt} = ${faFmt(units, 1)} units on a ${syr} mL syringe.`,
+    });
+  });
+  return out;
+};
+const FA_RECON_STEPS = [
+  'Wipe the tops of the peptide vial and the BAC water with an alcohol wipe.',
+  'Draw the amount of BAC water listed above.',
+  'Inject it slowly down the inside wall of the peptide vial.',
+  'Gently swirl until clear. Do not shake.',
+  'Label the vial with a recon sticker and refrigerate.',
+];
 
 const faS = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
@@ -46,6 +83,11 @@ window.FulfillmentChecklistModal = ({ orders, assignee, clientName, onCancel, on
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState('');
   const shipped = faIsShipped(first);
+  const isPickup = String(first.shipping_method || '').startsWith('Pickup');
+  const [prep, setPrep] = React.useState(isPickup ? 'reconstitute' : 'lyophilized');
+  const [presetTick, setPresetTick] = React.useState(0);
+  React.useEffect(() => { if (window.loadReconPresets) window.loadReconPresets().then(() => setPresetTick(t => t + 1)); }, []);
+  const recon = React.useMemo(() => faReconFor(orders), [orders, presetTick]);
   const toggle = (k) => setChecked(c => ({ ...c, [k]: !c[k] }));
   const picked = all.filter(k => checked[k]);
 
@@ -57,6 +99,10 @@ window.FulfillmentChecklistModal = ({ orders, assignee, clientName, onCancel, on
         key: faGroupKey(orders), assignee, orderRef: first.order_reference || '', clientName: clientName || '',
         items: picked, note, shippingMethod: first.shipping_method || '',
         address: shipped ? first.shipping_address : '',
+        prep: prep === 'reconstitute' ? 'Reconstitute' : 'Lyophilized powder',
+        recon: prep === 'reconstitute' ? recon.filter(r => !r.missing).map(r => r.text) : [],
+        reconMissing: prep === 'reconstitute' ? recon.filter(r => r.missing).map(r => r.label) : [],
+        reconSteps: prep === 'reconstitute' ? FA_RECON_STEPS : [],
       }) });
       onDone(res);
     } catch (e) { setError(e.message); setSending(false); }
@@ -68,6 +114,24 @@ window.FulfillmentChecklistModal = ({ orders, assignee, clientName, onCancel, on
         <div style={{ fontSize: 12, color: '#2997ff', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>Send to {assignee}</div>
         <h3 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 4 }}>{first.order_reference || 'Order'}</h3>
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 22 }}>{clientName}{first.shipping_method ? ` · ${first.shipping_method}` : ''}</p>
+
+        <span style={faS.label}>Vial prep</span>
+        <div style={{ display: 'flex', gap: 8, marginBottom: prep === 'reconstitute' ? 12 : 20 }}>
+          {[['reconstitute', 'Reconstitute'], ['lyophilized', 'Lyophilized powder']].map(([v, l]) => (
+            <button key={v} type="button" onClick={() => setPrep(v)} style={{
+              flex: 1, padding: '10px 12px', borderRadius: 10, fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', color: '#f5f5f7',
+              border: `1px solid ${prep === v ? 'rgba(41,151,255,0.6)' : 'rgba(255,255,255,0.1)'}`, background: prep === v ? 'rgba(41,151,255,0.12)' : 'rgba(255,255,255,0.03)',
+            }}>{l}</button>
+          ))}
+        </div>
+        {prep === 'reconstitute' && (
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13.5, lineHeight: 1.55 }}>
+            {recon.length === 0 && <div style={{ color: 'rgba(255,255,255,0.5)' }}>No peptide vials on this order.</div>}
+            {recon.map(r => r.missing
+              ? <div key={r.label} style={{ color: '#ff9f0a' }}>{r.label}: no calculator recommendation for this vial size. Add one in Client Tools → Calculator Guide.</div>
+              : <div key={r.label}>{r.text}</div>)}
+          </div>
+        )}
 
         <span style={faS.label}>Items on this order</span>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
@@ -210,6 +274,8 @@ window.FulfillmentBoard = ({ sb, clients, onBack }) => {
               {a ? (
                 <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 14px' }}>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600, marginBottom: 8 }}>Instructions · {new Date(a.sentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+                  {a.prep && <div style={{ fontSize: 13.5, marginBottom: 8 }}><strong>Prep:</strong> {a.prep}</div>}
+                  {(a.recon || []).length > 0 && <div style={{ fontSize: 13, marginBottom: 8, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>{a.recon.map(t => <div key={t}>{t}</div>)}</div>}
                   <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, lineHeight: 1.6 }}>{a.items.map(i => <li key={i}>{i}</li>)}</ul>
                   {a.address && <div style={{ fontSize: 13, marginTop: 10, whiteSpace: 'pre-wrap', color: 'rgba(255,255,255,0.75)' }}><strong>Ship to:</strong> {a.address}</div>}
                   {a.note && <div style={{ fontSize: 13, marginTop: 8, color: 'rgba(255,255,255,0.75)' }}><strong>Note:</strong> {a.note}</div>}
