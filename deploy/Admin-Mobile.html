@@ -411,6 +411,8 @@ select.field-input option { background: #1a1a1c; color: var(--ink); }
   border-color: transparent;
 }
 
+.btn-primary { background: var(--primary); color: #fff; border: none; border-radius: 999px; padding: 12px 20px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.btn-primary:disabled { opacity: .5; }
 </style>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
@@ -432,6 +434,11 @@ select.field-input option { background: #1a1a1c; color: var(--ink); }
 
   const STATUS_COLORS = {
     pending:   { bg: 'rgba(255,159,10,0.16)', fg: '#ff9f0a' },
+    'Sent Kaia':    { bg: 'rgba(100,210,255,0.16)', fg: '#64d2ff' },
+    'Sent Victor':  { bg: 'rgba(100,210,255,0.16)', fg: '#64d2ff' },
+    'Sent Melissa': { bg: 'rgba(100,210,255,0.16)', fg: '#64d2ff' },
+    'Sent Christi': { bg: 'rgba(100,210,255,0.16)', fg: '#64d2ff' },
+    'Sent Bryan':   { bg: 'rgba(100,210,255,0.16)', fg: '#64d2ff' },
     invoiced:  { bg: 'rgba(41,151,255,0.16)', fg: '#2997ff' },
     paid:      { bg: 'rgba(52,199,89,0.16)',  fg: '#34c759' },
     reported:  { bg: 'rgba(41,151,255,0.16)', fg: '#2997ff' },
@@ -442,7 +449,7 @@ select.field-input option { background: #1a1a1c; color: var(--ink); }
     unpaid:    { bg: 'rgba(255,159,10,0.16)', fg: '#ff9f0a' },
   };
 
-  const FULFILLMENT_OPTIONS = ['pending', 'shipped', 'delivered', 'completed', 'cancelled'];
+  const FULFILLMENT_OPTIONS = ['pending', 'Sent Kaia', 'Sent Victor', 'Sent Melissa', 'Sent Christi', 'Sent Bryan', 'shipped', 'delivered', 'completed', 'cancelled'];
   const PAYMENT_OPTIONS     = ['unpaid', 'reported', 'invoiced', 'paid'];
 
   function readStatuses(o) {
@@ -621,6 +628,8 @@ select.field-input option { background: #1a1a1c; color: var(--ink); }
 <script type="text/babel" src="client-invite.jsx"></script>
 <script type="text/babel" src="coupons-manager.jsx"></script>
 <script type="text/babel" src="inventory-manager.jsx"></script>
+<script src="recon-presets.js"></script>
+<script type="text/babel" src="fulfillment-assign.jsx?v=5"></script>
 
 <!-- Mobile app (load order: ui → orders → screens → shell) -->
 <script type="text/babel">
@@ -810,6 +819,17 @@ function itemsSummary(group) {
   return n > 1 ? `${label} +${n - 1} more` : label;
 }
 
+// Pickup vs delivery and vial prep, read from the order's shipping_method.
+function orderMethodInfo(o) {
+  const m = String((o && o.shipping_method) || '');
+  const isPickup = /^Pickup/i.test(m);
+  const kind = isPickup ? 'Pickup' : /local/i.test(m) ? 'Local delivery' : m ? 'Shipped' : '—';
+  const prep = /Premixed/i.test(m) ? 'Reconstitute (premixed)'
+    : /Powder/i.test(m) ? 'Lyophilized powder'
+    : isPickup ? 'Not chosen — ask client' : m ? 'Lyophilized powder' : '—';
+  return { method: m || '—', kind, prep };
+}
+
 function OrderCard({ group, clientById, couponsByCode, onOpen }) {
   const first = group.orders[0];
   const c = clientById[first.client_id];
@@ -830,6 +850,7 @@ function OrderCard({ group, clientById, couponsByCode, onOpen }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 9, flexWrap: 'wrap' }}>
           <StatusPill status={fulfillment} />
           {fulfillment !== 'cancelled' && <StatusPill status={payment} />}
+          <span className="pill" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--ink-60)' }}>{orderMethodInfo(first).kind}</span>
           <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-45)' }}>{fmtDate(first.created_at || first.ordered_at)}</span>
         </div>
       </div>
@@ -866,7 +887,12 @@ function OrderSheet({ group, client, couponsByCode, sb, onClose, onChanged }) {
   const totals = P.computeGroupTotals(group.orders, couponsByCode);
   const name = client ? (client.name || client.email) : 'Unknown client';
 
+  const [sendTo, setSendTo] = React.useState(null);
   const changeFulfillment = async (v) => {
+    if (/^Sent (Kaia|Victor|Melissa|Christi|Bryan)$/.test(v) && window.FulfillmentChecklistModal) {
+      setSendTo({ orders: group.orders, assignee: v.slice(5), clientName: name });
+      return;
+    }
     setFulfillment(v); setBusy(true);
     await P.setGroupStatus(sb, group.orders, v);
     setBusy(false); onChanged && onChanged();
@@ -933,6 +959,26 @@ function OrderSheet({ group, client, couponsByCode, sb, onClose, onChanged }) {
         <div className="kv"><span className="kv__k" style={{ fontWeight: 600, color: 'var(--ink)' }}>Total</span>
           <span className="kv__v" style={{ fontWeight: 700, fontSize: 16 }}>{fmtMoney(totals.total)}</span></div>
       </div>
+
+      {/* Pickup / delivery and vial prep */}
+      <div className="card" style={{ padding: 14, marginBottom: 16 }}>
+        <div className="kv"><span className="kv__k">Pickup / delivery</span><span className="kv__v" style={{ fontWeight: 600 }}>{orderMethodInfo(first).kind}</span></div>
+        <div className="kv"><span className="kv__k">Details</span><span className="kv__v" style={{ maxWidth: '60%', textAlign: 'right' }}>{orderMethodInfo(first).method}</span></div>
+        <div className="kv"><span className="kv__k">Vial prep</span><span className="kv__v" style={{ fontWeight: 600 }}>{orderMethodInfo(first).prep}</span></div>
+      </div>
+
+      {sendTo && (
+        <window.FulfillmentChecklistModal {...sendTo}
+          onCancel={() => setSendTo(null)}
+          onDone={async (res) => {
+            const s = sendTo; setSendTo(null);
+            setFulfillment('Sent ' + s.assignee); setBusy(true);
+            await P.setGroupStatus(sb, group.orders, 'Sent ' + s.assignee);
+            setBusy(false); onChanged && onChanged();
+            const warn = [res.emailStatus, res.smsStatus].filter(x => x && x !== 'sent');
+            if (warn.length) window.alert('Saved, but delivery had a problem:\nEmail: ' + res.emailStatus + '\nSMS: ' + res.smsStatus);
+          }} />
+      )}
 
       {/* Payment method / shipping / notes */}
       {(first.payment_method || first.shipping_address || first.notes) && (

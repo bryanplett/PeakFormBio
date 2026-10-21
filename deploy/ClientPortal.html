@@ -1518,11 +1518,17 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       : (pickupSJDateChoice
         ? new Date(pickupSJDateChoice + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + ', 3:30–6:00 PM'
         : '');
-    const shippingMethodFinal = isLocalDelivery && deliveryCity
-      ? `${shippingMethod} — ${deliveryCity}`
-      : (shippingMethod === 'Pickup San Jose' && sjDateLabel)
-        ? `${shippingMethod} — ${sjDateLabel}`
-        : (isPickup && pickupForm ? `${shippingMethod} — ${pickupForm === 'premixed' ? 'Premixed' : 'Powder'}` : shippingMethod);
+    // Every order records its vial prep: pickups use the customer's choice,
+    // shipped/delivered orders are always lyophilized powder.
+    const prepLabel = isPickup
+      ? (pickupForm === 'premixed' ? 'Premixed' : 'Powder')
+      : 'Powder';
+    const shippingMethodFinal = [
+      shippingMethod,
+      isLocalDelivery && deliveryCity ? deliveryCity : '',
+      shippingMethod === 'Pickup San Jose' && sjDateLabel ? sjDateLabel : '',
+      prepLabel,
+    ].filter(Boolean).join(' — ');
 
     // Snapshot everything the eventual DB insert + notification need, since
     // cart/notes/shipping fields get cleared as soon as we move to the

@@ -85,7 +85,8 @@ window.FulfillmentChecklistModal = ({ orders, assignee, clientName, onCancel, on
   const [error, setError] = React.useState('');
   const shipped = faIsShipped(first);
   const isPickup = String(first.shipping_method || '').startsWith('Pickup');
-  const [prep, setPrep] = React.useState(isPickup ? 'reconstitute' : 'lyophilized');
+  const sm = String(first.shipping_method || '');
+  const [prep, setPrep] = React.useState(/Premixed/i.test(sm) ? 'reconstitute' : /Powder/i.test(sm) ? 'lyophilized' : isPickup ? 'reconstitute' : 'lyophilized');
   const [presetTick, setPresetTick] = React.useState(0);
   React.useEffect(() => { if (window.loadReconPresets) window.loadReconPresets().then(() => setPresetTick(t => t + 1)); }, []);
   const recon = React.useMemo(() => faReconFor(orders), [orders, presetTick]);
