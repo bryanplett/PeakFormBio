@@ -1521,8 +1521,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     // Every order records its vial prep: pickups use the customer's choice,
     // shipped/delivered orders are always lyophilized powder.
     const prepLabel = isPickup
-      ? (pickupForm === 'premixed' ? 'Premixed' : 'Powder')
-      : 'Powder';
+      ? (pickupForm === 'premixed' ? 'Premixed' : 'Lyophilized')
+      : 'Lyophilized';
     const shippingMethodFinal = [
       shippingMethod,
       isLocalDelivery && deliveryCity ? deliveryCity : '',
@@ -1654,7 +1654,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
             notes: snap.notes || '(none)',
             payment_method: snap.paymentMethodLabel,
             order_reference: snap.reference,
-            shipping_method: snap.shippingMethodDisplay,
+            shipping_method: snap.shippingMethodFinal || snap.shippingMethodDisplay,
             shipping_cost: `$${(snap.shippingCost || 0).toFixed(2)}`,
             coupon_code: couponActive ? `${matchedCoupon.code} (${couponLabel}; saved $${couponSavings.toFixed(2)})` : (snap.couponCodeToStore || '(none)'),
             subtotal: `$${subtotalEffective.toFixed(2)}`,

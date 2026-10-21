@@ -825,7 +825,7 @@ function orderMethodInfo(o) {
   const isPickup = /^Pickup/i.test(m);
   const kind = isPickup ? 'Pickup' : /local/i.test(m) ? 'Local delivery' : m ? 'Shipped' : '—';
   const prep = /Premixed/i.test(m) ? 'Reconstitute (premixed)'
-    : /Powder/i.test(m) ? 'Lyophilized powder'
+    : /Powder|Lyophil/i.test(m) ? 'Lyophilized powder'
     : isPickup ? 'Not chosen — ask client' : m ? 'Lyophilized powder' : '—';
   return { method: m || '—', kind, prep };
 }

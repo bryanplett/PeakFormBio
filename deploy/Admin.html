@@ -419,6 +419,15 @@ const OrdersTable = ({
                         {first.shipping_method}
                       </div>
                     )}
+                    {first.shipping_method && (() => {
+                      const sm = first.shipping_method;
+                      const prep = /Premixed/i.test(sm) ? 'Premixed' : /Powder|Lyophil/i.test(sm) ? 'Lyophilized' : sm.startsWith('Pickup') ? 'Prep not chosen' : 'Lyophilized';
+                      const col = prep === 'Premixed' ? '#bf5af2' : prep === 'Lyophilized' ? '#64d2ff' : 'rgba(255,255,255,0.5)';
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 6, marginBottom: 8, borderRadius: 980, padding: '3px 10px', fontSize: 11.5, fontWeight: 600,
+                          color: col, background: 'rgba(255,255,255,0.05)', border: '1px solid ' + (prep === 'Prep not chosen' ? 'rgba(255,255,255,0.15)' : col) }}>{prep}</div>
+                      );
+                    })()}
                     {g.orders.length > 1 && (
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, fontWeight: 600 }}>
                         {g.orders.length} items
