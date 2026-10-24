@@ -510,7 +510,10 @@ const ResetPasswordScreen = ({ token, onDone }) => {
 const CATEGORY_MAP = [
   {
     id: 'supplements', title: 'Supplements', tint: '#30d158',
-    matches: [], blurbs: {},
+    matches: ['caffeine pouches'],
+    blurbs: {
+      'caffeine pouches': '100mg caffeine per pouch with L-Theanine, Taurine and L-Tyrosine. Zero sugar. Watermelon Warfare flavor, 20 pouches per tin.',
+    },
   },
   {
     id: 'metabolic', title: 'Metabolic / Weight Management', tint: '#ff9f0a',
@@ -735,6 +738,7 @@ const PRODUCT_PHOTOS = [
   { match: 'lipo c',       src: 'assets/product-lipoc.png' },
   { match: 'supershred',   src: 'assets/product-supershred.png' },
   { match: 'b12',          src: 'assets/product-b12.png' },
+  { match: 'trenergy',     src: 'assets/product-trenergy-pouches.png' },
   { match: 'reusable research peptide pen', src: 'assets/product-pen-reusable.png' },
   { match: 'disposable peptide pen', src: 'assets/product-pen-disposable.png' },
   { match: 'bacteriostatic', src: 'assets/product-bacwater.png' },

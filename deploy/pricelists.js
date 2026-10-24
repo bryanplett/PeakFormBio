@@ -70,6 +70,7 @@ window.PRICELISTS = {
       { name: 'Accessory Pack — 04',     price:   5, category: 'Accessories', public: false },
       { name: 'V2 Reusable Research Peptide Pen Injector', price: 25, category: 'Accessories', public: false },
       { name: 'Disposable Peptide Pen | Adjustable 0–60 Unit Dial', price: 10, category: 'Accessories', public: false },
+      { name: 'Trenergy Caffeine Pouches, Watermelon, 100mg (20 Pouches)', price: 7, category: 'Supplements', public: false },
     ],
   },
 
@@ -170,6 +171,9 @@ const _NEW_DEFAULT_PRODUCTS = [
   { mark: 'pens_v1', products: [
     { name: 'V2 Reusable Research Peptide Pen Injector', price: 25, category: 'Accessories', public: false },
     { name: 'Disposable Peptide Pen | Adjustable 0–60 Unit Dial', price: 10, category: 'Accessories', public: false },
+  ] },
+  { mark: 'trenergy_v1', products: [
+    { name: 'Trenergy Caffeine Pouches, Watermelon, 100mg (20 Pouches)', price: 7, category: 'Supplements', public: false },
   ] },
 ];
 function _addNewDefaultProducts(v) {
