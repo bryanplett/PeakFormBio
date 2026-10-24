@@ -68,6 +68,8 @@ window.PRICELISTS = {
       { name: 'Accessory Pack — 02',     price:  10, category: 'Accessories', public: false },
       { name: 'Accessory Pack — 03',     price:  15, category: 'Accessories', public: false },
       { name: 'Accessory Pack — 04',     price:   5, category: 'Accessories', public: false },
+      { name: 'V2 Reusable Research Peptide Pen Injector', price: 25, category: 'Accessories', public: false },
+      { name: 'Disposable Peptide Pen | Adjustable 0–60 Unit Dial', price: 10, category: 'Accessories', public: false },
     ],
   },
 
@@ -161,6 +163,31 @@ window.getPricelistOptions = function() {
 // and the fallback path always have a clean copy to return to.
 window.PRICELISTS_DEFAULT = JSON.parse(JSON.stringify(window.PRICELISTS));
 
+// Products added after the pricelist was first saved in Admin. Each is added
+// once to every tier that doesn't have it; the marker stops it coming back if
+// you later delete it in Admin → Pricelist.
+const _NEW_DEFAULT_PRODUCTS = [
+  { mark: 'pens_v1', products: [
+    { name: 'V2 Reusable Research Peptide Pen Injector', price: 25, category: 'Accessories', public: false },
+    { name: 'Disposable Peptide Pen | Adjustable 0–60 Unit Dial', price: 10, category: 'Accessories', public: false },
+  ] },
+];
+function _addNewDefaultProducts(v) {
+  Object.keys(v).forEach(k => {
+    const tier = v[k];
+    if (!tier || !Array.isArray(tier.products)) return;
+    tier._added = tier._added || [];
+    _NEW_DEFAULT_PRODUCTS.forEach(batch => {
+      if (tier._added.includes(batch.mark)) return;
+      batch.products.forEach(np => {
+        if (!tier.products.some(p => p && p.name === np.name)) tier.products.push({ ...np });
+      });
+      tier._added.push(batch.mark);
+    });
+  });
+  return v;
+}
+
 // Basic shape check so a malformed/empty DB row never blanks out the catalog.
 function _validPricelists(v) {
   if (!v || typeof v !== 'object') return false;
@@ -179,7 +206,7 @@ window.loadPricelists = async function(sb) {
     if (error || !data || !_validPricelists(data.value)) return window.PRICELISTS;
     // Replace the active object IN PLACE-style (reassign) so all helpers that
     // read window.PRICELISTS pick up the live version immediately.
-    window.PRICELISTS = data.value;
+    window.PRICELISTS = _addNewDefaultProducts(data.value);
     return window.PRICELISTS;
   } catch (_err) {
     return window.PRICELISTS;

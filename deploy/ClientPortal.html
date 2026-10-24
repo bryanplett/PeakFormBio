@@ -605,7 +605,7 @@ const CATEGORY_MAP = [
   },
   {
     id: 'accessories', title: 'Accessories', tint: '#8e8e93',
-    matches: ['accessory pack', 'bac water'],
+    matches: ['accessory pack', 'bac water', 'peptide pen'],
     blurbs: {
       'accessory pack': 'Add the supplies you need to your order. Each pack price is listed below.',
       'accessory pack — 01': '4 Syringes & Wipes.',
@@ -613,6 +613,8 @@ const CATEGORY_MAP = [
       'accessory pack — 03': '4 Syringes, Wipes & 10ml BAC Water.',
       'accessory pack — 04': '10 Syringes.',
       'bac water': 'Bacteriostatic water for reconstituting lyophilized peptides.',
+      'reusable research peptide pen': 'Reusable aluminum pen injector. Available in black, blue, green and red. Please add your top three color choices in the order notes.',
+      'disposable peptide pen': 'White disposable pen with an adjustable 0–60 unit dial.',
       'pack \u2014 01':    '4 syringes and alcohol wipes.',
       'pack \u2014 02':    '4 syringes, alcohol wipes, and 3ml BAC water.',
       'pack \u2014 03':    '4 syringes, alcohol wipes, and 10ml BAC water.',
@@ -733,6 +735,8 @@ const PRODUCT_PHOTOS = [
   { match: 'lipo c',       src: 'assets/product-lipoc.png' },
   { match: 'supershred',   src: 'assets/product-supershred.png' },
   { match: 'b12',          src: 'assets/product-b12.png' },
+  { match: 'reusable research peptide pen', src: 'assets/product-pen-reusable.jpg' },
+  { match: 'disposable peptide pen', src: 'assets/product-pen-disposable.jpg' },
   { match: 'bacteriostatic', src: 'assets/product-bacwater.png' },
   { match: 'bac water',    src: 'assets/product-bacwater.png' },
   { match: 'nutrition plan', src: 'assets/program-nutrition.png' },
@@ -2599,6 +2603,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                 <textarea className="field-input" rows="3" placeholder="Allergies, preferences, timing requests…"
                   value={notes} onChange={e => setNotes(e.target.value)}
                   style={{ resize: 'vertical', minHeight: 80 }} />
+                {cart.some(i => /reusable research peptide pen/i.test(i.label)) && (
+                  <p style={{ fontSize: 12.5, color: '#ff9f0a', marginTop: 6 }}>Reusable pen: please list your top three color choices (black, blue, green, red).</p>
+                )}
               </div>
 
               {/* Payment method — required */}
