@@ -205,12 +205,12 @@
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 10, cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.45 }}>
               <input type="checkbox" checked={ackOutsideLink} onChange={(e) => setAckOutsideLink(e.target.checked)}
                 style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
-              <span>I understand payments sent outside the handle/link below may be lost and cannot be recovered.</span>
+              <span>I understand payments sent outside the handle/link below may be lost and cannot be recovered. If by the slim chance, I am able to recover your funds, they will be returned to you <strong style={{ color: '#ff453a', background: 'rgba(255,69,58,0.14)', borderRadius: 4, padding: '1px 5px', fontWeight: 800 }}>MINUS A $25 HANDLING FEE</strong>.</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 14, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#f5f5f7', lineHeight: 1.45 }}>
               <input type="checkbox" checked={ackName} onChange={(e) => setAckName(e.target.checked)}
                 style={{ width: 17, height: 17, marginTop: 1, accentColor: '#0066cc', flexShrink: 0 }} />
-              <span>I will include ONLY my order reference number or full name in the payment note.</span>
+              <span>I will include ONLY my order reference number or full name in the payment note. If you add anything other than your name or order number in the notes, your payment will be returned to you <strong style={{ color: '#ff453a', background: 'rgba(255,69,58,0.14)', borderRadius: 4, padding: '1px 5px', fontWeight: 800 }}>MINUS A $25 HANDLING FEE</strong>.</span>
             </label>
 
             <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
