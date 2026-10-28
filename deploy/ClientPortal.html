@@ -1256,6 +1256,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // Morgan Hill: next two Mon/Wed, never same day.
   const getNextMHPickupDates = () => getNextPickupDates([1, 3]);
   const [pickupMHDateChoice, setPickupMHDateChoice] = React.useState(''); // ISO date string, or 'special'
+  // Mountain View: next two weekdays (Mon–Fri), never same day.
+  const getNextMVPickupDates = () => getNextPickupDates([1, 2, 3, 4, 5]);
+  const [pickupMVDateChoice, setPickupMVDateChoice] = React.useState(''); // ISO date string, or 'special'
   const [pickupSettings, setPickupSettings] = React.useState(window.PICKUP_SETTINGS_DEFAULT);
   React.useEffect(() => { window.loadPickupSettings(sb).then(setPickupSettings); }, []);
   const clientPickup = userData?.profile?.pickup_locations; // null = no override
@@ -1540,6 +1543,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     if (!shippingMethod) errs.shipping = 'Please choose a shipping method.';
     else if (shippingMethod === 'Pickup San Jose' && !pickupSJDateChoice) errs.shipping = 'Please choose a San Jose pickup day.';
     else if (shippingMethod === 'Pickup Morgan Hill' && !pickupMHDateChoice) errs.shipping = 'Please choose a Morgan Hill pickup day.';
+    else if (shippingMethod === 'Pickup Mountain View' && !pickupMVDateChoice) errs.shipping = 'Please choose a Mountain View pickup day.';
     if (Object.keys(errs).length) {
       setFieldErrors(errs);
       return;
@@ -1585,6 +1589,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       : (pickupMHDateChoice
         ? new Date(pickupMHDateChoice + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + ', 9:00 AM–4:00 PM'
         : '');
+    const mvDateLabel = pickupMVDateChoice === 'special'
+      ? 'By special arrangement'
+      : (pickupMVDateChoice
+        ? new Date(pickupMVDateChoice + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + ', 7:00 AM–2:00 PM'
+        : '');
     // Every order records its vial prep: pickups use the customer's choice,
     // shipped/delivered orders are always lyophilized powder.
     const prepLabel = isPickup
@@ -1595,6 +1604,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       isLocalDelivery && deliveryCity ? deliveryCity : '',
       shippingMethod === 'Pickup San Jose' && sjDateLabel ? sjDateLabel : '',
       shippingMethod === 'Pickup Morgan Hill' && mhDateLabel ? mhDateLabel : '',
+      shippingMethod === 'Pickup Mountain View' && mvDateLabel ? mvDateLabel : '',
       prepLabel,
     ].filter(Boolean).join(' — ');
 
@@ -1770,7 +1780,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       window.pfbRememberOrder && window.pfbRememberOrder({ reference, total: amountDue, methodId: paymentMethod });
     }
 
-    setCart([]); kitOptedOutRef.current.clear(); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode(''); setPickupSJDateChoice(''); setPickupMHDateChoice('');
+    setCart([]); kitOptedOutRef.current.clear(); setNotes(''); setPaymentMethod(''); setShippingMethod(''); setCouponCode(''); setPickupSJDateChoice(''); setPickupMHDateChoice(''); setPickupMVDateChoice('');
     setSubmitting(false);
     setSuccess(true);
   };
@@ -2280,6 +2290,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                     setPickupForm('');
                     if (v !== 'Pickup San Jose') setPickupSJDateChoice('');
                     if (v !== 'Pickup Morgan Hill') setPickupMHDateChoice('');
+                    if (v !== 'Pickup Mountain View') setPickupMVDateChoice('');
                     if (fieldErrors.shipping) setFieldErrors(prev => ({ ...prev, shipping: undefined }));
                     if (v === 'Pickup San Jose') setPickupModal('sj');
                     if (v === 'Pickup Morgan Hill') setPickupModal('mh');
@@ -2353,6 +2364,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               {shippingMethod === 'Pickup San Jose' && !pickupSJDateChoice && (
                 <p style={{ fontSize: 12, color: '#ff9f0a', marginTop: -8 }}>Please choose a pickup day above.</p>
               )}
+              {shippingMethod === 'Pickup Mountain View' && !pickupMVDateChoice && (
+                <p style={{ fontSize: 12, color: '#ff9f0a', marginTop: -8 }}>Please choose a pickup day above.</p>
+              )}
               {shippingMethod === 'Pickup Morgan Hill' && !pickupMHDateChoice && (
                 <p style={{ fontSize: 12, color: '#ff9f0a', marginTop: -8 }}>Please choose a pickup day above.</p>
               )}
@@ -2362,7 +2376,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                 const isSJ = pickupModal === 'sj';
                 const isMV = pickupModal === 'mv';
                 const isMH = pickupModal === 'mh';
-                const acked = isSJ ? !!pickupSJDateChoice : isMH ? !!pickupMHDateChoice : pickupAcknowledged[pickupModal];
+                const acked = isSJ ? !!pickupSJDateChoice : isMH ? !!pickupMHDateChoice : isMV ? !!pickupMVDateChoice : pickupAcknowledged[pickupModal];
+                const mvDates = isMV ? getNextMVPickupDates() : [];
                 const sjDates = isSJ ? getNextSJPickupDates() : [];
                 const mhDates = isMH ? getNextMHPickupDates() : [];
                 const dayOpt = (choice, setChoice, name, iso, text) => (
@@ -2407,9 +2422,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
                       {isMV ? (
                         <>
-                          {mv.hours && (
-                            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 12 }}>{mv.hours}</p>
-                          )}
+                          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, marginBottom: 12 }}>
+                            Mountain View pickups are available <strong style={{color:'#f5f5f7'}}>Monday through Friday, 7:00 AM – 2:00 PM</strong>.
+                          </p>
                           <div style={{
                             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: 10, padding: '12px 14px', marginBottom: 20,
@@ -2420,6 +2435,14 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                               <circle cx="7" cy="6" r="1.2" fill="#2997ff"/>
                             </svg>
                             <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{mv.address}</span>
+                          </div>
+
+                          <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'rgba(255,255,255,0.85)' }}>Choose a pickup day <span style={{ color: '#ff6b6b' }}>*</span></p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+                            {mvDates.map(d => dayOpt(pickupMVDateChoice, setPickupMVDateChoice, 'mvPickupDate', d.toISOString().slice(0,10),
+                              d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + ', 7:00 AM – 2:00 PM'))}
+                            {dayOpt(pickupMVDateChoice, setPickupMVDateChoice, 'mvPickupDate', 'special',
+                              'By special arrangement. I acknowledge this may take one to five days. Contact PeakFormBio at 669-333-6600 to make arrangements.')}
                           </div>
                         </>
                       ) : isSJ ? (
@@ -2502,7 +2525,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                         </>
                       )}
 
-                      {!isSJ && !isMH && (
+                      {!isSJ && !isMH && !isMV && (
                         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 24 }}>
                           <input type="checkbox" checked={acked}
                             onChange={e => setPickupAcknowledged(prev => ({ ...prev, [pickupModal]: e.target.checked }))}
@@ -2517,7 +2540,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
                       <div style={{ display: 'flex', gap: 10 }}>
                         <button
-                          onClick={() => { setShippingMethod(''); setPickupModal(null); if (isSJ) setPickupSJDateChoice(''); if (isMH) setPickupMHDateChoice(''); }}
+                          onClick={() => { setShippingMethod(''); setPickupModal(null); if (isSJ) setPickupSJDateChoice(''); if (isMH) setPickupMHDateChoice(''); if (isMV) setPickupMVDateChoice(''); }}
                           style={{
                             flex: 1, background: 'transparent', color: 'rgba(255,255,255,0.55)',
                             border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12,

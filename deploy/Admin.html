@@ -1351,7 +1351,7 @@ const PickupSettings = ({ onBack }) => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: cfg.mountainView.enabled ? 16 : 0 }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7' }}>Mountain View</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>New location — fill in details below</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>Mon–Fri 7 AM–2 PM · clients choose a day</div>
               </div>
               <Toggle on={cfg.mountainView.enabled} onChange={v => setCfg(c => ({ ...c, mountainView: { ...c.mountainView, enabled: v } }))} />
             </div>

@@ -88,7 +88,7 @@ const PickupTally = ({ orders, clientById }) => {
         <div className="card">
           <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>By appointment / special arrangement</h3>
           <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', marginBottom: 14 }}>
-            Not tied to a specific date — Mountain View pickups, "special arrangement" requests, and older pickups placed before pickup days were required.
+            Not tied to a specific date — "special arrangement" requests, and older pickups placed before pickup days were required.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {byArrangement.map(o => {
