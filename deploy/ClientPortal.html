@@ -940,12 +940,7 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
             <span style={{ flexShrink: 0, fontSize: 18, fontWeight: 700, color: tint }}>{display.price}</span>
           )}
         </h3>
-        {isKitCard && (
-          <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {display.strength}
-          </div>
-        )}
-        <div style={{
+        {!isKitCard && <div style={{
           display: 'flex', alignItems: 'center',
           marginBottom: 14, height: 22, gap: 8,
           opacity: active || isKitCard ? 1 : 0,
@@ -962,15 +957,53 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
             fontSize: isKitCard ? 17 : 14, fontWeight: 700, color: tint, whiteSpace: 'nowrap',
             visibility: display.price ? 'visible' : 'hidden',
           }}>{display.price || '$0'}</span>
-        </div>
-        {displayBlurb && (
+        </div>}
+        {isKitCard && hasVariants && (() => {
+          // Compact two-step picker: strength chips, then 5 / 10 vials.
+          const KI = window.PFB_KIT_INFO || {};
+          const strengthOf = (v) => { const k = KI[v.parsed.fullLabel]; const parts = (k ? k.base : v.parsed.name).split(/[—–]/); return (parts[1] || '').trim(); };
+          const vialsOf = (v) => (KI[v.parsed.fullLabel] || {}).vials || 0;
+          const curS = strengthOf(activeVariant), curV = vialsOf(activeVariant);
+          const strengths = [...new Set(variants.map(strengthOf))];
+          const pick = (st, vi) => { const i = variants.findIndex(v => strengthOf(v) === st && vialsOf(v) === vi); if (i >= 0) setSelectedIdx(i); };
+          const chip = (on) => ({ background: on ? `${tint}22` : 'rgba(255,255,255,0.04)', color: on ? '#fff' : 'rgba(255,255,255,0.75)',
+            border: `1px solid ${on ? tint : 'rgba(255,255,255,0.10)'}`, borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' });
+          return (
+            <div style={{ opacity: active ? 1 : 0, transition: 'opacity 0.3s 0.15s', marginBottom: 12, marginTop: 6 }}>
+              {strengths.length > 1 && strengths[0] && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                  {strengths.map(st => (
+                    <button key={st} type="button" onClick={(e) => { e.stopPropagation(); pick(st, curV); }}
+                      style={{ ...chip(st === curS), padding: '4px 9px', fontSize: 11.5 }}>{st}</button>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {[5, 10].map(vi => {
+                  const v = variants.find(x => strengthOf(x) === curS && vialsOf(x) === vi);
+                  if (!v) return null;
+                  const inCart = selectedLabels.includes(v.parsed.fullLabel);
+                  return (
+                    <button key={vi} type="button" onClick={(e) => { e.stopPropagation(); pick(curS, vi); }}
+                      style={{ ...chip(vi === curV), padding: '7px 6px', fontSize: 12.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, position: 'relative' }}>
+                      <span>{vi} Vials</span>
+                      <span style={{ fontSize: 12, color: tint }}>{v.parsed.price}</span>
+                      {inCart && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, borderRadius: '50%', background: tint, border: '1.5px solid #1a1a1c' }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+        {displayBlurb && !isKitCard && (
           <p style={{
             fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, marginBottom: 14,
             opacity: active ? 1 : 0, transition: 'opacity 0.3s 0.15s',
           }}>{displayBlurb}</p>
         )}
 
-        {hasVariants && (
+        {hasVariants && !isKitCard && (
           <div style={{
             opacity: active ? 1 : 0,
             transition: 'opacity 0.3s 0.15s',
@@ -1454,7 +1487,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       const unit = Number(userData?.id && window.getClientPrice ? window.getClientPrice(userData.id, key, p.name) : p.price);
       if (!(unit > 0)) return;
       const sep = /[—–]/.test(p.name) ? ' · ' : ' — ';
-      [[5, 0.7, 'Half kit (5 vials)'], [10, 0.5, 'Kit of 10 vials']].forEach(([vials, pct, txt]) => {
+      [[5, 0.7, '5 Vials'], [10, 0.5, '10 Vials']].forEach(([vials, pct, txt]) => {
         const total = unit * vials * pct;
         const label = `${p.name}${sep}${txt} — $${money(total)}`;
         info[label] = { base: p.name, vials, perVial: Math.round(unit * pct * 100) / 100, kitName: txt };
@@ -2192,7 +2225,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       </div>
       {storeMode === 'wholesale' && (
         <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)', marginBottom: 20, textWrap: 'pretty' }}>
-          Peptides by the kit: <strong style={{ color: '#f5f5f7' }}>Half kit (5 vials)</strong> at 30% off, or <strong style={{ color: '#f5f5f7' }}>Kit of 10 vials</strong> at 50% off the single-vial price.
+          Peptides by the kit: <strong style={{ color: '#f5f5f7' }}>5 Vials</strong> at 30% off, or <strong style={{ color: '#f5f5f7' }}>10 Vials</strong> at 50% off the single-vial price.
         </p>
       )}
       {storeMode === 'retail' && <div style={{ height: 10 }} />}
