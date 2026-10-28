@@ -1488,9 +1488,10 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       if (!(unit > 0)) return;
       const sep = /[—–]/.test(p.name) ? ' · ' : ' — ';
       [[5, 0.7, '5 Vials'], [10, 0.5, '10 Vials']].forEach(([vials, pct, txt]) => {
-        const total = unit * vials * pct;
+        const fixed = Number(vials === 5 ? p.kit5 : p.kit10);
+        const total = fixed > 0 ? fixed : unit * vials * pct;
         const label = `${p.name}${sep}${txt} — $${money(total)}`;
-        info[label] = { base: p.name, vials, perVial: Math.round(unit * pct * 100) / 100, kitName: txt };
+        info[label] = { base: p.name, vials, perVial: Math.round(total / vials * 100) / 100, kitName: txt };
         out.push(label);
       });
     });

@@ -41,12 +41,14 @@
     tierKeys.forEach(tier => {
       (pricelists[tier]?.products || []).forEach(p => {
         if (!map.has(p.name)) {
-          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, hidden: p.hidden === true, prices: {} });
+          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, hidden: p.hidden === true, kit5: p.kit5 ?? '', kit10: p.kit10 ?? '', prices: {} });
           order.push(p.name);
         }
         const row = map.get(p.name);
         row.prices[tier] = p.price;
         if ((!row.category || row.category === 'Other') && p.category) row.category = p.category;
+        if (row.kit5 === '' && p.kit5 != null) row.kit5 = p.kit5;
+        if (row.kit10 === '' && p.kit10 != null) row.kit10 = p.kit10;
       });
     });
     return order.map(n => map.get(n));
@@ -61,7 +63,9 @@
         if (raw === '' || raw == null || isNaN(Number(raw))) return;
         const name = (row.name || '').trim();
         if (!name) return;
-        out[tier].products.push({ name, price: Number(raw), category: (row.category || '').trim() || 'Other', ...(row.public === false ? { public: false } : {}), ...(row.hidden ? { hidden: true } : {}) });
+        out[tier].products.push({ name, price: Number(raw), category: (row.category || '').trim() || 'Other', ...(row.public === false ? { public: false } : {}), ...(row.hidden ? { hidden: true } : {}),
+          ...(row.kit5 !== '' && row.kit5 != null && !isNaN(Number(row.kit5)) ? { kit5: Number(row.kit5) } : {}),
+          ...(row.kit10 !== '' && row.kit10 != null && !isNaN(Number(row.kit10)) ? { kit10: Number(row.kit10) } : {}) });
       });
     });
     return out;
@@ -267,7 +271,11 @@
     };
     const clearAllClient = () => { setCEdits({}); setMsg('Cleared all custom prices for this client (not saved yet — click Save to apply).'); };
 
-    const gridCols = `1fr 180px 56px 56px ${tierKeys.map(() => '100px').join(' ')} 110px 34px`;
+    const gridCols = `1fr 170px 46px 46px ${tierKeys.map(() => '96px').join(' ')} 96px 96px 90px 34px`;
+    // Wholesale kit prices: blank = automatic (5 vials at 70%, 10 vials at 50% of the vial price).
+    const isPeptideCat = (c) => !/accessor|supplement|program|service/i.test(c || '');
+    const unitFor = (r) => Number(r.prices.wholesale ?? r.prices[tierKeys[tierKeys.length - 1]]);
+    const autoKit = (r, vials, pct) => { const u = unitFor(r); if (!(u > 0)) return '—'; const t = Math.round(u * vials * pct * 100) / 100; return String(Number.isInteger(t) ? t : t.toFixed(2)); };
     const cell = { padding: '7px 10px', fontSize: 13.5 };
     const priceField = (val, onChange, placeholder, width) => (
       <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
@@ -280,7 +288,7 @@
     );
 
     return (
-      <div className="fade-in" style={{ maxWidth: 960, margin: '0 auto' }}>
+      <div className="fade-in" style={{ maxWidth: 1180, margin: '0 auto' }}>
         {onBack && <button className="btn-ghost" onClick={onBack} style={{ marginBottom: 18 }}>← Back</button>}
         <div style={{ marginBottom: 16 }}>
           <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: '#f5f5f7' }}>Pricelist</h2>
@@ -364,6 +372,8 @@
                 padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
                 <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span><span style={{ textAlign: 'center' }} title="Show in the client portal store">Store</span>
                 {tierKeys.map(t => <span key={t} style={{ textAlign: 'right' }}>{meta[t]?.name || t}</span>)}
+                <span style={{ textAlign: 'right' }} title="Wholesale store: 5-vial kit. Blank = automatic (70% of vial price).">5 Vials</span>
+                <span style={{ textAlign: 'right' }} title="Wholesale store: 10-vial kit. Blank = automatic (50% of vial price).">10 Vials</span>
                 <span style={{ textAlign: 'right' }}>Stock</span>
                 <span></span>
               </div>
@@ -389,6 +399,10 @@
                             <input type="checkbox" checked={!r.hidden} onChange={e => patchRow(r._id, { hidden: !e.target.checked })} />
                           </label>
                           {tierKeys.map(t => <div key={t} style={{ justifySelf: 'end' }}>{priceField(r.prices[t], v => patchPrice(r._id, t, v), '—')}</div>)}
+                          {isPeptideCat(r.category) ? <>
+                            <div style={{ justifySelf: 'end' }} title="Blank = automatic">{priceField(r.kit5, v => patchRow(r._id, { kit5: v }), autoKit(r, 5, 0.7), 82)}</div>
+                            <div style={{ justifySelf: 'end' }} title="Blank = automatic">{priceField(r.kit10, v => patchRow(r._id, { kit10: v }), autoKit(r, 10, 0.5), 82)}</div>
+                          </> : <><span style={{ justifySelf: 'end', color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>—</span><span style={{ justifySelf: 'end', color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>—</span></>}
                           <div className="pl-stock-pop" style={{ position: 'relative', justifySelf: 'end' }}>
                             {(() => {
                               const stock = inventory.get(r.name);
