@@ -1,5 +1,5 @@
 // "New at PeakFormBio" pen announcement popup for the client portal.
-// Shows once per browser (bump PEN_PROMO_KEY to show it again to everyone).
+// Shows every time the portal page loads.
 (function (global) {
   const PEN_PROMO_KEY = 'pfb_pen_promo_seen_v1';
 
@@ -75,13 +75,11 @@
   const PenPromo = ({ onAdd }) => {
     const [open, setOpen] = React.useState(false);
     React.useEffect(() => {
-      let seen = false;
-      try { seen = !!localStorage.getItem(PEN_PROMO_KEY); } catch (e) {}
-      const t = !seen ? setTimeout(() => setOpen(true), 900) : null;
+      const t = setTimeout(() => setOpen(true), 900);
       global.openPenPromo = () => setOpen(true);
       return () => { if (t) clearTimeout(t); };
     }, []);
-    const close = () => { setOpen(false); try { localStorage.setItem(PEN_PROMO_KEY, '1'); } catch (e) {} };
+    const close = () => setOpen(false);
     if (!open) return null;
     return <PenPromoModal onClose={close} onAdd={(name) => { close(); onAdd(name); }} />;
   };
