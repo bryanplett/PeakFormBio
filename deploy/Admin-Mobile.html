@@ -421,7 +421,7 @@ select.field-input option { background: #1a1a1c; color: var(--ink); }
 
 <!-- Shared backend client + data (same as desktop admin) -->
 <script src="api-client.js"></script>
-<script src="pricelists.js"></script>
+<script src="pricelists.js?v=2"></script>
 <script src="inventory-helper.js"></script>
 <script src="food-db.js"></script>
 <script src="payment-config.js"></script>
@@ -622,14 +622,15 @@ select.field-input option { background: #1a1a1c; color: var(--ink); }
 <script type="text/babel" src="meal-planner-v2.jsx"></script>
 <script type="text/babel" src="payment-instructions.jsx"></script>
 <script type="text/babel" src="payment-settings.jsx"></script>
-<script type="text/babel" src="pricelist-manager.jsx"></script>
+<script type="text/babel" src="pricelist-manager.jsx?v=4"></script>
 <script type="text/babel" src="workout-builder.jsx"></script>
 <script type="text/babel" src="profile-editor.jsx"></script>
 <script type="text/babel" src="client-invite.jsx"></script>
 <script type="text/babel" src="coupons-manager.jsx"></script>
 <script type="text/babel" src="inventory-manager.jsx"></script>
 <script src="recon-presets.js"></script>
-<script type="text/babel" src="fulfillment-assign.jsx?v=5"></script>
+<script type="text/babel" src="fulfillment-assign.jsx?v=6"></script>
+<script type="text/babel" src="fulfillment-tally.jsx?v=2"></script>
 
 <!-- Mobile app (load order: ui → orders → screens → shell) -->
 <script type="text/babel">
@@ -1233,8 +1234,8 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
 
   function PricelistSelect({ sb, client, onToast }) {
     const opts = (typeof window.getPricelistOptions === 'function')
-      ? window.getPricelistOptions() : [{ value: 'standard', label: 'Standard' }, { value: 'wholesale', label: 'Wholesale' }];
-    const [val, setVal] = React.useState(client.pricelist || 'standard');
+      ? window.getPricelistOptions() : [{ value: 'wholesale', label: 'Wholesale' }];
+    const [val, setVal] = React.useState(client.pricelist && client.pricelist !== 'telegram' ? client.pricelist : 'wholesale');
     const [saving, setSaving] = React.useState(false);
     const change = async (v) => {
       setVal(v); setSaving(true);
@@ -1524,9 +1525,9 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
   function MOnboard({ sb, onClose, onDone }) {
     const pricelistOptions = (typeof window.getPricelistOptions === 'function')
       ? window.getPricelistOptions()
-      : [{ value: 'standard', label: 'Standard' }, { value: 'wholesale', label: 'Wholesale' }];
+      : [{ value: 'wholesale', label: 'Wholesale' }];
 
-    const [form, setForm] = React.useState({ name: '', email: '', phone: '', password: '', pricelist: 'standard' });
+    const [form, setForm] = React.useState({ name: '', email: '', phone: '', password: '', pricelist: 'wholesale' });
     const [busy, setBusy] = React.useState(false);
     const [err, setErr] = React.useState('');
     const [done, setDone] = React.useState(null); // { email, password, portalUrl, name }
@@ -1674,6 +1675,8 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
 
   const TOOLS = [
     { key: 'inventory',   name: 'Inventory',       icon: 'inventory' },
+    { key: 'fulfillment', name: 'Fulfillment',     icon: 'check' },
+    { key: 'tally',       name: 'Fulfillment Tally', icon: 'orders' },
     { key: 'pricelist',   name: 'Pricelist',       icon: 'dollar' },
     { key: 'coupons',     name: 'Coupons',         icon: 'tag' },
     { key: 'payments',    name: 'Payments',        icon: 'card' },
@@ -1695,6 +1698,8 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
     if (tool === 'inventory' && window.InventoryManager) body = <window.InventoryManager sb={sb} onBack={onClose} />;
     else if (tool === 'coupons' && window.CouponsManager) body = <window.CouponsManager sb={sb} onBack={onClose} />;
     else if (tool === 'payments' && window.PaymentSettings) body = <window.PaymentSettings sb={sb} onBack={onClose} />;
+    else if (tool === 'fulfillment' && window.FulfillmentBoard) body = <window.FulfillmentBoard sb={sb} clients={clients} onBack={onClose} />;
+    else if (tool === 'tally' && window.FulfillmentTally) body = <window.FulfillmentTally sb={sb} clients={clients} onBack={onClose} />;
     else if (tool === 'pricelist' && window.PricelistManager) body = <window.PricelistManager sb={sb} clients={clients} onBack={onClose} />;
     else if (tool === 'mealplanner' && window.StandaloneMealPlanner) body = <window.StandaloneMealPlanner sb={sb} clients={clients} onBack={onClose} />;
     else if (tool === 'macros' && window.MacrosCalculator) body = <window.MacrosCalculator sb={sb} clients={clients} onBack={onClose} />;

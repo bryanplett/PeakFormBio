@@ -138,15 +138,16 @@
 
     // Base mode
     const [rows, setRows] = useState([]);
-    const [meta, setMeta] = useState({ wholesale: { name: 'Wholesale', description: '' }, telegram: { name: 'Telegram', description: '' } });
-    const [tierKeys, setTierKeys] = useState(['wholesale', 'telegram']);
+    const [meta, setMeta] = useState({ wholesale: { name: 'Wholesale', description: '' } });
+    const [tierKeys, setTierKeys] = useState(['wholesale']);
     const [source, setSource] = useState('');
 
     // Client mode — edits as { [productName]: stringValue }, '' = use tier price
     const [cEdits, setCEdits] = useState({});
 
     function hydrateBase(pricelists, src) {
-      const keys = Object.keys(pricelists);
+      // The Telegram tier has been retired — it's dropped here and on the next save.
+      const keys = Object.keys(pricelists).filter(k => k !== 'telegram');
       const m = {};
       keys.forEach(k => { m[k] = { name: pricelists[k].name || k, description: pricelists[k].description || '' }; });
       setTierKeys(keys);

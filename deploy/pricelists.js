@@ -74,60 +74,6 @@ window.PRICELISTS = {
     ],
   },
 
-  telegram: {
-    name: 'Telegram',
-    description: 'Telegram store pricing — applies only to peakformbio.com/telegram.',
-    products: [
-      { name: 'Selank — 10mg',              price: 0, category: 'Cognitive / Mood / Sleep' },
-      { name: 'Semax — 10mg',               price: 0, category: 'Cognitive / Mood / Sleep' },
-      { name: 'Semax-Selank Blend — 10mg',  price: 0, category: 'Cognitive / Mood / Sleep' },
-      { name: 'DSIP — 10mg',                price: 0, category: 'Cognitive / Mood / Sleep' },
-      { name: 'KPV — 10mg',                 price: 0, category: 'Skin / Beauty / Anti-Aging' },
-      { name: 'SNAP-8 — 8mg',               price: 0, category: 'Skin / Beauty / Anti-Aging' },
-      { name: 'GHK-Cu — 50mg',              price: 0, category: 'Skin / Beauty / Anti-Aging' },
-      { name: 'Semaglutide — 10mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Semaglutide — 15mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Tirzepatide — 10mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Tirzepatide — 20mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Tirzepatide — 30mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Tirzepatide — 40mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Tirzepatide — 60mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Retatrutide — 10mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Retatrutide — 15mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Retatrutide — 20mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Retatrutide — 30mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Retatrutide — 60mg',         price: 0, category: 'Metabolic / Weight Management' },
-      { name: '5 Amino — 50mg',             price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'Cagrilintide — 10mg',        price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'L-Carnitine',               price: 0, category: 'Metabolic / Weight Management' },
-      { name: 'CJC 1295 DAC — 5mg',        price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'BPC — 10mg',                 price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'TB-500 — 10mg',              price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'GHRP-2 — 10mg',              price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'GHRP-6 — 10mg',              price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'CJC-1295 + Ipamorelin — 5+5mg', price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'Ipamorelin — 10mg',          price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'IGF LR3 — 1mg',              price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'KLOW — 80mg',                price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'Tesamorelin — 10mg',         price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'Wolverine — 10mg',           price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'HGH — 10IU',                 price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'HGH — 36IU',                 price: 0, category: 'Growth Hormone / Recovery / Muscle' },
-      { name: 'PT-141 — 10mg',              price: 0, category: 'Hormonal / Sexual Wellness' },
-      { name: 'HCG — 5000IU',               price: 0, category: 'Hormonal / Sexual Wellness' },
-      { name: 'SS-31 — 10mg',               price: 0, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'SS-31 — 30mg',               price: 0, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'Mito Magic — 120mg',         price: 0, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'MOTS-c — 10mg',              price: 0, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'MOTS-c — 40mg',              price: 0, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'Epithalon — 50mg',           price: 0, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'NAD+ — 1000mg',              price: 0, category: 'Longevity / Cellular Health / Mitochondrial' },
-      { name: 'Glutathione — 1200mg',       price: 0, category: 'Wellness' },
-      { name: 'Lipo-C',                     price: 0, category: 'Wellness' },
-      { name: 'Supershred',                 price: 0, category: 'Wellness' },
-      { name: 'B12',                        price: 0, category: 'Wellness' },
-    ],
-  },
 };
 
 // Helper used by ClientPortal: get the right product list for a client.
@@ -144,7 +90,7 @@ window.getPricelistAsLabels = function(key) {
 
 // Convenience: list of pricelist keys + names for dropdowns.
 window.getPricelistOptions = function() {
-  return Object.entries(window.PRICELISTS).map(([key, pl]) => ({
+  return Object.entries(window.PRICELISTS).filter(([k]) => k !== 'telegram').map(([key, pl]) => ({
     value: key, label: pl.name,
   }));
 };
@@ -210,7 +156,8 @@ window.loadPricelists = async function(sb) {
     if (error || !data || !_validPricelists(data.value)) return window.PRICELISTS;
     // Replace the active object IN PLACE-style (reassign) so all helpers that
     // read window.PRICELISTS pick up the live version immediately.
-    window.PRICELISTS = _addNewDefaultProducts(data.value);
+    const _v = { ...data.value }; delete _v.telegram; // Telegram tier retired
+    window.PRICELISTS = _addNewDefaultProducts(_v);
     return window.PRICELISTS;
   } catch (_err) {
     return window.PRICELISTS;
