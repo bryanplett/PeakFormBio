@@ -41,7 +41,7 @@
     tierKeys.forEach(tier => {
       (pricelists[tier]?.products || []).forEach(p => {
         if (!map.has(p.name)) {
-          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, hidden: p.hidden === true, kit5: p.kit5 ?? '', kit10: p.kit10 ?? '', prices: {} });
+          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, hidden: p.hidden === true, kit5: p.kit5 ?? '', kit10: p.kit10 ?? '', kit5Hidden: p.kit5Hidden === true, kit10Hidden: p.kit10Hidden === true, prices: {} });
           order.push(p.name);
         }
         const row = map.get(p.name);
@@ -49,6 +49,8 @@
         if ((!row.category || row.category === 'Other') && p.category) row.category = p.category;
         if (row.kit5 === '' && p.kit5 != null) row.kit5 = p.kit5;
         if (row.kit10 === '' && p.kit10 != null) row.kit10 = p.kit10;
+        if (p.kit5Hidden) row.kit5Hidden = true;
+        if (p.kit10Hidden) row.kit10Hidden = true;
       });
     });
     return order.map(n => map.get(n));
@@ -65,7 +67,8 @@
         if (!name) return;
         out[tier].products.push({ name, price: Number(raw), category: (row.category || '').trim() || 'Other', ...(row.public === false ? { public: false } : {}), ...(row.hidden ? { hidden: true } : {}),
           ...(row.kit5 !== '' && row.kit5 != null && !isNaN(Number(row.kit5)) ? { kit5: Number(row.kit5) } : {}),
-          ...(row.kit10 !== '' && row.kit10 != null && !isNaN(Number(row.kit10)) ? { kit10: Number(row.kit10) } : {}) });
+          ...(row.kit10 !== '' && row.kit10 != null && !isNaN(Number(row.kit10)) ? { kit10: Number(row.kit10) } : {}),
+          ...(row.kit5Hidden ? { kit5Hidden: true } : {}), ...(row.kit10Hidden ? { kit10Hidden: true } : {}) });
       });
     });
     return out;
@@ -95,6 +98,7 @@
     const [msg, setMsg] = useState('');
     const [filter, setFilter] = useState('');
     const [mode, setMode] = useState('base'); // 'base' | clientId
+    const [plTab, setPlTab] = useState('retail'); // 'retail' | 'wholesale'
     const [overrides, setOverrides] = useState({}); // { clientId: { product: price } }
 
     // Inventory — merged in from the old separate Inventory tab. Keyed by
@@ -271,7 +275,8 @@
     };
     const clearAllClient = () => { setCEdits({}); setMsg('Cleared all custom prices for this client (not saved yet — click Save to apply).'); };
 
-    const gridCols = `1fr 170px 46px 46px ${tierKeys.map(() => '96px').join(' ')} 96px 96px 90px 34px`;
+    const gridCols = `1fr 180px 56px 56px ${tierKeys.map(() => '100px').join(' ')} 110px 34px`;
+    const kitGridCols = '1fr 120px 64px 130px 140px';
     // Wholesale kit prices: blank = automatic (5 vials at 70%, 10 vials at 50% of the vial price).
     const isPeptideCat = (c) => !/accessor|supplement|program|service/i.test(c || '');
     const unitFor = (r) => Number(r.prices.wholesale ?? r.prices[tierKeys[tierKeys.length - 1]]);
@@ -288,7 +293,7 @@
     );
 
     return (
-      <div className="fade-in" style={{ maxWidth: 1180, margin: '0 auto' }}>
+      <div className="fade-in" style={{ maxWidth: 960, margin: '0 auto' }}>
         {onBack && <button className="btn-ghost" onClick={onBack} style={{ marginBottom: 18 }}>← Back</button>}
         <div style={{ marginBottom: 16 }}>
           <h2 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: '#f5f5f7' }}>Pricelist</h2>
@@ -366,14 +371,61 @@
 
             <datalist id="pl-categories">{categories.map(c => <option key={c} value={c} />)}</datalist>
 
+            {mode === 'base' && (
+              <div role="tablist" style={{ display: 'inline-flex', padding: 4, gap: 4, borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 16 }}>
+                {[['retail', 'Retail', 'Single vials & extras'], ['wholesale', 'Wholesale', '5 & 10 vial kits']].map(([id, label, sub]) => {
+                  const on = plTab === id;
+                  return (
+                    <button key={id} type="button" role="tab" aria-selected={on} onClick={() => setPlTab(id)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 140, padding: '9px 20px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                        background: on ? '#2997ff' : 'transparent', color: on ? '#fff' : 'rgba(255,255,255,0.65)' }}>
+                      <span style={{ fontSize: 15, fontWeight: 700 }}>{label}</span>
+                      <span style={{ fontSize: 11, opacity: on ? 0.9 : 0.6 }}>{sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── WHOLESALE KITS ────────────────────────────────────────────── */}
+            {mode === 'base' && plTab === 'wholesale' && <>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 14, lineHeight: 1.5 }}>
+                Each peptide is sold in the Wholesale store as 5 vials and 10 vials. Leave a price blank to use the automatic price (5 vials at 70%, 10 vials at 50% of the Wholesale vial price). Uncheck Store to hide just that kit. Retail is not affected.
+              </p>
+              <div className="plm-head" style={{ gridTemplateColumns: kitGridCols, padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
+                <span>Kit</span><span style={{ textAlign: 'right' }}>Vial price</span><span style={{ textAlign: 'center' }}>Store</span><span style={{ textAlign: 'right' }}>Kit price</span><span style={{ textAlign: 'right' }}>Automatic</span>
+              </div>
+              <div style={{ display: 'grid', gap: 18 }}>
+                {groupedBase.filter(g => isPeptideCat(g.category)).map(group => (
+                  <div key={group.category}>
+                    <h3 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 4px 8px' }}>{group.category}</h3>
+                    <div className="card" style={{ padding: 8, display: 'grid', gap: 2 }}>
+                      {group.items.filter(r => (r.name || '').trim() && unitFor(r) > 0).map(r => [[5, 0.7, 'kit5', 'kit5Hidden'], [10, 0.5, 'kit10', 'kit10Hidden']].map(([vials, pct, key, hk]) => {
+                        const off = r.hidden || r[hk];
+                        return (
+                          <div key={r._id + '-' + vials} className="plm-row" style={{ padding: '4px 8px', gridTemplateColumns: kitGridCols, opacity: off ? 0.45 : 1, borderTop: vials === 5 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                            <span style={{ fontSize: 13.5, color: '#ededef' }}>{r.name} <strong style={{ color: '#2997ff', fontWeight: 600 }}>· {vials} Vials</strong></span>
+                            <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', textAlign: 'right' }}>${unitFor(r)}</span>
+                            <label title={r.hidden ? 'Hidden in Retail too — turn on Store in the Retail tab first' : 'Show this kit in the Wholesale store'} style={{ display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={!off} disabled={r.hidden} onChange={e => patchRow(r._id, { [hk]: !e.target.checked })} />
+                            </label>
+                            <div style={{ justifySelf: 'end' }}>{priceField(r[key], v => patchRow(r._id, { [key]: v }), autoKit(r, vials, pct), 100)}</div>
+                            <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.4)', textAlign: 'right' }}>${autoKit(r, vials, pct)}</span>
+                          </div>
+                        );
+                      }))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>}
+
             {/* ── BASE MODE ─────────────────────────────────────────────────── */}
-            {mode === 'base' && <>
+            {mode === 'base' && plTab === 'retail' && <>
               <div className="plm-head" style={{ gridTemplateColumns: gridCols,
                 padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
                 <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span><span style={{ textAlign: 'center' }} title="Show in the client portal store">Store</span>
                 {tierKeys.map(t => <span key={t} style={{ textAlign: 'right' }}>{meta[t]?.name || t}</span>)}
-                <span style={{ textAlign: 'right' }} title="Wholesale store: 5-vial kit. Blank = automatic (70% of vial price).">5 Vials</span>
-                <span style={{ textAlign: 'right' }} title="Wholesale store: 10-vial kit. Blank = automatic (50% of vial price).">10 Vials</span>
                 <span style={{ textAlign: 'right' }}>Stock</span>
                 <span></span>
               </div>
@@ -399,10 +451,6 @@
                             <input type="checkbox" checked={!r.hidden} onChange={e => patchRow(r._id, { hidden: !e.target.checked })} />
                           </label>
                           {tierKeys.map(t => <div key={t} style={{ justifySelf: 'end' }}>{priceField(r.prices[t], v => patchPrice(r._id, t, v), '—')}</div>)}
-                          {isPeptideCat(r.category) ? <>
-                            <div style={{ justifySelf: 'end' }} title="Blank = automatic">{priceField(r.kit5, v => patchRow(r._id, { kit5: v }), autoKit(r, 5, 0.7), 82)}</div>
-                            <div style={{ justifySelf: 'end' }} title="Blank = automatic">{priceField(r.kit10, v => patchRow(r._id, { kit10: v }), autoKit(r, 10, 0.5), 82)}</div>
-                          </> : <><span style={{ justifySelf: 'end', color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>—</span><span style={{ justifySelf: 'end', color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>—</span></>}
                           <div className="pl-stock-pop" style={{ position: 'relative', justifySelf: 'end' }}>
                             {(() => {
                               const stock = inventory.get(r.name);

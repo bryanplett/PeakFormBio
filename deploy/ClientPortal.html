@@ -1488,6 +1488,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       if (!(unit > 0)) return;
       const sep = /[—–]/.test(p.name) ? ' · ' : ' — ';
       [[5, 0.7, '5 Vials'], [10, 0.5, '10 Vials']].forEach(([vials, pct, txt]) => {
+        if (vials === 5 ? p.kit5Hidden : p.kit10Hidden) return;
         const fixed = Number(vials === 5 ? p.kit5 : p.kit10);
         const total = fixed > 0 ? fixed : unit * vials * pct;
         const label = `${p.name}${sep}${txt} — $${money(total)}`;
