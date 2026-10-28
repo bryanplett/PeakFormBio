@@ -24,6 +24,7 @@
 <script type="text/babel" src="recon-calculator.jsx"></script>
 <script type="text/babel" src="payment-instructions.jsx"></script>
 <script type="text/babel" src="recent-order.jsx?v=1"></script>
+<script type="text/babel" src="pen-promo.jsx?v=4"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -616,8 +617,8 @@ const CATEGORY_MAP = [
       'accessory pack — 03': '4 Syringes, Wipes & 10ml BAC Water.',
       'accessory pack — 04': '10 Syringes.',
       'bac water': 'Bacteriostatic water for reconstituting lyophilized peptides.',
-      'reusable research peptide pen': 'Reusable aluminum pen injector. Available in black, blue, green and red. Please add your top three color choices in the order notes.',
-      'disposable peptide pen': 'White disposable pen with an adjustable 0–60 unit dial.',
+      'reusable research peptide pen': 'The V2 3mL Refillable Peptide Pen is a reusable pen designed for convenient use with compatible 3mL cartridges. Each V2 pen includes 2 empty 3mL cartridges. Durable, lightweight and portable, with an adjustable 0–60 unit dose dial. Available in black, pink, blue, gold and silver. Please add your top three color choices in the order notes.',
+      'disposable peptide pen': 'Disposable pen with an adjustable 1–60 unit dose dial and a clear dose window. Includes one 3 mL cartridge. Lightweight BPA-free plastic, pocket-sized and great for travel. Use for 30 days, then discard. Multiple cap colors for easy identification.',
       'pack \u2014 01':    '4 syringes and alcohol wipes.',
       'pack \u2014 02':    '4 syringes, alcohol wipes, and 3ml BAC water.',
       'pack \u2014 03':    '4 syringes, alcohol wipes, and 10ml BAC water.',
@@ -2631,7 +2632,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   value={notes} onChange={e => setNotes(e.target.value)}
                   style={{ resize: 'vertical', minHeight: 80 }} />
                 {cart.some(i => /reusable research peptide pen/i.test(i.label)) && (
-                  <p style={{ fontSize: 12.5, color: '#ff9f0a', marginTop: 6 }}>Reusable pen: please list your top three color choices (black, blue, green, red).</p>
+                  <p style={{ fontSize: 12.5, color: '#ff9f0a', marginTop: 6 }}>Reusable pen: please list your top three color choices (black, pink, blue, gold, silver).</p>
                 )}
               </div>
 
@@ -3869,6 +3870,13 @@ const Portal = ({ userId, onLogout }) => {
       {/* Main content */}
       <main style={{ flex: 1, minWidth: 0, padding: '48px 40px', paddingBottom: 80, background: '#0a0a0a' }}>
         <SpecialPromoBanner onOpen={() => setCarnitineOpen(true)} />
+        {window.PenPromo && (
+          <window.PenPromo onAdd={(name) => {
+            switchTab('order');
+            window.history.replaceState({}, '', window.location.pathname + `?add=${encodeURIComponent(name)}&qty=1` + window.location.hash);
+            window.dispatchEvent(new CustomEvent('pfb-deep-link'));
+          }} />
+        )}
         {carnitineOpen && (
           <SpecialModal
             onClose={() => setCarnitineOpen(false)}
