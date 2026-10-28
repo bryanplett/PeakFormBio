@@ -826,6 +826,7 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
   const stockCheckLabel = (display.fullLabel || '').toLowerCase().replace(/\s*—\s*\$[\d,.]+/, '').trim();
   const stockCheckName = (display.name || '').trim().toLowerCase();
   const kitInfo = (window.PFB_KIT_INFO || {})[display.fullLabel];
+  const isKitCard = !!kitInfo;
   const kitBase = kitInfo ? kitInfo.base.toLowerCase() : null;
   const stockQty = kitBase && inventoryMap.hasOwnProperty(kitBase) ? inventoryMap[kitBase]
     : inventoryMap.hasOwnProperty(stockCheckLabel) ? inventoryMap[stockCheckLabel]
@@ -937,7 +938,7 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
         <div style={{
           display: 'flex', alignItems: 'center',
           marginBottom: 14, height: 22, gap: 8,
-          opacity: active ? 1 : 0,
+          opacity: active || isKitCard ? 1 : 0,
           transition: 'opacity 0.25s 0.05s',
         }}>
           <span style={{
@@ -945,10 +946,10 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
             background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
             fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.7)',
             whiteSpace: 'nowrap', letterSpacing: 0.2,
-          }}>{hasVariants ? `${variants.length} strengths` : (display.strength || '—')}</span>
+          }}>{isKitCard ? (display.strength || '—') : hasVariants ? `${variants.length} strengths` : (display.strength || '—')}</span>
           <span style={{ flex: 1 }} />
           <span style={{
-            fontSize: 14, fontWeight: 700, color: tint, whiteSpace: 'nowrap',
+            fontSize: isKitCard ? 17 : 14, fontWeight: 700, color: tint, whiteSpace: 'nowrap',
             visibility: display.price ? 'visible' : 'hidden',
           }}>{display.price || '$0'}</span>
         </div>
@@ -968,7 +969,7 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
             <p style={{
               fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.45)',
               letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8,
-            }}>Choose strength</p>
+            }}>{isKitCard ? 'Choose kit' : 'Choose strength'}</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {variants.map((v, i) => {
                 const isThisSelected = i === selectedIdx;
@@ -988,6 +989,7 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
                       position: 'relative',
                     }}>
                     {v.parsed.strength || '—'}
+                    {isKitCard && v.parsed.price && <span style={{ marginLeft: 6, color: tint }}>{v.parsed.price}</span>}
                     {isInCart && (
                       <span style={{
                         position: 'absolute', top: -4, right: -4,
@@ -1588,10 +1590,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // quick-add the right BAC Water / Accessory Pack line (including price suffix).
   // Wholesale kit helpers: a kit counts as N vials for accessory packs.
   const vialsIn = (label) => ((window.PFB_KIT_INFO || {})[label] || {}).vials || 1;
+  // Wholesale kits never auto-add accessory packs.
   const accessoryKitNumFor = (label) => {
     if (!window.getAccessoryKitFor) return null;
-    const k = (window.PFB_KIT_INFO || {})[label];
-    return window.getAccessoryKitFor(k ? k.base : label);
+    if ((window.PFB_KIT_INFO || {})[label]) return null;
+    return window.getAccessoryKitFor(label);
   };
   const findOptionLabel = (prefix) => {
     const lower = prefix.toLowerCase();
