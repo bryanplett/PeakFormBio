@@ -41,7 +41,7 @@
     tierKeys.forEach(tier => {
       (pricelists[tier]?.products || []).forEach(p => {
         if (!map.has(p.name)) {
-          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, prices: {} });
+          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, hidden: p.hidden === true, prices: {} });
           order.push(p.name);
         }
         const row = map.get(p.name);
@@ -61,7 +61,7 @@
         if (raw === '' || raw == null || isNaN(Number(raw))) return;
         const name = (row.name || '').trim();
         if (!name) return;
-        out[tier].products.push({ name, price: Number(raw), category: (row.category || '').trim() || 'Other', ...(row.public === false ? { public: false } : {}) });
+        out[tier].products.push({ name, price: Number(raw), category: (row.category || '').trim() || 'Other', ...(row.public === false ? { public: false } : {}), ...(row.hidden ? { hidden: true } : {}) });
       });
     });
     return out;
@@ -183,7 +183,7 @@
       setRows(rs => rs.map(r => r._id === id ? { ...r, prices: { ...r.prices, [tier]: val } } : r));
     const removeRow = (id) => setRows(rs => rs.filter(r => r._id !== id));
     const addRow = (category) => {
-      const blank = { _id: _rowSeq++, name: '', category: category || ((window.CATEGORY_TITLES && window.CATEGORY_TITLES[0]) || 'Wellness'), public: true, prices: {} };
+      const blank = { _id: _rowSeq++, name: '', category: category || ((window.CATEGORY_TITLES && window.CATEGORY_TITLES[0]) || 'Wellness'), public: true, hidden: false, prices: {} };
       tierKeys.forEach(t => { blank.prices[t] = ''; });
       setRows(rs => [...rs, blank]);
       setMsg('');
@@ -267,7 +267,7 @@
     };
     const clearAllClient = () => { setCEdits({}); setMsg('Cleared all custom prices for this client (not saved yet — click Save to apply).'); };
 
-    const gridCols = `1fr 180px 56px ${tierKeys.map(() => '100px').join(' ')} 110px 34px`;
+    const gridCols = `1fr 180px 56px 56px ${tierKeys.map(() => '100px').join(' ')} 110px 34px`;
     const cell = { padding: '7px 10px', fontSize: 13.5 };
     const priceField = (val, onChange, placeholder, width) => (
       <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
@@ -362,7 +362,7 @@
             {mode === 'base' && <>
               <div className="plm-head" style={{ gridTemplateColumns: gridCols,
                 padding: '0 14px 8px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
-                <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span>
+                <span>Product</span><span>Category</span><span style={{ textAlign: 'center' }}>Site</span><span style={{ textAlign: 'center' }} title="Show in the client portal store">Store</span>
                 {tierKeys.map(t => <span key={t} style={{ textAlign: 'right' }}>{meta[t]?.name || t}</span>)}
                 <span style={{ textAlign: 'right' }}>Stock</span>
                 <span></span>
@@ -384,6 +384,9 @@
                           </select>
                           <label title="Show on public website" style={{ display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
                             <input type="checkbox" checked={r.public !== false} onChange={e => patchRow(r._id, { public: e.target.checked })} />
+                          </label>
+                          <label title="Show in the client portal store (uncheck to hide)" style={{ display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={!r.hidden} onChange={e => patchRow(r._id, { hidden: !e.target.checked })} />
                           </label>
                           {tierKeys.map(t => <div key={t} style={{ justifySelf: 'end' }}>{priceField(r.prices[t], v => patchPrice(r._id, t, v), '—')}</div>)}
                           <div className="pl-stock-pop" style={{ position: 'relative', justifySelf: 'end' }}>

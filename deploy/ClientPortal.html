@@ -825,9 +825,12 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
   // Out-of-stock check — match inventory by full label or name
   const stockCheckLabel = (display.fullLabel || '').toLowerCase().replace(/\s*—\s*\$[\d,.]+/, '').trim();
   const stockCheckName = (display.name || '').trim().toLowerCase();
-  const stockQty = inventoryMap.hasOwnProperty(stockCheckLabel) ? inventoryMap[stockCheckLabel]
+  const kitInfo = (window.PFB_KIT_INFO || {})[display.fullLabel];
+  const kitBase = kitInfo ? kitInfo.base.toLowerCase() : null;
+  const stockQty = kitBase && inventoryMap.hasOwnProperty(kitBase) ? inventoryMap[kitBase]
+    : inventoryMap.hasOwnProperty(stockCheckLabel) ? inventoryMap[stockCheckLabel]
     : inventoryMap.hasOwnProperty(stockCheckName) ? inventoryMap[stockCheckName] : null;
-  const outOfStock = stockQty !== null && stockQty <= 0;
+  const outOfStock = stockQty !== null && stockQty < (kitInfo ? kitInfo.vials : 1);
 
   const [hover, setHover] = React.useState(false);
   const variantSelected = hasVariants && selectedLabels.includes(activeVariant.parsed.fullLabel);
@@ -1417,10 +1420,36 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     } else {
       list = PRODUCTS;
     }
-    // Show every product on the client's pricelist — whether or not it has a
-    // product photo. Items without a photo fall back to the styled vial
-    // placeholder (PortalVial), so nothing is hidden from the catalog.
+    // Hide anything unchecked under "Store" in Admin → Pricelist.
+    const pl = typeof window.getPricelist === 'function' ? window.getPricelist(key) : null;
+    const hidden = new Set(((pl && pl.products) || []).filter(p => p.hidden).map(p => p.name.toLowerCase()));
+    if (hidden.size) list = list.filter(l => !hidden.has(l.replace(/\s*—\s*\$[\d,.]+\s*$/, '').trim().toLowerCase()));
     return list;
+  }, [userData?.profile?.pricelist, userData?.id, plReady]);
+
+  // Wholesale store: peptides only, sold as a full kit (10 vials at 50% of
+  // the single-vial price) or a half kit (5 vials at 70%).
+  const [storeMode, setStoreMode] = React.useState('retail');
+  const wholesaleOptions = React.useMemo(() => {
+    const key = userData?.profile?.pricelist || 'wholesale';
+    const pl = typeof window.getPricelist === 'function' ? window.getPricelist(key) : null;
+    const NON_PEPTIDE = /accessor|supplement|program|service/i;
+    const money = (n) => { const r = Math.round(n * 100) / 100; return Number.isInteger(r) ? String(r) : r.toFixed(2); };
+    const info = window.PFB_KIT_INFO = window.PFB_KIT_INFO || {};
+    const out = [];
+    ((pl && pl.products) || []).forEach(p => {
+      if (!p || p.hidden || NON_PEPTIDE.test(p.category || '')) return;
+      const unit = Number(userData?.id && window.getClientPrice ? window.getClientPrice(userData.id, key, p.name) : p.price);
+      if (!(unit > 0)) return;
+      const sep = /[—–]/.test(p.name) ? ' · ' : ' — ';
+      [[5, 0.7, 'Half kit (5 vials)'], [10, 0.5, 'Kit of 10 vials']].forEach(([vials, pct, txt]) => {
+        const total = unit * vials * pct;
+        const label = `${p.name}${sep}${txt} — ${money(total)}`;
+        info[label] = { base: p.name, vials, perVial: Math.round(unit * pct * 100) / 100, kitName: txt };
+        out.push(label);
+      });
+    });
+    return out;
   }, [userData?.profile?.pricelist, userData?.id, plReady]);
 
 
@@ -1435,16 +1464,17 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     showToast(label.replace(/\s*—\s*\$[\d,.]+/, '').trim() + ' added');
     // Auto-add the matching accessory kit (one kit per vial), per the
     // "Accessory Kit Number" column in accessory-kits.js.
-    const kitNum = window.getAccessoryKitFor ? window.getAccessoryKitFor(label) : null;
+    const kitNum = accessoryKitNumFor(label);
     const kitLabel = kitNum ? findOptionLabel('Accessory Pack — ' + kitNum) : null;
+    const per = vialsIn(label);
     if (kitLabel && !kitOptedOutRef.current.has(label)) {
       setCart(prev => {
         const ex = prev.find(i => i.label === kitLabel);
-        if (ex) return prev.map(i => i.label === kitLabel ? { ...i, qty: i.qty + 1 } : i);
-        return [...prev, { label: kitLabel, qty: 1 }];
+        if (ex) return prev.map(i => i.label === kitLabel ? { ...i, qty: i.qty + per } : i);
+        return [...prev, { label: kitLabel, qty: per }];
       });
       setKitOptOut(false);
-      setAccessoryPromptFor({ product: label, kitLabel, kitNum });
+      setAccessoryPromptFor({ product: label, kitLabel, kitNum, per });
     }
   };
 
@@ -1453,7 +1483,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     if (p && kitOptOut) {
       kitOptedOutRef.current.add(p.product);
       setCart(prev => prev
-        .map(i => i.label === p.kitLabel ? { ...i, qty: i.qty - 1 } : i)
+        .map(i => i.label === p.kitLabel ? { ...i, qty: i.qty - (p.per || 1) } : i)
         .filter(i => i.qty > 0));
     }
     setKitOptOut(false);
@@ -1523,7 +1553,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // Skipped for products where the customer opted out of the kit.
   const adjustKitFor = (label, delta) => {
     if (!delta || kitOptedOutRef.current.has(label)) return;
-    const kitNum = window.getAccessoryKitFor ? window.getAccessoryKitFor(label) : null;
+    delta = delta * vialsIn(label);
+    const kitNum = accessoryKitNumFor(label);
     const kitLabel = kitNum ? findOptionLabel('Accessory Pack — ' + kitNum) : null;
     if (!kitLabel) return;
     setCart(prev => {
@@ -1555,6 +1586,13 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
 
   // Find a label in productOptions that startsWith the given prefix. Lets us
   // quick-add the right BAC Water / Accessory Pack line (including price suffix).
+  // Wholesale kit helpers: a kit counts as N vials for accessory packs.
+  const vialsIn = (label) => ((window.PFB_KIT_INFO || {})[label] || {}).vials || 1;
+  const accessoryKitNumFor = (label) => {
+    if (!window.getAccessoryKitFor) return null;
+    const k = (window.PFB_KIT_INFO || {})[label];
+    return window.getAccessoryKitFor(k ? k.base : label);
+  };
   const findOptionLabel = (prefix) => {
     const lower = prefix.toLowerCase();
     return productOptions.find(l => l.toLowerCase().startsWith(lower)) || null;
@@ -1709,10 +1747,18 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (user) {
-          for (const item of snap.cart) {
+          for (const rawItem of snap.cart) {
+            // Wholesale kits are saved as their vials (e.g. 1 kit of 10 → 10×
+            // "Retatrutide — 10mg" at the kit's per-vial price) so stock and
+            // packing lists stay accurate; the kit is noted on the order.
+            const kit = (window.PFB_KIT_INFO || {})[rawItem.label];
+            const item = kit
+              ? { label: `${kit.base} — ${kit.perVial}`, qty: rawItem.qty * kit.vials }
+              : rawItem;
+            const kitNote = kit ? `WHOLESALE: ${rawItem.qty}× ${kit.base} ${kit.kitName}` : '';
             const orderDetails = {
               client_id: user.id,
-              notes: snap.notes || null,
+              notes: [snap.notes, kitNote].filter(Boolean).join(' | ') || null,
               status: 'pending',
               payment_method:   snap.paymentMethodLabel,
               shipping_method:  snap.shippingMethodFinal || null,
@@ -2117,9 +2163,31 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
         </div>
       )}
 
+      {/* Retail / Wholesale switch */}
+      <div role="tablist" aria-label="Store" style={{ display: 'inline-flex', padding: 4, gap: 4, borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 10 }}>
+        {[['retail', 'Retail', 'Single vials & extras'], ['wholesale', 'Wholesale', 'Kits of 5 or 10 vials']].map(([id, label, sub]) => {
+          const on = storeMode === id;
+          return (
+            <button key={id} role="tab" aria-selected={on} type="button" onClick={() => setStoreMode(id)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 150, padding: '10px 22px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                background: on ? '#2997ff' : 'transparent', color: on ? '#fff' : 'rgba(255,255,255,0.65)' }}>
+              <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>{label}</span>
+              <span style={{ fontSize: 11.5, opacity: on ? 0.9 : 0.6, marginTop: 1 }}>{sub}</span>
+            </button>
+          );
+        })}
+      </div>
+      {storeMode === 'wholesale' && (
+        <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)', marginBottom: 20, textWrap: 'pretty' }}>
+          Peptides by the kit: <strong style={{ color: '#f5f5f7' }}>Half kit (5 vials)</strong> at 30% off, or <strong style={{ color: '#f5f5f7' }}>Kit of 10 vials</strong> at 50% off the single-vial price.
+        </p>
+      )}
+      {storeMode === 'retail' && <div style={{ height: 10 }} />}
+
       {/* Catalog grid */}
       <PortalCatalog
-        productOptions={productOptions}
+        key={storeMode}
+        productOptions={storeMode === 'wholesale' ? wholesaleOptions : productOptions}
         selectedLabels={cartLabels}
         onSelect={addToCart}
         inventoryMap={inventoryMap}
