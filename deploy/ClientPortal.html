@@ -1456,7 +1456,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       const sep = /[—–]/.test(p.name) ? ' · ' : ' — ';
       [[5, 0.7, 'Half kit (5 vials)'], [10, 0.5, 'Kit of 10 vials']].forEach(([vials, pct, txt]) => {
         const total = unit * vials * pct;
-        const label = `${p.name}${sep}${txt} — ${money(total)}`;
+        const label = `${p.name}${sep}${txt} — $${money(total)}`;
         info[label] = { base: p.name, vials, perVial: Math.round(unit * pct * 100) / 100, kitName: txt };
         out.push(label);
       });
@@ -1766,7 +1766,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
             // packing lists stay accurate; the kit is noted on the order.
             const kit = (window.PFB_KIT_INFO || {})[rawItem.label];
             const item = kit
-              ? { label: `${kit.base} — ${kit.perVial}`, qty: rawItem.qty * kit.vials }
+              ? { label: `${kit.base} — $${kit.perVial}`, qty: rawItem.qty * kit.vials }
               : rawItem;
             const kitNote = kit ? `WHOLESALE: ${rawItem.qty}× ${kit.base} ${kit.kitName}` : '';
             const orderDetails = {
