@@ -1243,10 +1243,10 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const [pickupAcknowledged, setPickupAcknowledged] = React.useState({ sj: false, mh: false, mv: false });
   const [pickupSJDateChoice, setPickupSJDateChoice] = React.useState(''); // ISO date string, or 'special'
   // Next two pickup days for a location. Never includes today.
-  const getNextPickupDates = (weekdays) => {
+  const getNextPickupDates = (weekdays, count = 2) => {
     const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
     const opts = [];
-    for (let i = 1; opts.length < 2 && i < 30; i++) {
+    for (let i = 1; opts.length < count && i < 30; i++) {
       const cand = new Date(startOfToday); cand.setDate(cand.getDate() + i);
       if (weekdays.includes(cand.getDay())) opts.push(cand);
     }
@@ -1256,8 +1256,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // Morgan Hill: next two Mon/Wed, never same day.
   const getNextMHPickupDates = () => getNextPickupDates([1, 3]);
   const [pickupMHDateChoice, setPickupMHDateChoice] = React.useState(''); // ISO date string, or 'special'
-  // Mountain View: next two weekdays (Mon–Fri), never same day.
-  const getNextMVPickupDates = () => getNextPickupDates([1, 2, 3, 4, 5]);
+  // Mountain View: next five weekdays (Mon–Fri), never same day.
+  const getNextMVPickupDates = () => getNextPickupDates([1, 2, 3, 4, 5], 5);
   const [pickupMVDateChoice, setPickupMVDateChoice] = React.useState(''); // ISO date string, or 'special'
   const [pickupSettings, setPickupSettings] = React.useState(window.PICKUP_SETTINGS_DEFAULT);
   React.useEffect(() => { window.loadPickupSettings(sb).then(setPickupSettings); }, []);
