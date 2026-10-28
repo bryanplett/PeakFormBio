@@ -57,6 +57,7 @@
   }
   .btn-blue:hover { background: #2997ff; }
   .btn-blue:active { transform: scale(0.96); }
+  .cat-jump::-webkit-scrollbar { display: none; }
   .btn-ghost {
     background: transparent; color: #2997ff; border: 1px solid rgba(41,151,255,0.5);
     border-radius: 980px; padding: 10px 20px; font-size: 14px; cursor: pointer;
@@ -1110,9 +1111,40 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect, inventor
   }, [grouped, q]);
   const matchCount = visible.reduce((n, c) => n + c.items.length, 0);
 
+  // Category jump bar: scrolls to a section, highlights the one in view.
+  const barRef = React.useRef(null);
+  const [activeCat, setActiveCat] = React.useState('');
+  const findScroller = (el) => {
+    for (let p = el && el.parentElement; p; p = p.parentElement) {
+      const oy = getComputedStyle(p).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+    }
+    return null;
+  };
+  const jumpTo = (id) => {
+    const el = document.getElementById('cat-' + id);
+    if (!el) return;
+    setActiveCat(id);
+    const offset = (barRef.current ? barRef.current.offsetHeight : 0) + 12;
+    const sc = findScroller(el);
+    if (sc) sc.scrollTo({ top: sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - offset, behavior: 'smooth' });
+    else window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - offset, behavior: 'smooth' });
+  };
+  React.useEffect(() => {
+    const onScroll = () => {
+      const limit = (barRef.current ? barRef.current.getBoundingClientRect().bottom : 0) + 40;
+      let cur = visible[0] && visible[0].id;
+      visible.forEach(c => { const el = document.getElementById('cat-' + c.id); if (el && el.getBoundingClientRect().top <= limit) cur = c.id; });
+      setActiveCat(cur || '');
+    };
+    window.addEventListener('scroll', onScroll, true);
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll, true);
+  }, [visible]);
+
   return (
     <div>
-      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: '#0a0a0a', padding: '4px 0 16px', marginBottom: 20 }}>
+      <div ref={barRef} style={{ position: 'sticky', top: 0, zIndex: 20, background: '#0a0a0a', padding: '4px 0 14px', marginBottom: 20 }}>
         <div style={{ position: 'relative' }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
             <circle cx="7" cy="7" r="5" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"/>
@@ -1133,6 +1165,25 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect, inventor
             {matchCount ? `${matchCount} product${matchCount === 1 ? '' : 's'} match “${query.trim()}”` : ''}
           </p>
         )}
+        {visible.length > 1 && (
+          <div className="cat-jump" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginTop: 12, paddingBottom: 2, scrollbarWidth: 'none' }}>
+            {visible.map(cat => {
+              const on = activeCat === cat.id;
+              return (
+                <button key={cat.id} type="button" onClick={() => jumpTo(cat.id)}
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 13, fontWeight: on ? 600 : 500, whiteSpace: 'nowrap', transition: 'all 0.15s',
+                    color: on ? '#f5f5f7' : 'rgba(255,255,255,0.6)',
+                    background: on ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${on ? cat.tint + '99' : 'rgba(255,255,255,0.08)'}` }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: cat.tint, boxShadow: on ? `0 0 8px ${cat.tint}` : 'none' }} />
+                  {cat.title}
+                  <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.35)' }}>{cat.items.length}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {q && !matchCount && (
@@ -1144,7 +1195,7 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect, inventor
       )}
 
       {visible.map(cat => (
-        <div key={cat.id} style={{ marginBottom: 44 }}>
+        <div key={cat.id} id={'cat-' + cat.id} style={{ marginBottom: 44 }}>
           <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 5, height: 22, borderRadius: 3, background: cat.tint,
