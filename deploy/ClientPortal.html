@@ -970,7 +970,7 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
             border: `1px solid ${on ? tint : 'rgba(255,255,255,0.10)'}`, borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' });
           return (
             <div style={{ opacity: active ? 1 : 0, transition: 'opacity 0.3s 0.15s', marginBottom: 12, marginTop: 6 }}>
-              {strengths.length > 1 && strengths[0] && (
+              {strengths[0] && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
                   {strengths.map(st => (
                     <button key={st} type="button" onClick={(e) => { e.stopPropagation(); pick(st, curV); }}
