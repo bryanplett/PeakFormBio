@@ -36,7 +36,7 @@ function validateTable(table) {
 // 'restricted' = can log in and view, but can't place orders,
 // 'disabled' = can't log in at all (enforced in middleware/auth.js).
 // Clients may never change their own status.
-const ADMIN_ONLY_CLIENT_COLS = new Set(['status']);
+const ADMIN_ONLY_CLIENT_COLS = new Set(['status', 'portal_type', 'hormone_protocol']);
 function stripAdminOnlyCols(table, role, row) {
   if (table !== 'clients' || role === 'admin' || !row || typeof row !== 'object') return row;
   const out = { ...row };
