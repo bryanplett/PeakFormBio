@@ -228,6 +228,7 @@
 <div id="root"></div>
 
 <script type="text/babel" src="catalog.jsx"></script>
+<script type="text/babel" src="hormone-site.jsx?v=2"></script>
 <script type="text/babel">
 
 
@@ -846,8 +847,8 @@ const Footer = ({ onSchedule }) => {
 };
 
 // ─── Inquiry Modal ───────────────────────────────────────────────────────────
-const ConsultationModal = ({ onClose }) => {
-  const [form, setForm] = React.useState({ name: '', email: '', phone: '', contactMethod: '', focus: '', referral: '', message: '' });
+const ConsultationModal = ({ onClose, initialFocus }) => {
+  const [form, setForm] = React.useState({ name: '', email: '', phone: '', contactMethod: '', focus: initialFocus || '', referral: '', message: '' });
   const [submitted, setSubmitted] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
@@ -990,6 +991,7 @@ const ConsultationModal = ({ onClose }) => {
                 <select className="form-select"
                   value={form.focus} onChange={(e) => set('focus', e.target.value)}>
                   <option value="">Select an area</option>
+                  <option>Hormone Therapy (TRT / HRT)</option>
                   <option>Supplementation</option>
                   <option>Fitness</option>
                   <option>Nutrition</option>
@@ -1118,7 +1120,8 @@ const SectionDivider = ({ accent = '#2997ff' }) =>
 const App = () => {
   const [modalOpen, setModalOpen] = React.useState(false);
 
-  const openModal = () => setModalOpen(true);
+  const [modalFocus, setModalFocus] = React.useState('');
+  const openModal = (focus) => { setModalFocus(typeof focus === 'string' ? focus : ''); setModalOpen(true); };
   const closeModal = () => setModalOpen(false);
 
   const pillars = [
@@ -1163,8 +1166,9 @@ const App = () => {
       <Nav onSchedule={openModal} />
 
       <div style={{ paddingTop: 52 }}>
-        <Hero onSchedule={openModal} />
+        {window.HormoneSplitHero ? <window.HormoneSplitHero onSchedule={openModal} /> : <Hero onSchedule={openModal} />}
         <ScrollingBanner />
+        {window.HormoneSection && <window.HormoneSection onSchedule={openModal} />}
         <PillarTile {...pillars[0]} onSchedule={openModal} />
         <ProductCatalog onSchedule={openModal} />
         <SectionDivider accent="#2997ff" />
@@ -1178,7 +1182,7 @@ const App = () => {
         <Footer onSchedule={openModal} />
       </div>
 
-      {modalOpen && <ConsultationModal onClose={closeModal} />}
+      {modalOpen && <ConsultationModal onClose={closeModal} initialFocus={modalFocus} />}
     </div>);
 
 };
