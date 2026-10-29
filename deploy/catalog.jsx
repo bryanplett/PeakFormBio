@@ -13,7 +13,8 @@ function buildCatalogData(products) {
   const seen = new Set();
   (products || []).forEach(p => {
     if (p.public === false) return;                 // portal-only
-    const bucket = buckets[p.category];
+    const cat = window.resolveCategory ? window.resolveCategory(p.name, p.category) : p.category;
+    const bucket = buckets[cat];
     if (!bucket) return;                            // unknown category → skip
     const base = window.baseProductName ? window.baseProductName(p.name) : p.name;
     const key = bucket.id + '|' + base.toLowerCase();
@@ -180,7 +181,7 @@ const ProductCatalog = ({ onSchedule }) => {
       .then(data => {
         if (cancelled || !data || !Array.isArray(data.products) || !data.products.length) return;
         const feed = data.products.map(p => ({ name: p.name, category: p.category, public: true }));
-        const known = feed.filter(p => window.getCategoryMeta && window.getCategoryMeta(p.category));
+        const known = feed.filter(p => window.getCategoryMeta && window.getCategoryMeta(window.resolveCategory ? window.resolveCategory(p.name, p.category) : p.category));
         if (known.length && known.length >= feed.length * 0.6) {
           const next = buildCatalogData(known);
           if (next.length) setCatalog(next);

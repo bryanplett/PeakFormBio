@@ -279,7 +279,7 @@
     const gridCols = `1fr 180px 56px 56px ${tierKeys.map(() => '100px').join(' ')} 110px 34px`;
     const kitGridCols = '1fr 120px 64px 130px 140px';
     // Wholesale kit prices: blank = automatic (5 vials at 70%, 10 vials at 50% of the vial price).
-    const isPeptideCat = (c) => !/accessor|supplement|program|service/i.test(c || '');
+    const isPeptideCat = (c) => !/accessor|supplement|program|service|lab suppl|sports nutrition|coaching/i.test(c || '');
     const unitFor = (r) => Number(r.prices.wholesale ?? r.prices[tierKeys[tierKeys.length - 1]]);
     const autoKit = (r, vials, pct) => { const u = unitFor(r); if (!(u > 0)) return '—'; const t = Math.round(u * vials * pct * 100) / 100; return String(Number.isInteger(t) ? t : t.toFixed(2)); };
     const cell = { padding: '7px 10px', fontSize: 13.5 };

@@ -23,7 +23,7 @@
 function buildCouponScopes() {
   const products = (window.PRICELISTS && window.PRICELISTS.wholesale && window.PRICELISTS.wholesale.products) || [];
   const names = products
-    .filter(p => p.category !== 'Programs / Services')
+    .filter(p => !/program|service|coaching/i.test(p.category || ''))
     .map(p => p.name.replace(/\s*—\s*.+$/, '').trim());
   const unique = Array.from(new Set(names)).sort();
   return [

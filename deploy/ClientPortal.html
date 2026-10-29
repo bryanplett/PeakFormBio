@@ -10,8 +10,8 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script src="api-client.js"></script>
-<script src="pricelists.js?v=2"></script>
-<script src="categories.js"></script>
+<script src="pricelists.js?v=3"></script>
+<script src="categories.js?v=2"></script>
 <script src="inventory-helper.js"></script>
 <script src="payment-config.js"></script>
 <script src="peptide-data.js"></script>
@@ -642,15 +642,16 @@ const lookupCategoryTitle = (label) => {
   return null;
 };
 const blurbForCategory = (lower, id) => {
-  const cat = CATEGORY_MAP.find(c => c.id === id);
-  if (!cat || !cat.blurbs) return '';
-  // Prefer longest matching key (most specific)
+  // Product descriptions live in CATEGORY_MAP; search them all (longest key wins)
+  // so they still show after products move to a new category.
   let blurb = '';
   let bestLen = -1;
-  for (const key of Object.keys(cat.blurbs)) {
-    if (key && lower.includes(key) && key.length > bestLen) {
-      blurb = cat.blurbs[key];
-      bestLen = key.length;
+  for (const cat of CATEGORY_MAP) {
+    for (const key of Object.keys(cat.blurbs || {})) {
+      if (key && lower.includes(key) && key.length > bestLen) {
+        blurb = cat.blurbs[key];
+        bestLen = key.length;
+      }
     }
   }
   return blurb;
@@ -658,12 +659,13 @@ const blurbForCategory = (lower, id) => {
 const categorize = (label) => {
   const lower = label.toLowerCase();
   // 1) Prefer the explicit category set on the product in Admin → Pricelist.
-  const title = lookupCategoryTitle(label);
+  const title = window.resolveCategory ? window.resolveCategory(label, lookupCategoryTitle(label)) : lookupCategoryTitle(label);
   if (title) {
     const meta = window.getCategoryMeta && window.getCategoryMeta(title);
     if (meta) return { categoryId: meta.id, blurb: blurbForCategory(lower, meta.id) };
   }
-  // 2) Fallback: legacy substring matching.
+  // 2) Fallback: legacy substring matching (old section ids → new ones).
+  const LEGACY_ID = { metabolic: 'glp', growth: 'ghs', longevity: 'mito', cognitive: 'neuro', beauty: 'cosmetic', hormonal: 'melano', wellness: 'vitamins', supplements: 'sports', accessories: 'lab', programs: 'coaching' };
   for (const cat of CATEGORY_MAP) {
     for (const m of cat.matches) {
       if (lower.includes(m)) {
@@ -671,7 +673,7 @@ const categorize = (label) => {
         for (const key of Object.keys(cat.blurbs)) {
           if (lower.includes(key) && key.length > 0) blurb = cat.blurbs[key];
         }
-        return { categoryId: cat.id, blurb };
+        return { categoryId: LEGACY_ID[cat.id] || cat.id, blurb };
       }
     }
   }
@@ -1086,7 +1088,7 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect, inventor
   // Group products into categories
   const grouped = React.useMemo(() => {
     const buckets = {};
-    CATEGORY_MAP.forEach(c => { buckets[c.id] = { ...c, items: [] }; });
+    (window.CATALOG_CATEGORIES || CATEGORY_MAP).forEach(c => { buckets[c.id] = { ...c, items: [] }; });
     buckets.other = { id: 'other', title: 'Other', tint: '#a1a1aa', items: [] };
 
     productOptions.forEach(label => {
@@ -1478,7 +1480,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const wholesaleOptions = React.useMemo(() => {
     const key = userData?.profile?.pricelist || 'wholesale';
     const pl = typeof window.getPricelist === 'function' ? window.getPricelist(key) : null;
-    const NON_PEPTIDE = /accessor|supplement|program|service/i;
+    const NON_PEPTIDE = /accessor|supplement|program|service|lab suppl|sports nutrition|coaching/i;
     const money = (n) => { const r = Math.round(n * 100) / 100; return Number.isInteger(r) ? String(r) : r.toFixed(2); };
     const info = window.PFB_KIT_INFO = window.PFB_KIT_INFO || {};
     const out = [];

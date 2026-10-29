@@ -158,6 +158,7 @@ window.loadPricelists = async function(sb) {
     // read window.PRICELISTS pick up the live version immediately.
     const _v = { ...data.value }; delete _v.telegram; // Telegram tier retired
     window.PRICELISTS = _addNewDefaultProducts(_v);
+    if (window.applyProductCategories) window.applyProductCategories(window.PRICELISTS);
     return window.PRICELISTS;
   } catch (_err) {
     return window.PRICELISTS;
