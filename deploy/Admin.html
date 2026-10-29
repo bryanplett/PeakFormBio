@@ -28,7 +28,8 @@
 <script type="text/babel" src="pricelist-manager.jsx?v=5"></script>
 <script type="text/babel" src="workout-builder.jsx"></script>
 <script type="text/babel" src="profile-editor.jsx"></script>
-<script type="text/babel" src="client-invite.jsx"></script>
+<script type="text/babel" src="portal-access.jsx?v=1"></script>
+<script type="text/babel" src="client-invite.jsx?v=2"></script>
 <script type="text/babel" src="coupons-manager.jsx?v=20260821"></script>
 <script type="text/babel" src="fulfillment-tally.jsx"></script>
 <script type="text/babel" src="fulfillment-assign.jsx?v=5"></script>
@@ -784,13 +785,14 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
               <th style={{ textAlign: 'left', padding: '14px 20px', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Email</th>
               <th style={{ textAlign: 'left', padding: '14px 20px', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Phone</th>
               <th style={{ textAlign: 'left', padding: '14px 20px', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Pricelist</th>
+              <th style={{ textAlign: 'left', padding: '14px 20px', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Portal</th>
               <th style={{ textAlign: 'left', padding: '14px 20px', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Status</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {clients.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>No clients yet.</td></tr>
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>No clients yet.</td></tr>
             )}
             {clients.map(c => (
               <tr key={c.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -868,6 +870,11 @@ const ClientsList = ({ clients, onSelect, onEdit, onRefresh }) => {
                       </div>
                     )}
                   </div>
+                </td>
+                <td style={{ padding: '12px 16px' }}>
+                  {window.PortalAccessCell
+                    ? <window.PortalAccessCell sb={sb} client={c} onChanged={(u) => { Object.assign(c, u); onRefresh && onRefresh(); }} />
+                    : '—'}
                 </td>
                 <td style={{ padding: '16px 20px' }}>
                   {(() => {

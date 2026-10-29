@@ -4,7 +4,7 @@
 const { useState } = React;
 
 function ClientInvite({ sb, onInvited, onCancel }) {
-  const [form, setForm]   = useState({ name: '', email: '', phone: '', password: '' });
+  const [form, setForm]   = useState({ name: '', email: '', phone: '', password: '', portal: 'peptides' });
   const [busy, setBusy]   = useState(false);
   const [msg,  setMsg]    = useState(null);            // { kind: 'ok'|'err', text, creds? }
   const [copied, setCopied] = useState(false);
@@ -43,13 +43,21 @@ function ClientInvite({ sb, onInvited, onCancel }) {
       return;
     }
 
+    // Which portal this client sees (peptide store / TRT-HRT / both).
+    if (form.portal && form.portal !== 'peptides') {
+      try {
+        await new Promise(r => setTimeout(r, 400));
+        await sb.from('clients').update({ portal_type: form.portal }).eq('email', email);
+      } catch (e) { console.warn('portal_type update failed', e); }
+    }
+
     setBusy(false);
     setMsg({
       kind: 'ok',
       text: `Account created for ${email}.`,
       creds: { email, password, portalUrl },
     });
-    setForm({ name: '', email: '', phone: '', password: '' });
+    setForm({ name: '', email: '', phone: '', password: '', portal: 'peptides' });
     onInvited && onInvited();
   };
 
@@ -89,7 +97,12 @@ function ClientInvite({ sb, onInvited, onCancel }) {
           value={form.phone} onChange={e => setField('phone', e.target.value)} />
         <input className="field-input" placeholder="Password (≥ 8 chars)" type="text" required
           value={form.password} onChange={e => setField('password', e.target.value)}
-          style={{ gridColumn: '1 / -1' }} />
+          style={{ gridColumn: '1 / 3' }} />
+        <select className="field-input" value={form.portal} onChange={e => setField('portal', e.target.value)} title="Which client portal they'll see">
+          <option value="peptides">Portal: Peptide store</option>
+          <option value="hormone">Portal: TRT / HRT</option>
+          <option value="both">Portal: Both</option>
+        </select>
       </form>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: msg ? 14 : 0, flexWrap: 'wrap' }}>
