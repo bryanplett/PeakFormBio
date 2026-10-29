@@ -10,6 +10,7 @@ import storageRouter from './routes/storage.js';
 import rpcRouter from './routes/rpc.js';
 import notificationsRouter from './routes/notifications.js';
 import bcrypt from 'bcryptjs';
+import { BASE_SCHEMA } from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -428,6 +429,13 @@ async function init() {
   if (retries === 0) {
     console.error('Could not connect to database. Exiting.');
     process.exit(1);
+  }
+  // ── Base tables (builds an empty database; no-op on an existing one) ────
+  try {
+    await pool.query(BASE_SCHEMA);
+    console.log('Base schema ensured.');
+  } catch (err) {
+    console.error('Base schema warning:', err.message);
   }
   // ── Schema reconciliation ───────────────────────────────────────────────
   // The frontend uses FLAT plan columns, but older DBs / the Supabase migration
