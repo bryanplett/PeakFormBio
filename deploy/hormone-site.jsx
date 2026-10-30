@@ -3,6 +3,7 @@
 
 const HORMONE_SITE = {
   startingPrice: '',          // e.g. '$149/mo' — leave '' to hide the "Starting at" line
+  sectionImage: '',           // medical/doctor photo for the "How it works" section, e.g. 'uploads/trt-doctor.png' — '' hides it
   heroImage: '',              // photo for the TRT/HRT slide, e.g. 'uploads/trt-hero.png' — '' uses the drafted background
   steps: [
     { n: '01', title: 'Intake questionnaire', body: 'Tell us about your symptoms, history and goals. It takes about ten minutes.' },
@@ -98,14 +99,20 @@ const HormoneSplitHero = ({ onSchedule }) => {
 };
 
 const HormoneSection = ({ onSchedule }) => (
-  <section id="hormone" style={{ background: '#000', color: '#f5f5f7', padding: '120px 24px' }}>
+  <section id="hormone" style={{ background: '#000', color: '#f5f5f7', padding: '120px 24px', position: 'relative', overflow: 'hidden' }}>
+    {HORMONE_SITE.sectionImage && (
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <img src={HORMONE_SITE.sectionImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.85) 45%, #000 100%)' }} />
+      </div>
+    )}
     <style>{`
       .hs-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
       .hs-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
       @media (max-width:1000px){.hs-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
       @media (max-width:700px){.hs-steps,.hs-two{grid-template-columns:1fr}}
     `}</style>
-    <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1180, margin: '0 auto', position: 'relative' }}>
       <p style={hsEyebrow}>How it works</p>
       <h2 style={{ fontSize: 'clamp(36px, 5vw, 60px)', fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.05, maxWidth: 760, marginBottom: 20, textWrap: 'balance' }}>
         Hormone therapy, guided by your labs.
