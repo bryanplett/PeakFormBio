@@ -4,7 +4,7 @@
 const HORMONE_SITE = {
   startingPrice: '',          // e.g. '$149/mo' — leave '' to hide the "Starting at" line
   comingSoon: true,           // shows "Coming Soon" badges; set false when the program launches
-  sectionImage: '',           // medical/doctor photo for the "How it works" section, e.g. 'uploads/trt-doctor.png' — '' hides it
+  sectionImage: 'assets/trt-doctor.png', // cut-out doctor photo (transparent PNG) shown on the right of "How it works" — '' hides it
   heroImage: '',              // photo for the TRT/HRT slide, e.g. 'uploads/trt-hero.png' — '' uses the drafted background
   steps: [
     { n: '01', title: 'Intake questionnaire', body: 'Tell us about your symptoms, history and goals. It takes about ten minutes.' },
@@ -111,18 +111,30 @@ const HormoneSplitHero = ({ onSchedule }) => {
 const HormoneSection = ({ onSchedule }) => (
   <section id="hormone" style={{ background: '#000', color: '#f5f5f7', padding: '120px 24px', position: 'relative', overflow: 'hidden' }}>
     {HORMONE_SITE.sectionImage && (
-      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        <img src={HORMONE_SITE.sectionImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.85) 45%, #000 100%)' }} />
+      <div className="hs-doc" aria-hidden="true">
+        <div className="hs-doc-glow" />
+        <img src={HORMONE_SITE.sectionImage} alt="" />
       </div>
     )}
     <style>{`
-      .hs-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+      .hs-steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;max-width:calc(100% - min(560px,42vw) + 40px)}
+      .hs-steps>*{grid-column:span 2}
+      .hs-steps>*:nth-child(1){grid-column:1 / span 3}
+      .hs-steps>*:nth-child(2){grid-column:4 / span 3}
+      .hs-doc{position:absolute;top:0;right:0;width:min(560px,42vw);height:100%;pointer-events:none;z-index:0}
+      .hs-doc-glow{position:absolute;right:-10%;top:4%;width:120%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(41,151,255,0.28) 0%,rgba(0,102,204,0.12) 40%,transparent 70%)}
+      .hs-doc img{position:absolute;top:40px;right:0;width:100%;max-height:min(980px,calc(100% - 40px));object-fit:contain;object-position:top right;
+        filter:drop-shadow(0 30px 60px rgba(0,0,0,0.6));-webkit-mask-image:linear-gradient(to bottom,#000 70%,transparent 100%);mask-image:linear-gradient(to bottom,#000 70%,transparent 100%)}
+      .hs-intro{max-width:640px}
+      @media (max-width:1150px){.hs-doc{width:min(460px,46vw);opacity:.95}.hs-intro{max-width:calc(100% - 46vw - 32px)}.hs-steps{max-width:100%}}
+      @media (max-width:900px){.hs-doc{position:relative;width:100%;height:auto;margin:-40px auto 36px;display:flex;justify-content:center}.hs-doc img{position:relative;top:0;width:min(360px,80%);max-height:none}.hs-doc-glow{right:auto;left:50%;top:0;width:min(420px,90%);transform:translateX(-50%)}.hs-intro{min-height:0}}
       .hs-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
-      @media (max-width:1000px){.hs-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media (max-width:1000px){.hs-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.hs-steps>*,.hs-steps>*:nth-child(1),.hs-steps>*:nth-child(2){grid-column:auto}}
       @media (max-width:700px){.hs-steps,.hs-two{grid-template-columns:1fr}}
+      .hs-intro{min-height:360px}
     `}</style>
-    <div style={{ maxWidth: 1180, margin: '0 auto', position: 'relative' }}>
+    <div style={{ maxWidth: 1180, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+      <div className="hs-intro">
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 6 }}>
         <p style={{ ...hsEyebrow, marginBottom: 0 }}>How it works</p>
         <ComingSoonBadge />
@@ -133,6 +145,7 @@ const HormoneSection = ({ onSchedule }) => (
       <p style={{ fontSize: 19, fontWeight: 300, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, maxWidth: 640, marginBottom: 56 }}>
         Low energy, poor sleep, stalled progress and low drive can all have hormonal causes. Our program starts with data and keeps checking it.
       </p>
+      </div>
 
       <div className="hs-steps">
         {HORMONE_SITE.steps.map(s => (
