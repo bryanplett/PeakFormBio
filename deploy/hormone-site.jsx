@@ -3,6 +3,7 @@
 
 const HORMONE_SITE = {
   startingPrice: '',          // e.g. '$149/mo' — leave '' to hide the "Starting at" line
+  comingSoon: true,           // shows "Coming Soon" badges; set false when the program launches
   sectionImage: '',           // medical/doctor photo for the "How it works" section, e.g. 'uploads/trt-doctor.png' — '' hides it
   heroImage: '',              // photo for the TRT/HRT slide, e.g. 'uploads/trt-hero.png' — '' uses the drafted background
   steps: [
@@ -19,6 +20,13 @@ const hsEyebrow = { fontSize: 13, fontWeight: 600, color: '#2997ff', letterSpaci
 
 // Combined hero: large centered photo as the backdrop, TRT/HRT on the left,
 // peptides on the right. Photo edges fade into the page so it all reads as one.
+const ComingSoonBadge = ({ style, className }) => HORMONE_SITE.comingSoon ? (
+  <span className={className} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+    color: '#0a0a0a', background: '#2997ff', borderRadius: 999, padding: '7px 14px', boxShadow: '0 0 0 4px rgba(41,151,255,0.18)', ...style }}>
+    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#0a0a0a', opacity: 0.6 }} />Coming Soon
+  </span>
+) : null;
+
 const HormoneSplitHero = ({ onSchedule }) => {
   const eyebrow = { fontSize: 13, fontWeight: 600, color: '#2997ff', letterSpacing: '0.10em', marginBottom: 18, textTransform: 'uppercase' };
   const title = { fontSize: 'clamp(40px, 4.4vw, 66px)', fontWeight: 700, color: '#fff', lineHeight: 1.03, letterSpacing: '-0.04em', marginBottom: 20, textWrap: 'balance', textShadow: '0 2px 30px rgba(0,0,0,0.6)' };
@@ -66,11 +74,12 @@ const HormoneSplitHero = ({ onSchedule }) => {
             <img className="hs-logo" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
               style={{ display: 'block', width: 420, maxWidth: '100%', height: 'auto', marginTop: -80, marginBottom: 96, filter: 'drop-shadow(0 6px 28px rgba(41,151,255,0.35))' }} />
             <div className="hs-rule" />
+            <ComingSoonBadge style={{ marginBottom: 18 }} />
             <p style={eyebrow}>Hormone Optimization · TRT / HRT</p>
             <h1 style={title}>Feel like<br />yourself again.</h1>
             <p className="hs-sub" style={sub}>Lab-guided hormone therapy for men and women, overseen by a licensed provider and built around your results.</p>
             <div className="hs-btns" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button className="btn-primary" onClick={() => onSchedule('Hormone Therapy (TRT / HRT)')} style={primary}>Book a consultation</button>
+              <button className="btn-primary" onClick={() => onSchedule('Hormone Therapy (TRT / HRT)')} style={primary}>{HORMONE_SITE.comingSoon ? 'Join the waitlist' : 'Book a consultation'}</button>
               <a href="#hormone" className="btn-ghost-light" style={ghost}>How it works</a>
             </div>
             {HORMONE_SITE.startingPrice && (
@@ -84,6 +93,7 @@ const HormoneSplitHero = ({ onSchedule }) => {
             <img className="hs-logo hs-logo-space" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="" aria-hidden="true"
               style={{ display: 'block', width: 420, maxWidth: '100%', height: 'auto', marginTop: -80, marginBottom: 96, visibility: 'hidden' }} />
             <div className="hs-rule" />
+            <ComingSoonBadge className="hs-logo-space" style={{ marginBottom: 18, visibility: 'hidden' }} />
             <p style={eyebrow}>Peptides · Fitness · Nutrition</p>
             <h2 style={title}>Your health,<br />optimized.</h2>
             <p className="hs-sub" style={sub}>Personalized plans built on evidence. Supplementation, fitness, and nutrition — tailored to you by fitness industry leaders.</p>
@@ -113,7 +123,10 @@ const HormoneSection = ({ onSchedule }) => (
       @media (max-width:700px){.hs-steps,.hs-two{grid-template-columns:1fr}}
     `}</style>
     <div style={{ maxWidth: 1180, margin: '0 auto', position: 'relative' }}>
-      <p style={hsEyebrow}>How it works</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 6 }}>
+        <p style={{ ...hsEyebrow, marginBottom: 0 }}>How it works</p>
+        <ComingSoonBadge />
+      </div>
       <h2 style={{ fontSize: 'clamp(36px, 5vw, 60px)', fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.05, maxWidth: 760, marginBottom: 20, textWrap: 'balance' }}>
         Hormone therapy, guided by your labs.
       </h2>
@@ -144,16 +157,18 @@ const HormoneSection = ({ onSchedule }) => (
         </div>
         <div style={{ background: 'linear-gradient(160deg, #0d2a4a 0%, #0a0a0a 75%)', border: '1px solid rgba(41,151,255,0.25)', borderRadius: 20, padding: '36px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 28 }}>
           <div>
-            <h3 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 12 }}>Start with a consultation</h3>
+            <h3 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 12 }}>{HORMONE_SITE.comingSoon ? 'Launching soon' : 'Start with a consultation'}</h3>
             <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
-              We'll walk you through labs, timelines and what to expect. Members get their full plan, lab results and resources in the PeakForm Bio client portal.
+              {HORMONE_SITE.comingSoon
+                ? 'Our hormone optimization program is almost ready. Join the waitlist and we\'ll reach out as soon as consultations open.'
+                : 'We\'ll walk you through labs, timelines and what to expect. Members get their full plan, lab results and resources in the PeakForm Bio client portal.'}
             </p>
             {HORMONE_SITE.startingPrice && (
               <p style={{ marginTop: 18, fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>Starting at <strong style={{ color: '#fff', fontSize: 22 }}>{HORMONE_SITE.startingPrice}</strong></p>
             )}
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button className="btn-primary" onClick={() => onSchedule('Hormone Therapy (TRT / HRT)')} style={{ padding: '15px 30px', fontSize: 17 }}>Book a consultation</button>
+            <button className="btn-primary" onClick={() => onSchedule('Hormone Therapy (TRT / HRT)')} style={{ padding: '15px 30px', fontSize: 17 }}>{HORMONE_SITE.comingSoon ? 'Join the waitlist' : 'Book a consultation'}</button>
             <a href="ClientPortal.html" className="btn-ghost-light" style={{ padding: '14px 26px', fontSize: 16 }}>Client login</a>
           </div>
         </div>

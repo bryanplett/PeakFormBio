@@ -281,7 +281,7 @@
 <script src="categories.js?v=2"></script>
 <script src="pricelists.js"></script>
 <script type="text/babel" src="catalog.jsx"></script>
-<script type="text/babel" src="hormone-site.jsx?v=11"></script>
+<script type="text/babel" src="hormone-site.jsx?v=13"></script>
 <script type="text/babel">
 
 
@@ -519,7 +519,7 @@ const Hero = ({ onSchedule }) =>
 
 
 // ─── Pillar Tile ─────────────────────────────────────────────────────────────
-const PillarTile = ({ id, dark, icon, headline, tagline, body, features, onSchedule, bgImage, imgPosition = 'center 20%', showProducts = false }) => {
+const PillarTile = ({ id, dark, icon, headline, tagline, body, features, onSchedule, bgImage, imgPosition = 'center 20%', showProducts = false, tall = false }) => {
   const bg = dark ? '#272729' : '#f5f5f7';
   const textColor = dark ? '#fff' : '#1d1d1f';
   const subColor = dark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.6)';
@@ -528,7 +528,8 @@ const PillarTile = ({ id, dark, icon, headline, tagline, body, features, onSched
 
   return (
     <section id={id} className="pillar-section" style={{
-      background: bg, padding: '100px 24px',
+      background: bg, padding: tall ? '150px 24px' : '100px 24px',
+      minHeight: tall ? 'min(100vh, 900px)' : undefined, display: tall ? 'flex' : undefined, flexDirection: 'column', justifyContent: 'center',
       textAlign: 'center', position: 'relative', overflow: 'hidden'
     }}>
       {bgImage &&
@@ -1194,7 +1195,8 @@ const App = () => {
     id: 'nutrition',
     dark: true,
     bgImage: 'uploads/ChatGPT Image Apr 26, 2026, 03_20_32 PM.png',
-    imgPosition: 'center 78%',
+    imgPosition: 'center 55%',
+    tall: true,
     icon: <NutritionIcon color="rgba(255,255,255,0.75)" />,
     headline: 'Nutrition.',
     tagline: 'Food as a system.',
