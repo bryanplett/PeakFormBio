@@ -32,22 +32,23 @@ const HormoneSplitHero = ({ onSchedule }) => {
         .hs-bg{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(1250px,78vw);
           -webkit-mask-image:linear-gradient(to right,transparent 0%,#000 26%,#000 74%,transparent 100%);
                   mask-image:linear-gradient(to right,transparent 0%,#000 26%,#000 74%,transparent 100%)}
-        .hs-bg img{width:100%;height:100%;object-fit:cover;object-position:center 15%;display:block}
+        .hs-bg img{width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
         .hs-bg::after{content:'';position:absolute;inset:0;background:
           linear-gradient(to bottom,rgba(10,10,10,0.55) 0%,transparent 22%,transparent 70%,#0a0a0a 100%),
           radial-gradient(ellipse at center,transparent 45%,rgba(10,10,10,0.35) 100%)}
-        .hs-wrap{position:relative;z-index:2;min-height:100vh;max-width:1560px;margin:0 auto;padding:96px 56px 80px;display:flex;flex-direction:column;align-items:center}
-        .hs-grid{flex:1;width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1.15fr) minmax(0,1fr);gap:40px;align-items:center}
+        .hs-wrap{position:relative;z-index:2;min-height:100vh;max-width:1560px;margin:0 auto;padding:96px 56px 80px;display:flex;flex-direction:column;justify-content:center}
+        .hs-grid{width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1.15fr) minmax(0,1fr);gap:40px;align-items:center}
         .hs-col-r{text-align:right}
         .hs-col-r .hs-btns{justify-content:flex-end}
         .hs-col-r .hs-sub{margin-left:auto}
+        .hs-logo-space{height:calc(220px * 0.723 + 40px)}
         .hs-rule{width:44px;height:2px;background:#2997ff;border-radius:2px;margin-bottom:22px}
         .hs-col-r .hs-rule{margin-left:auto}
         @media (max-width:1050px){
           .hs-bg{width:100%;-webkit-mask-image:none;mask-image:none;opacity:.35}
           .hs-wrap{padding:88px 26px 64px}
           .hs-grid{grid-template-columns:minmax(0,1fr);gap:56px}
-          .hs-spacer{display:none}
+          .hs-spacer,.hs-logo-space{display:none}
           .hs-col-r{text-align:left}
           .hs-col-r .hs-btns{justify-content:flex-start}
           .hs-col-r .hs-sub,.hs-col-r .hs-rule{margin-left:0}
@@ -60,11 +61,10 @@ const HormoneSplitHero = ({ onSchedule }) => {
         background: 'radial-gradient(40% 55% at 10% 55%, rgba(0,102,204,0.22) 0%, transparent 70%), radial-gradient(40% 55% at 90% 55%, rgba(0,102,204,0.22) 0%, transparent 70%)' }} />
 
       <div className="hs-wrap">
-        <img className="hs-logo" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
-          style={{ display: 'block', width: 240, height: 'auto', marginBottom: 24 }} />
-
         <div className="hs-grid">
           <div className="hs-col-l">
+            <img className="hs-logo" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
+              style={{ display: 'block', width: 220, height: 'auto', marginBottom: 40 }} />
             <div className="hs-rule" />
             <p style={eyebrow}>Hormone Optimization · TRT / HRT</p>
             <h1 style={title}>Feel like<br />yourself again.</h1>
@@ -81,6 +81,7 @@ const HormoneSplitHero = ({ onSchedule }) => {
           <div className="hs-spacer" />
 
           <div className="hs-col-r">
+            <div className="hs-logo-space" aria-hidden="true" />
             <div className="hs-rule" />
             <p style={eyebrow}>Peptides · Fitness · Nutrition</p>
             <h2 style={title}>Your health,<br />optimized.</h2>
