@@ -3,6 +3,7 @@
 
 const HORMONE_SITE = {
   startingPrice: '',          // e.g. '$149/mo' — leave '' to hide the "Starting at" line
+  heroImage: '',              // photo for the TRT/HRT slide, e.g. 'uploads/trt-hero.png' — '' uses the drafted background
   steps: [
     { n: '01', title: 'Intake questionnaire', body: 'Tell us about your symptoms, history and goals. It takes about ten minutes.' },
     { n: '02', title: 'Lab work', body: 'A comprehensive hormone and health panel gives your provider a clear baseline.' },
@@ -15,51 +16,102 @@ const HORMONE_SITE = {
 
 const hsEyebrow = { fontSize: 13, fontWeight: 600, color: '#2997ff', letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 16 };
 
-const HormoneSplitHero = ({ onSchedule }) => (
-  <section className="hs-hero" style={{ background: '#000', paddingTop: 40 }}>
-    <style>{`
-      .hs-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;padding:12px;min-height:calc(100vh - 92px)}
-      .hs-panel{position:relative;overflow:hidden;border-radius:24px;display:flex;flex-direction:column;justify-content:flex-end;padding:56px}
-      .hs-panel h1,.hs-panel h2{color:#fff;letter-spacing:-0.04em;line-height:1.02;text-wrap:balance}
-      @media (max-width:900px){.hs-grid{grid-template-columns:1fr;min-height:0}.hs-panel{padding:36px 26px;min-height:440px}}
-    `}</style>
-    <div className="hs-grid">
-      <div className="hs-panel" style={{ background: 'radial-gradient(120% 90% at 0% 0%, #10243d 0%, #0a0a0a 60%)' }}>
-        <img src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
-          style={{ display: 'block', width: 180, height: 'auto', opacity: 0.95, marginBottom: 'auto', paddingBottom: 32, alignSelf: 'flex-start' }} />
-        <p style={hsEyebrow}>Hormone Optimization · TRT / HRT</p>
-        <h1 style={{ fontSize: 'clamp(44px, 6vw, 80px)', fontWeight: 700, marginBottom: 22 }}>Feel like<br />yourself again.</h1>
-        <p style={{ fontSize: 19, fontWeight: 300, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55, maxWidth: 520, marginBottom: 34 }}>
-          Lab-guided hormone therapy for men and women, overseen by a licensed provider and built around your results.
-        </p>
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button className="btn-primary" onClick={() => onSchedule('Hormone Therapy (TRT / HRT)')} style={{ padding: '16px 34px', fontSize: 18 }}>Book a consultation</button>
-          <a href="#hormone" className="btn-ghost-light" style={{ padding: '15px 30px', fontSize: 17 }}>How it works</a>
-        </div>
-        {HORMONE_SITE.startingPrice && (
-          <p style={{ marginTop: 22, fontSize: 15, color: 'rgba(255,255,255,0.6)' }}>Starting at <strong style={{ color: '#fff' }}>{HORMONE_SITE.startingPrice}</strong></p>
-        )}
-      </div>
+// Full-screen hero slideshow: TRT/HRT slide and peptides slide, same type
+// scale on both. Auto-advances every 7s (pauses on hover); arrows, dots, swipe.
+const HormoneSplitHero = ({ onSchedule }) => {
+  const [i, setI] = React.useState(0);
+  const [paused, setPaused] = React.useState(false);
+  const touch = React.useRef(null);
+  const N = 2;
+  const go = (n) => setI(((n % N) + N) % N);
+  React.useEffect(() => {
+    if (paused) return;
+    const t = setTimeout(() => go(i + 1), 7000);
+    return () => clearTimeout(t);
+  }, [i, paused]);
 
-      <div className="hs-panel" style={{ background: '#0a0a0a' }}>
-        <img src="uploads/ChatGPT Image Apr 26, 2026, 03_02_19 PM.png" alt="" aria-hidden="true"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', opacity: 0.55 }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.15) 100%)' }} />
-        <div style={{ position: 'relative' }}>
-          <p style={hsEyebrow}>Peptides · Fitness · Nutrition</p>
-          <h2 style={{ fontSize: 'clamp(34px, 4vw, 52px)', fontWeight: 700, marginBottom: 18 }}>Your health, optimized.</h2>
-          <p style={{ fontSize: 17, fontWeight: 300, color: 'rgba(255,255,255,0.7)', lineHeight: 1.55, maxWidth: 420, marginBottom: 28 }}>
-            Research peptides, training and nutrition plans tailored to you.
-          </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="#supplementation" className="btn-ghost-light" style={{ padding: '13px 26px', fontSize: 16 }}>Explore peptides</a>
-            <button className="btn-ghost-light" onClick={() => onSchedule('')} style={{ padding: '13px 26px', fontSize: 16, cursor: 'pointer', fontFamily: 'inherit' }}>Request information</button>
+  const eyebrow = { fontSize: 13, fontWeight: 600, color: '#2997ff', letterSpacing: '0.10em', marginBottom: 20, textTransform: 'uppercase' };
+  const title = { fontSize: 'clamp(52px, 7vw, 84px)', fontWeight: 700, color: '#fff', lineHeight: 1.02, letterSpacing: '-0.04em', marginBottom: 24, textWrap: 'balance' };
+  const sub = { fontSize: 20, fontWeight: 300, color: 'rgba(255,255,255,0.68)', lineHeight: 1.55, letterSpacing: '-0.01em', maxWidth: 500, marginBottom: 44 };
+  const logo = <img className="hs-logo" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio" style={{ display: 'block', width: 260, height: 'auto', marginBottom: 36 }} />;
+  const overlay = { position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.72) 45%, rgba(0,0,0,0.10) 100%)', pointerEvents: 'none' };
+  const arrow = (dir) => (
+    <button type="button" aria-label={dir < 0 ? 'Previous slide' : 'Next slide'} onClick={() => go(i + dir)} className="hs-arrow"
+      style={{ position: 'absolute', top: '50%', [dir < 0 ? 'left' : 'right']: 20, transform: 'translateY(-50%)', zIndex: 5, width: 48, height: 48, borderRadius: '50%',
+        border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.35)', color: '#fff', fontSize: 22, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(6px)' }}>{dir < 0 ? '‹' : '›'}</button>
+  );
+
+  return (
+    <section className="hs-hero" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
+      onTouchStart={e => { touch.current = e.touches[0].clientX; }}
+      onTouchEnd={e => { if (touch.current == null) return; const dx = e.changedTouches[0].clientX - touch.current; if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1)); touch.current = null; }}
+      style={{ position: 'relative', overflow: 'hidden', background: '#0a0a0a' }}>
+      <style>{`
+        .hs-track{display:flex;width:200%;transition:transform .8s cubic-bezier(.65,0,.35,1)}
+        .hs-slide{position:relative;width:50%;min-height:100vh;display:flex;align-items:center;overflow:hidden}
+        .hs-content{position:relative;z-index:2;padding:120px 96px 110px;max-width:760px}
+        .hs-rings{position:absolute;right:-10%;top:50%;width:min(1100px,95vw);aspect-ratio:1;transform:translateY(-50%);border-radius:50%;
+          background:repeating-radial-gradient(circle at center, rgba(41,151,255,0.10) 0 1px, transparent 1px 46px);
+          -webkit-mask:radial-gradient(circle at center, #000 0%, #000 45%, transparent 70%);mask:radial-gradient(circle at center, #000 0%, #000 45%, transparent 70%)}
+        @media (max-width:900px){.hs-content{padding:100px 26px 120px}.hs-arrow{display:none}.hs-logo{width:190px!important}}
+      `}</style>
+
+      <div className="hs-track" style={{ transform: `translateX(-${i * 50}%)` }}>
+        {/* Slide 1 — TRT / HRT */}
+        <div className="hs-slide" aria-hidden={i !== 0}>
+          {HORMONE_SITE.heroImage
+            ? <img src={HORMONE_SITE.heroImage} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', opacity: 0.8 }} />
+            : <>
+                <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 90% at 78% 45%, #0f3a66 0%, #0a1a2e 38%, #0a0a0a 72%)' }} />
+                <div className="hs-rings" />
+                <div style={{ position: 'absolute', right: '14%', top: '50%', width: 'min(420px,40vw)', aspectRatio: '1', transform: 'translateY(-50%)', borderRadius: '50%',
+                  background: 'radial-gradient(circle at 40% 35%, rgba(41,151,255,0.55) 0%, rgba(0,102,204,0.25) 40%, transparent 70%)', filter: 'blur(8px)' }} />
+              </>}
+          <div style={overlay} />
+          <div className="hs-content">
+            {logo}
+            <p style={eyebrow}>Hormone Optimization · TRT / HRT</p>
+            <h1 style={title}>Feel like<br />yourself again.</h1>
+            <p style={sub}>Lab-guided hormone therapy for men and women, overseen by a licensed provider and built around your results.</p>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button className="btn-primary" onClick={() => onSchedule('Hormone Therapy (TRT / HRT)')} style={{ padding: '16px 36px', fontSize: 18 }}>Book a consultation</button>
+              <a href="#hormone" className="btn-ghost-light" style={{ padding: '15px 32px', fontSize: 17 }}>How it works</a>
+            </div>
+            {HORMONE_SITE.startingPrice && (
+              <p style={{ marginTop: 22, fontSize: 15, color: 'rgba(255,255,255,0.6)' }}>Starting at <strong style={{ color: '#fff' }}>{HORMONE_SITE.startingPrice}</strong></p>
+            )}
+          </div>
+        </div>
+
+        {/* Slide 2 — Peptides / fitness / nutrition */}
+        <div className="hs-slide" aria-hidden={i !== 1}>
+          <img src="uploads/ChatGPT Image Apr 26, 2026, 03_02_19 PM.png" alt="" aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', opacity: 0.8 }} />
+          <div style={overlay} />
+          <div className="hs-content">
+            {logo}
+            <p style={eyebrow}>Peptides · Fitness · Nutrition</p>
+            <h2 style={title}>Your health,<br />optimized.</h2>
+            <p style={sub}>Personalized plans built on evidence. Supplementation, fitness, and nutrition — tailored to you.</p>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button className="btn-primary" onClick={() => onSchedule('')} style={{ padding: '16px 36px', fontSize: 18 }}>Request Information</button>
+              <a href="#supplementation" className="btn-ghost-light" style={{ padding: '15px 32px', fontSize: 17 }}>Explore peptides</a>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
-);
+
+      {arrow(-1)}{arrow(1)}
+      <div style={{ position: 'absolute', bottom: 32, left: 0, right: 0, zIndex: 5, display: 'flex', justifyContent: 'center', gap: 10 }}>
+        {['Hormone therapy', 'Peptides & wellness'].map((label, n) => (
+          <button key={label} type="button" onClick={() => go(n)} aria-label={label}
+            style={{ height: 6, width: i === n ? 34 : 12, borderRadius: 999, border: 'none', padding: 0, cursor: 'pointer',
+              background: i === n ? '#2997ff' : 'rgba(255,255,255,0.35)', transition: 'width .3s, background .3s' }} />
+        ))}
+      </div>
+    </section>
+  );
+};
 
 const HormoneSection = ({ onSchedule }) => (
   <section id="hormone" style={{ background: '#000', color: '#f5f5f7', padding: '120px 24px' }}>
