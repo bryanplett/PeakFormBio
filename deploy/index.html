@@ -100,6 +100,14 @@
   }
   .form-select:focus { border-color: #0066cc; box-shadow: 0 0 0 3px rgba(0,102,204,0.12); }
 
+  /* Desktop nav runs out of room below ~1100px: collapse the links into the menu button. */
+  @media (max-width: 1100px) {
+    .nav-links-desktop { display: none !important; }
+    .nav-logo-spacer { width: auto !important; }
+    .menu-btn { display: inline-flex !important; }
+  }
+  .nav-links-desktop a { white-space: nowrap; }
+
   /* ───── Responsive: Mobile + Tablet ───── */
   @media (max-width: 768px) {
     .nav-links-desktop { display: none !important; }
@@ -222,12 +230,14 @@
     .nav-cta-portal { display: none !important; }
     .nav-root { padding: 0 12px !important; }
   }
+  #hormone{scroll-margin-top:52px}
 </style>
 </head>
 <body>
 <div id="root"></div>
 
 <script type="text/babel" src="catalog.jsx"></script>
+<script type="text/babel" src="hormone-site.jsx?v=19"></script>
 <script type="text/babel">
 
 
@@ -267,7 +277,8 @@ const Nav = ({ onSchedule }) => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const links = ['Supplementation', 'Fitness', 'Nutrition', 'Catalog', 'About'];
+  const links = ['Hormone Optimization', 'Supplementation', 'Fitness', 'Nutrition', 'About'];
+  const linkHref = (l) => l === 'Hormone Optimization' ? '#hormone' : `#${l.toLowerCase()}`;
 
   return (
     <>
@@ -288,7 +299,7 @@ const Nav = ({ onSchedule }) => {
         {/* Center links */}
         <div className="nav-links-desktop" style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
           {links.map((l) =>
-          <a key={l} href={`#${l.toLowerCase()}`} style={{
+          <a key={l} href={linkHref(l)} style={{
             fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.80)',
             letterSpacing: '-0.12px', textDecoration: 'none',
             transition: 'color 0.15s'
@@ -333,7 +344,7 @@ const Nav = ({ onSchedule }) => {
             </svg>
           </button>
           {links.map((l) =>
-        <a key={l} href={`#${l.toLowerCase()}`}
+        <a key={l} href={linkHref(l)}
         onClick={() => setMobileOpen(false)}
         style={{
           fontSize: 28, fontWeight: 600, color: '#fff',
@@ -442,7 +453,7 @@ const Hero = ({ onSchedule }) =>
 
 
 // ─── Pillar Tile ─────────────────────────────────────────────────────────────
-const PillarTile = ({ id, dark, icon, headline, tagline, body, features, onSchedule, bgImage, imgPosition = 'center 20%', showProducts = false }) => {
+const PillarTile = ({ id, dark, icon, headline, tagline, body, features, onSchedule, bgImage, imgPosition = 'center 20%', showProducts = false, tall = false }) => {
   const bg = dark ? '#272729' : '#f5f5f7';
   const textColor = dark ? '#fff' : '#1d1d1f';
   const subColor = dark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.6)';
@@ -451,7 +462,8 @@ const PillarTile = ({ id, dark, icon, headline, tagline, body, features, onSched
 
   return (
     <section id={id} className="pillar-section" style={{
-      background: bg, padding: '100px 24px',
+      background: bg, padding: tall ? '150px 24px' : '100px 24px',
+      minHeight: tall ? 'min(100vh, 900px)' : undefined, display: tall ? 'flex' : undefined, flexDirection: 'column', justifyContent: 'center',
       textAlign: 'center', position: 'relative', overflow: 'hidden'
     }}>
       {bgImage &&
@@ -846,8 +858,8 @@ const Footer = ({ onSchedule }) => {
 };
 
 // ─── Inquiry Modal ───────────────────────────────────────────────────────────
-const ConsultationModal = ({ onClose }) => {
-  const [form, setForm] = React.useState({ name: '', email: '', phone: '', contactMethod: '', focus: '', referral: '', message: '' });
+const ConsultationModal = ({ onClose, initialFocus }) => {
+  const [form, setForm] = React.useState({ name: '', email: '', phone: '', contactMethod: '', focus: initialFocus || '', referral: '', message: '' });
   const [submitted, setSubmitted] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
@@ -990,6 +1002,7 @@ const ConsultationModal = ({ onClose }) => {
                 <select className="form-select"
                   value={form.focus} onChange={(e) => set('focus', e.target.value)}>
                   <option value="">Select an area</option>
+                  <option>Hormone Therapy (TRT / HRT)</option>
                   <option>Supplementation</option>
                   <option>Fitness</option>
                   <option>Nutrition</option>
@@ -1118,7 +1131,8 @@ const SectionDivider = ({ accent = '#2997ff' }) =>
 const App = () => {
   const [modalOpen, setModalOpen] = React.useState(false);
 
-  const openModal = () => setModalOpen(true);
+  const [modalFocus, setModalFocus] = React.useState('');
+  const openModal = (focus) => { setModalFocus(typeof focus === 'string' ? focus : ''); setModalOpen(true); };
   const closeModal = () => setModalOpen(false);
 
   const pillars = [
@@ -1149,7 +1163,8 @@ const App = () => {
     id: 'nutrition',
     dark: true,
     bgImage: 'uploads/ChatGPT Image Apr 26, 2026, 03_20_32 PM.png',
-    imgPosition: 'center 25%',
+    imgPosition: 'center 55%',
+    tall: true,
     icon: <NutritionIcon color="rgba(255,255,255,0.75)" />,
     headline: 'Nutrition.',
     tagline: 'Food as a system.',
@@ -1163,22 +1178,21 @@ const App = () => {
       <Nav onSchedule={openModal} />
 
       <div style={{ paddingTop: 52 }}>
-        <Hero onSchedule={openModal} />
+        {window.HormoneSplitHero ? <window.HormoneSplitHero onSchedule={openModal} /> : <Hero onSchedule={openModal} />}
         <ScrollingBanner />
+        {window.HormoneSection && <window.HormoneSection onSchedule={openModal} />}
         <PillarTile {...pillars[0]} onSchedule={openModal} />
-        <ProductCatalog onSchedule={openModal} />
         <SectionDivider accent="#2997ff" />
         <PillarTile {...pillars[1]} onSchedule={openModal} />
         <SectionDivider accent="#2997ff" />
         <PillarTile {...pillars[2]} onSchedule={openModal} />
         <TrustBar />
-        <HowItWorks onSchedule={openModal} />
         <Quote />
         <FinalCTA onSchedule={openModal} />
         <Footer onSchedule={openModal} />
       </div>
 
-      {modalOpen && <ConsultationModal onClose={closeModal} />}
+      {modalOpen && <ConsultationModal onClose={closeModal} initialFocus={modalFocus} />}
     </div>);
 
 };

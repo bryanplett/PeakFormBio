@@ -24,6 +24,7 @@
 <script type="text/babel" src="recon-calculator.jsx"></script>
 <script type="text/babel" src="payment-instructions.jsx"></script>
 <script type="text/babel" src="recent-order.jsx?v=1"></script>
+<script type="text/babel" src="hormone-portal.jsx?v=1"></script>
 <script type="text/babel" src="pen-promo.jsx?v=5"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3676,6 +3677,12 @@ const Portal = ({ userId, onLogout }) => {
   }, [userId]);
   React.useEffect(() => { if (userId) loadNotifications(); }, [userId, loadNotifications]);
 
+  // TRT/HRT clients land on their Hormone Program tab.
+  const _pt = userData && userData.profile && userData.profile.portal_type;
+  React.useEffect(() => {
+    if ((_pt === 'hormone' || _pt === 'both') && activeTab === 'order') setActiveTab('hormone');
+  }, [_pt]);
+
   // Wrapper that marks notifications for a tab as read
   const switchTab = async (tabId) => {
     setActiveTab(tabId);
@@ -3905,8 +3912,12 @@ const Portal = ({ userId, onLogout }) => {
     setQuizSkipped(false);
   };
 
+  // Which portal this client sees: 'peptides' (default), 'hormone' (TRT/HRT
+  // replaces the store) or 'both'. Set per client in Admin → Clients → Portal.
+  const portalType = (userData && userData.profile && userData.profile.portal_type) || 'peptides';
   const tabs = [
-    { id: 'order',    label: 'Order Form',        icon: icons.order },
+    ...(portalType !== 'peptides' ? [{ id: 'hormone', label: 'Hormone Program', icon: icons.blood }] : []),
+    ...(portalType !== 'hormone' ? [{ id: 'order', label: 'Order Form', icon: icons.order }] : []),
     { id: 'history',  label: 'Purchase History',   icon: icons.history },
     { id: 'nutrition',label: 'Nutrition Plan',     icon: icons.nutrition },
     { id: 'workout',  label: 'Workout Plan',       icon: icons.workout },
@@ -4108,7 +4119,8 @@ const Portal = ({ userId, onLogout }) => {
         {window.RecentOrderPay && ['order', 'history'].includes(activeTab) && (
           <window.RecentOrderPay sb={sb} rawOrders={rawOrders} methods={payMethods} hideJustPlaced={activeTab === 'order'} />
         )}
-        {activeTab === 'order'     && <OrderForm userData={userData} onOrderPlaced={addOrder} />}
+        {activeTab === 'hormone'   && (window.HormoneProgram ? <window.HormoneProgram sb={sb} userData={userData} onGoTab={switchTab} /> : <EmptyState title="Hormone Program" message="Loading…" />)}
+        {activeTab === 'order' && portalType !== 'hormone' && <OrderForm userData={userData} onOrderPlaced={addOrder} />}
         {activeTab === 'history'   && <PurchaseHistory orders={userData.orders} />}
         {activeTab === 'nutrition' && (userData.nutrition
           ? <NutritionPlan plan={userData.nutrition} userId={userId} />

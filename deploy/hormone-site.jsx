@@ -1,0 +1,197 @@
+// hormone-site.jsx — public-site TRT / HRT pieces: split hero + program section.
+// Edit HORMONE_SITE below to change wording or add a starting price.
+
+const HORMONE_SITE = {
+  startingPrice: '',          // e.g. '$149/mo' — leave '' to hide the "Starting at" line
+  comingSoon: true,           // shows "Coming Soon" badges; set false when the program launches
+  sectionImage: 'assets/trt-doctor.png', // cut-out doctor photo (transparent PNG) shown on the right of "How it works" — '' hides it
+  heroImage: '',              // photo for the TRT/HRT slide, e.g. 'uploads/trt-hero.png' — '' uses the drafted background
+  steps: [
+    { n: '01', title: 'Intake questionnaire', body: 'Tell us about your symptoms, history and goals. It takes about ten minutes.' },
+    { n: '02', title: 'Lab work', body: 'A comprehensive hormone and health panel gives your provider a clear baseline.' },
+    { n: '03', title: 'Provider consultation', body: 'Review your results one-on-one with a licensed provider from our partner clinic.' },
+    { n: '04', title: 'Your protocol', body: 'If treatment is appropriate, your provider prescribes a plan built around your labs.' },
+    { n: '05', title: 'Ongoing monitoring', body: 'Follow-up labs and check-ins keep your levels on target and your plan adjusted.' },
+  ],
+  includes: ['Comprehensive baseline labs', 'Licensed provider consultation', 'Personalized protocol', 'Follow-up monitoring labs', 'Client portal with your plan, labs and resources'],
+};
+
+const hsEyebrow = { fontSize: 13, fontWeight: 600, color: '#2997ff', letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 16 };
+
+// Combined hero: large centered photo as the backdrop, TRT/HRT on the left,
+// peptides on the right. Photo edges fade into the page so it all reads as one.
+const ComingSoonBadge = ({ style, className }) => HORMONE_SITE.comingSoon ? (
+  <span className={className} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+    color: '#0a0a0a', background: '#2997ff', borderRadius: 999, padding: '7px 14px', boxShadow: '0 0 0 4px rgba(41,151,255,0.18)', ...style }}>
+    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#0a0a0a', opacity: 0.6 }} />Coming Soon
+  </span>
+) : null;
+
+const HormoneSplitHero = ({ onSchedule }) => {
+  const eyebrow = { fontSize: 13, fontWeight: 600, color: '#2997ff', letterSpacing: '0.10em', marginBottom: 18, textTransform: 'uppercase' };
+  const title = { fontSize: 'clamp(40px, 4.4vw, 66px)', fontWeight: 700, color: '#fff', lineHeight: 1.03, letterSpacing: '-0.04em', marginBottom: 20, textWrap: 'balance', textShadow: '0 2px 30px rgba(0,0,0,0.6)' };
+  const sub = { fontSize: 18, fontWeight: 300, color: 'rgba(255,255,255,0.75)', lineHeight: 1.55, letterSpacing: '-0.01em', marginBottom: 34, maxWidth: 420, textWrap: 'pretty' };
+  const primary = { padding: '14px 30px', fontSize: 17 };
+  const ghost = { padding: '13px 26px', fontSize: 16 };
+  const img = HORMONE_SITE.heroImage || 'uploads/ChatGPT Image Apr 26, 2026, 03_02_19 PM.png';
+
+  return (
+    <section className="hs-hero" style={{ position: 'relative', overflow: 'hidden', background: '#0a0a0a' }}>
+      <style>{`
+        .hs-bg{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(1250px,78vw);
+          -webkit-mask-image:linear-gradient(to right,transparent 0%,#000 26%,#000 74%,transparent 100%);
+                  mask-image:linear-gradient(to right,transparent 0%,#000 26%,#000 74%,transparent 100%)}
+        .hs-bg img{width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
+        .hs-bg::after{content:'';position:absolute;inset:0;background:
+          linear-gradient(to bottom,rgba(10,10,10,0.55) 0%,transparent 22%,transparent 70%,#0a0a0a 100%),
+          radial-gradient(ellipse at center,transparent 45%,rgba(10,10,10,0.35) 100%)}
+        .hs-wrap{position:relative;z-index:2;min-height:100vh;max-width:1560px;margin:0 auto;padding:96px 56px 80px;display:flex;flex-direction:column;justify-content:center}
+        .hs-grid{width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1.15fr) minmax(0,1fr);gap:40px;align-items:center}
+        .hs-col-r{text-align:right}
+        .hs-col-r .hs-btns{justify-content:flex-end}
+        .hs-col-r .hs-sub{margin-left:auto}
+        .hs-rule{width:44px;height:2px;background:#2997ff;border-radius:2px;margin-bottom:22px}
+        .hs-col-r .hs-rule{margin-left:auto}
+        @media (max-width:1050px){
+          .hs-bg{width:100%;-webkit-mask-image:none;mask-image:none;opacity:.35}
+          .hs-wrap{padding:88px 26px 64px}
+          .hs-grid{grid-template-columns:minmax(0,1fr);gap:56px}
+          .hs-spacer,.hs-logo-space{display:none!important}
+          .hs-col-r{text-align:left}
+          .hs-col-r .hs-btns{justify-content:flex-start}
+          .hs-col-r .hs-sub,.hs-col-r .hs-rule{margin-left:0}
+          .hs-logo{width:280px!important;margin-top:0!important;margin-bottom:56px!important}
+        }
+      `}</style>
+
+      <div className="hs-bg" aria-hidden="true"><img src={img} alt="" /></div>
+      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(40% 55% at 10% 55%, rgba(0,102,204,0.22) 0%, transparent 70%), radial-gradient(40% 55% at 90% 55%, rgba(0,102,204,0.22) 0%, transparent 70%)' }} />
+
+      <div className="hs-wrap">
+        <div className="hs-grid">
+          <div className="hs-col-l">
+            <img className="hs-logo" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
+              style={{ display: 'block', width: 420, maxWidth: '100%', height: 'auto', marginTop: -80, marginBottom: 96, filter: 'drop-shadow(0 6px 28px rgba(41,151,255,0.35))' }} />
+            <div className="hs-rule" />
+            <ComingSoonBadge style={{ marginBottom: 18 }} />
+            <p style={eyebrow}>Hormone Optimization · TRT / HRT</p>
+            <h1 style={title}>Feel like<br />yourself again.</h1>
+            <p className="hs-sub" style={sub}>Lab-guided hormone therapy for men and women, overseen by a licensed provider and built around your results.</p>
+            <div className="hs-btns" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button className="btn-primary" onClick={() => onSchedule('Hormone Therapy (TRT / HRT)')} style={primary}>{HORMONE_SITE.comingSoon ? 'Join the waitlist' : 'Book a consultation'}</button>
+              <a href="#hormone" className="btn-ghost-light" style={ghost}>How it works</a>
+            </div>
+            {HORMONE_SITE.startingPrice && (
+              <p style={{ marginTop: 20, fontSize: 15, color: 'rgba(255,255,255,0.6)' }}>Starting at <strong style={{ color: '#fff' }}>{HORMONE_SITE.startingPrice}</strong></p>
+            )}
+          </div>
+
+          <div className="hs-spacer" />
+
+          <div className="hs-col-r">
+            <img className="hs-logo hs-logo-space" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="" aria-hidden="true"
+              style={{ display: 'block', width: 420, maxWidth: '100%', height: 'auto', marginTop: -80, marginBottom: 96, visibility: 'hidden' }} />
+            <div className="hs-rule" />
+            <ComingSoonBadge className="hs-logo-space" style={{ marginBottom: 18, visibility: 'hidden' }} />
+            <p style={eyebrow}>Peptides · Fitness · Nutrition</p>
+            <h2 style={title}>Your health,<br />optimized.</h2>
+            <p className="hs-sub" style={sub}>Personalized plans built on evidence. Supplementation, fitness, and nutrition — tailored to you by fitness industry leaders.</p>
+            <div className="hs-btns" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button className="btn-primary" onClick={() => onSchedule('')} style={primary}>Request Information</button>
+              <a href="#supplementation" className="btn-ghost-light" style={ghost}>Explore peptides</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const HormoneSection = ({ onSchedule }) => (
+  <section id="hormone" style={{ background: '#000', color: '#f5f5f7', padding: '120px 24px', position: 'relative', overflow: 'hidden' }}>
+    {HORMONE_SITE.sectionImage && (
+      <div className="hs-doc" aria-hidden="true">
+        <div className="hs-doc-glow" />
+        <img src={HORMONE_SITE.sectionImage} alt="" />
+      </div>
+    )}
+    <style>{`
+      .hs-steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;max-width:calc(100% - min(560px,42vw) + 40px)}
+      .hs-steps>*{grid-column:span 2}
+      .hs-steps>*:nth-child(1){grid-column:1 / span 3}
+      .hs-steps>*:nth-child(2){grid-column:4 / span 3}
+      .hs-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+      .hs-doc{position:absolute;top:0;right:0;width:min(560px,42vw);height:100%;pointer-events:none;z-index:0}
+      .hs-doc-glow{position:absolute;right:-10%;top:4%;width:120%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(41,151,255,0.28) 0%,rgba(0,102,204,0.12) 40%,transparent 70%)}
+      .hs-doc img{position:absolute;top:40px;right:0;width:100%;max-height:min(980px,calc(100% - 40px));object-fit:contain;object-position:top right;
+        filter:drop-shadow(0 30px 60px rgba(0,0,0,0.6));-webkit-mask-image:linear-gradient(to bottom,#000 70%,transparent 100%);mask-image:linear-gradient(to bottom,#000 70%,transparent 100%)}
+      .hs-intro{max-width:640px}
+      @media (max-width:1150px){.hs-doc{width:min(460px,46vw);opacity:.95}.hs-intro{max-width:calc(100% - 46vw - 32px)}.hs-steps{max-width:100%}}
+      @media (max-width:900px){.hs-doc{position:relative;width:100%;height:auto;margin:-40px auto 36px;display:flex;justify-content:center}.hs-doc img{position:relative;top:0;width:min(360px,80%);max-height:none}.hs-doc-glow{right:auto;left:50%;top:0;width:min(420px,90%);transform:translateX(-50%)}.hs-intro{min-height:0}}
+      @media (max-width:1000px){.hs-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.hs-steps>*,.hs-steps>*:nth-child(1),.hs-steps>*:nth-child(2){grid-column:auto}}
+      @media (max-width:700px){.hs-steps,.hs-two{grid-template-columns:1fr}}
+      .hs-intro{min-height:360px}
+    `}</style>
+    <div style={{ maxWidth: 1180, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+      <div className="hs-intro">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 6 }}>
+        <p style={{ ...hsEyebrow, marginBottom: 0 }}>How it works</p>
+        <ComingSoonBadge />
+      </div>
+      <h2 style={{ fontSize: 'clamp(36px, 5vw, 60px)', fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.05, maxWidth: 760, marginBottom: 20, textWrap: 'balance' }}>
+        Hormone therapy, guided by your labs.
+      </h2>
+      <p style={{ fontSize: 19, fontWeight: 300, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, maxWidth: 640, marginBottom: 56 }}>
+        Low energy, poor sleep, stalled progress and low drive can all have hormonal causes. Our program starts with data and keeps checking it.
+      </p>
+      </div>
+
+      <div className="hs-steps">
+        {HORMONE_SITE.steps.map(s => (
+          <div key={s.n} style={{ background: '#161617', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '28px 24px' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#2997ff', marginBottom: 18 }}>{s.n}</div>
+            <h3 style={{ fontSize: 19, fontWeight: 600, letterSpacing: '-0.015em', marginBottom: 10 }}>{s.title}</h3>
+            <p style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>{s.body}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="hs-two">
+        <div style={{ background: '#161617', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '36px 32px' }}>
+          <h3 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 20 }}>What's included</h3>
+          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {HORMONE_SITE.includes.map(i => (
+              <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline', fontSize: 16, color: 'rgba(255,255,255,0.85)' }}>
+                <span style={{ color: '#2997ff', fontWeight: 700 }}>✓</span>{i}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div style={{ background: 'linear-gradient(160deg, #0d2a4a 0%, #0a0a0a 75%)', border: '1px solid rgba(41,151,255,0.25)', borderRadius: 20, padding: '36px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 28 }}>
+          <div>
+            <h3 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 12 }}>{HORMONE_SITE.comingSoon ? 'Launching soon' : 'Start with a consultation'}</h3>
+            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+              {HORMONE_SITE.comingSoon
+                ? 'Our hormone optimization program is almost ready. Join the waitlist and we\'ll reach out as soon as consultations open.'
+                : 'We\'ll walk you through labs, timelines and what to expect. Members get their full plan, lab results and resources in the PeakForm Bio client portal.'}
+            </p>
+            {HORMONE_SITE.startingPrice && (
+              <p style={{ marginTop: 18, fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>Starting at <strong style={{ color: '#fff', fontSize: 22 }}>{HORMONE_SITE.startingPrice}</strong></p>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <button className="btn-primary" onClick={() => onSchedule('Hormone Therapy (TRT / HRT)')} style={{ padding: '15px 30px', fontSize: 17 }}>{HORMONE_SITE.comingSoon ? 'Join the waitlist' : 'Book a consultation'}</button>
+            <a href="ClientPortal.html" className="btn-ghost-light" style={{ padding: '14px 26px', fontSize: 16 }}>Client login</a>
+          </div>
+        </div>
+      </div>
+
+      <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, marginTop: 28, maxWidth: 860 }}>
+        Prescriptions are issued only by a licensed provider through our partner clinic, after a consultation and lab review, and only when clinically appropriate. Individual results vary.
+      </p>
+    </div>
+  </section>
+);
+
+Object.assign(window, { HormoneSplitHero, HormoneSection, HORMONE_SITE });
