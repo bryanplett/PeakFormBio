@@ -41,18 +41,17 @@ const HormoneSplitHero = ({ onSchedule }) => {
         .hs-col-r{text-align:right}
         .hs-col-r .hs-btns{justify-content:flex-end}
         .hs-col-r .hs-sub{margin-left:auto}
-        .hs-logo-space{height:calc(320px * 0.723 - 56px + 36px)}
         .hs-rule{width:44px;height:2px;background:#2997ff;border-radius:2px;margin-bottom:22px}
         .hs-col-r .hs-rule{margin-left:auto}
         @media (max-width:1050px){
           .hs-bg{width:100%;-webkit-mask-image:none;mask-image:none;opacity:.35}
           .hs-wrap{padding:88px 26px 64px}
           .hs-grid{grid-template-columns:minmax(0,1fr);gap:56px}
-          .hs-spacer,.hs-logo-space{display:none}
+          .hs-spacer,.hs-logo-space{display:none!important}
           .hs-col-r{text-align:left}
           .hs-col-r .hs-btns{justify-content:flex-start}
           .hs-col-r .hs-sub,.hs-col-r .hs-rule{margin-left:0}
-          .hs-logo{width:240px!important;margin-top:0!important}
+          .hs-logo{width:280px!important;margin-top:0!important;margin-bottom:56px!important}
         }
       `}</style>
 
@@ -64,7 +63,7 @@ const HormoneSplitHero = ({ onSchedule }) => {
         <div className="hs-grid">
           <div className="hs-col-l">
             <img className="hs-logo" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="PeakForm Bio"
-              style={{ display: 'block', width: 320, height: 'auto', marginTop: -56, marginBottom: 36, filter: 'drop-shadow(0 6px 28px rgba(41,151,255,0.35))' }} />
+              style={{ display: 'block', width: 420, maxWidth: '100%', height: 'auto', marginTop: -80, marginBottom: 96, filter: 'drop-shadow(0 6px 28px rgba(41,151,255,0.35))' }} />
             <div className="hs-rule" />
             <p style={eyebrow}>Hormone Optimization · TRT / HRT</p>
             <h1 style={title}>Feel like<br />yourself again.</h1>
@@ -81,7 +80,8 @@ const HormoneSplitHero = ({ onSchedule }) => {
           <div className="hs-spacer" />
 
           <div className="hs-col-r">
-            <div className="hs-logo-space" aria-hidden="true" />
+            <img className="hs-logo hs-logo-space" src="1_5058098532557259934/PNG/VV/Asset 1@4x.png" alt="" aria-hidden="true"
+              style={{ display: 'block', width: 420, maxWidth: '100%', height: 'auto', marginTop: -80, marginBottom: 96, visibility: 'hidden' }} />
             <div className="hs-rule" />
             <p style={eyebrow}>Peptides · Fitness · Nutrition</p>
             <h2 style={title}>Your health,<br />optimized.</h2>
