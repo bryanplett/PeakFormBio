@@ -121,6 +121,7 @@ const HormoneSection = ({ onSchedule }) => (
       .hs-steps>*{grid-column:span 2}
       .hs-steps>*:nth-child(1){grid-column:1 / span 3}
       .hs-steps>*:nth-child(2){grid-column:4 / span 3}
+      .hs-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
       .hs-doc{position:absolute;top:0;right:0;width:min(560px,42vw);height:100%;pointer-events:none;z-index:0}
       .hs-doc-glow{position:absolute;right:-10%;top:4%;width:120%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(41,151,255,0.28) 0%,rgba(0,102,204,0.12) 40%,transparent 70%)}
       .hs-doc img{position:absolute;top:40px;right:0;width:100%;max-height:min(980px,calc(100% - 40px));object-fit:contain;object-position:top right;
@@ -128,7 +129,6 @@ const HormoneSection = ({ onSchedule }) => (
       .hs-intro{max-width:640px}
       @media (max-width:1150px){.hs-doc{width:min(460px,46vw);opacity:.95}.hs-intro{max-width:calc(100% - 46vw - 32px)}.hs-steps{max-width:100%}}
       @media (max-width:900px){.hs-doc{position:relative;width:100%;height:auto;margin:-40px auto 36px;display:flex;justify-content:center}.hs-doc img{position:relative;top:0;width:min(360px,80%);max-height:none}.hs-doc-glow{right:auto;left:50%;top:0;width:min(420px,90%);transform:translateX(-50%)}.hs-intro{min-height:0}}
-      .hs-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
       @media (max-width:1000px){.hs-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.hs-steps>*,.hs-steps>*:nth-child(1),.hs-steps>*:nth-child(2){grid-column:auto}}
       @media (max-width:700px){.hs-steps,.hs-two{grid-template-columns:1fr}}
       .hs-intro{min-height:360px}
