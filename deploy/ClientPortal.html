@@ -1508,7 +1508,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       const base = Number(userData?.id && window.getClientPrice ? window.getClientPrice(userData.id, key, p.name) : p.price);
       const price = Number(p.wsPrice) > 0 ? Number(p.wsPrice) : base;
       if (!(price > 0)) return;
-      out.push(`${p.name} — ${money(price)}`);
+      out.push(`${p.name} — $` + money(price));
     });
     return out;
   }, [userData?.profile?.pricelist, userData?.id, plReady]);
