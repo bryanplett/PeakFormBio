@@ -41,7 +41,7 @@
     tierKeys.forEach(tier => {
       (pricelists[tier]?.products || []).forEach(p => {
         if (!map.has(p.name)) {
-          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, hidden: p.hidden === true, kit5: p.kit5 ?? '', kit10: p.kit10 ?? '', kit5Hidden: p.kit5Hidden === true, kit10Hidden: p.kit10Hidden === true, prices: {} });
+          map.set(p.name, { _id: _rowSeq++, name: p.name, category: p.category || 'Other', public: p.public !== false, hidden: p.hidden === true, kit5: p.kit5 ?? '', kit10: p.kit10 ?? '', wsPrice: p.wsPrice ?? '', wsHidden: p.wsHidden === true, kit5Hidden: p.kit5Hidden === true, kit10Hidden: p.kit10Hidden === true, prices: {} });
           order.push(p.name);
         }
         const row = map.get(p.name);
@@ -51,6 +51,8 @@
         if (row.kit10 === '' && p.kit10 != null) row.kit10 = p.kit10;
         if (p.kit5Hidden) row.kit5Hidden = true;
         if (p.kit10Hidden) row.kit10Hidden = true;
+        if (row.wsPrice === '' && p.wsPrice != null) row.wsPrice = p.wsPrice;
+        if (p.wsHidden) row.wsHidden = true;
       });
     });
     return order.map(n => map.get(n));
@@ -68,7 +70,9 @@
         out[tier].products.push({ name, price: Number(raw), category: (row.category || '').trim() || 'Other', ...(row.public === false ? { public: false } : {}), ...(row.hidden ? { hidden: true } : {}),
           ...(row.kit5 !== '' && row.kit5 != null && !isNaN(Number(row.kit5)) ? { kit5: Number(row.kit5) } : {}),
           ...(row.kit10 !== '' && row.kit10 != null && !isNaN(Number(row.kit10)) ? { kit10: Number(row.kit10) } : {}),
-          ...(row.kit5Hidden ? { kit5Hidden: true } : {}), ...(row.kit10Hidden ? { kit10Hidden: true } : {}) });
+          ...(row.kit5Hidden ? { kit5Hidden: true } : {}), ...(row.kit10Hidden ? { kit10Hidden: true } : {}),
+          ...(row.wsPrice !== '' && row.wsPrice != null && !isNaN(Number(row.wsPrice)) ? { wsPrice: Number(row.wsPrice) } : {}),
+          ...(row.wsHidden ? { wsHidden: true } : {}) });
       });
     });
     return out;
@@ -415,6 +419,32 @@
                           </div>
                         );
                       }))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Lab Supplies — sold individually in the Wholesale store */}
+                {groupedBase.filter(g => /lab suppl|accessor/i.test(g.category || '')).map(group => (
+                  <div key={'ws-' + group.category}>
+                    <h3 style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '4px 4px 4px' }}>{group.category}</h3>
+                    <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', margin: '0 4px 8px' }}>Sold individually. Leave the price blank to use the Retail price.</p>
+                    <div className="card" style={{ padding: 8, display: 'grid', gap: 2 }}>
+                      {group.items.filter(r => (r.name || '').trim()).map(r => {
+                        const off = r.hidden || r.wsHidden;
+                        const retail = unitFor(r);
+                        const retailTxt = retail > 0 ? '$' + retail : '—';
+                        return (
+                          <div key={r._id + '-ws'} className="plm-row" style={{ padding: '4px 8px', gridTemplateColumns: kitGridCols, opacity: off ? 0.45 : 1 }}>
+                            <span style={{ fontSize: 13.5, color: '#ededef' }}>{r.name}</span>
+                            <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', textAlign: 'right' }}>{retailTxt}</span>
+                            <label title={r.hidden ? 'Hidden in Retail too — turn on Store in the Retail tab first' : 'Show in the Wholesale store'} style={{ display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={!off} disabled={r.hidden} onChange={e => patchRow(r._id, { wsHidden: !e.target.checked })} />
+                            </label>
+                            <div style={{ justifySelf: 'end' }}>{priceField(r.wsPrice, v => patchRow(r._id, { wsPrice: v }), retail > 0 ? String(retail) : '—', 100)}</div>
+                            <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.4)', textAlign: 'right' }}>{retailTxt}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

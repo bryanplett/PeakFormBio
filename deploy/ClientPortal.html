@@ -1499,6 +1499,15 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
         out.push(label);
       });
     });
+    // Lab Supplies are sold individually on the Wholesale side.
+    // wsPrice = wholesale override; blank uses the normal price. wsHidden hides it here only.
+    ((pl && pl.products) || []).forEach(p => {
+      if (!p || p.hidden || p.wsHidden || !/lab suppl|accessor/i.test(p.category || '')) return;
+      const base = Number(userData?.id && window.getClientPrice ? window.getClientPrice(userData.id, key, p.name) : p.price);
+      const price = Number(p.wsPrice) > 0 ? Number(p.wsPrice) : base;
+      if (!(price > 0)) return;
+      out.push(`${p.name} — ${money(price)}`);
+    });
     return out;
   }, [userData?.profile?.pricelist, userData?.id, plReady]);
 
@@ -2230,7 +2239,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       </div>
       {storeMode === 'wholesale' && (
         <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)', marginBottom: 20, textWrap: 'pretty' }}>
-          Peptides by the kit: <strong style={{ color: '#f5f5f7' }}>5 Vials</strong> at 30% off, or <strong style={{ color: '#f5f5f7' }}>10 Vials</strong> at 50% off the single-vial price.
+          Lab supplies are sold individually below. Peptides by the kit: <strong style={{ color: '#f5f5f7' }}>5 Vials</strong> at 30% off, or <strong style={{ color: '#f5f5f7' }}>10 Vials</strong> at 50% off the single-vial price.
         </p>
       )}
       {storeMode === 'retail' && <div style={{ height: 10 }} />}
