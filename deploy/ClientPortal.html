@@ -1689,6 +1689,8 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     if (!isPickup) {
       if (!trimmedAddress) errs.address = 'Shipping address is required.';
       else if (trimmedAddress.length < 8) errs.address = 'Please enter a complete shipping address.';
+      else if (shippingMethod === 'Regular Shipping ($7)' && /\b(hawaii|alaska)\b/i.test(trimmedAddress) || (shippingMethod === 'Regular Shipping ($7)' && /\b(96[78]\d{2}|99[5-9]\d{2})\b/.test(trimmedAddress)))
+        errs.shipping = 'Orders to Hawaii or Alaska must use Priority Shipping.';
     }
     if (isLocalDelivery && !deliveryCity) errs.deliveryCity = 'Please choose your city.';
     if (isPickup && !pickupForm) errs.pickupForm = 'Please choose premixed or powder form.';
@@ -2043,8 +2045,13 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     return { orig, eff: orig, discounted: false };
   };
 
+  // Hawaii / Alaska: Priority only. Detected from state name, HI/AK abbreviation, or ZIP (967–968 HI, 995–999 AK).
+  const addrIsHIAK = (a) => /\b(hawaii|alaska)\b/i.test(a || '')
+    || /(^|[\s,])(HI|AK|Hi|Ak)\.?([\s,]+\d{5}|\s*$|[\s,]*\n)/.test(a || '')
+    || /\b(96[78]\d{2}|99[5-9]\d{2})(-\d{4})?\b/.test(a || '');
+  const isHIAK = addrIsHIAK(shippingAddress);
   const SHIPPING_OPTIONS = [
-    !cartHasNasal && { value: 'Regular Shipping ($7)',   cost: 7,  label: 'Regular Shipping — $7' },
+    !cartHasNasal && !isHIAK && { value: 'Regular Shipping ($7)',   cost: 7,  label: 'Regular Shipping — $7' },
     !cartHasNasal && { value: 'Priority Shipping ($15)', cost: 15, label: 'Priority Shipping — $15' },
     !cartHasNasal && { value: 'Local Delivery (temperature controlled)', cost: 0, label: 'Local Delivery (temperature controlled)' },
     pickupSettings.sanJose && (!clientPickup || clientPickup.includes('sanJose')) && { value: 'Pickup San Jose', cost: 0, label: 'Pickup San Jose' },
@@ -2766,6 +2773,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   value={shippingAddress}
                   onChange={e => {
                     setShippingAddress(e.target.value);
+                    if (addrIsHIAK(e.target.value) && shippingMethod === 'Regular Shipping ($7)') setShippingMethod('Priority Shipping ($15)');
                     if (fieldErrors.address) setFieldErrors(prev => ({ ...prev, address: undefined }));
                   }}
                   aria-invalid={!!fieldErrors.address}
@@ -2777,6 +2785,11 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                 {fieldErrors.address && (
                   <p style={{ fontSize: 12, color: '#ff8a8a', marginTop: 6, letterSpacing: '-0.1px' }}>
                     {fieldErrors.address}
+                  </p>
+                )}
+                {isHIAK && !isPickup && !isLocalDelivery && (
+                  <p style={{ fontSize: 12.5, color: '#ff9f0a', marginTop: 6 }}>
+                    Orders shipping to Hawaii or Alaska must use Priority Shipping ($15).
                   </p>
                 )}
               </div>
