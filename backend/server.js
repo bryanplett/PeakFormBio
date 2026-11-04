@@ -333,6 +333,50 @@ app.get('/api/admin/groupbuy-settings', async (req, res) => {
   }
 });
 
+// ── New-order email via Resend (ORDER_NOTIFY_EMAIL overrides the default) ───
+app.post('/api/public/order-notify', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const to = process.env.ORDER_NOTIFY_EMAIL || 'bryan@peakformbio.com';
+    const subject = String(b._subject || 'New Order').slice(0, 200);
+    const label = {
+      website_status: 'Website', order_reference: 'Order', client_name: 'Client', client_email: 'Email', client_phone: 'Phone',
+      payment_method: 'Payment', shipping_method: 'Pickup / shipping', shipping_address: 'Address', order_summary: 'Items',
+      total_items: 'Total items', subtotal: 'Subtotal', coupon_code: 'Coupon', shipping_cost: 'Shipping', order_total: 'Order total',
+      notes: 'Notes', submitted_at: 'Placed',
+    };
+    const text = Object.keys(label).filter(k => b[k] != null && b[k] !== '')
+      .map(k => k === 'order_summary' ? `${label[k]}:\n${b[k]}` : `${label[k]}: ${b[k]}`).join('\n');
+    const status = await faSendEmail(to, subject, text);
+    if (status !== 'sent') return res.status(502).json({ message: status });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// ── Order backups: orders whose save failed in the client portal ────────────
+app.post('/api/public/order-backup', async (req, res) => {
+  try {
+    const b = req.body || {};
+    await pool.query('INSERT INTO order_backups (reference, error, payload) VALUES ($1, $2, $3)',
+      [String(b.reference || ''), String(b.error || '').slice(0, 500), JSON.stringify(b)]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+app.get('/api/admin/order-backups', async (req, res) => {
+  try {
+    if (!(await faAdmin(req))) return res.status(403).json({ message: 'Admin access required.' });
+    const { rows } = await pool.query('SELECT * FROM order_backups WHERE restored = false ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+app.post('/api/admin/order-backups/:id/restored', async (req, res) => {
+  try {
+    if (!(await faAdmin(req))) return res.status(403).json({ message: 'Admin access required.' });
+    await pool.query('UPDATE order_backups SET restored = true WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 // ── Telegram Orders (public submit) ──────────────────────────────────────────
 app.post('/api/public/telegram-orders', async (req, res) => {
   try {
@@ -601,6 +645,19 @@ async function init() {
     console.log('inquiries table ensured.');
   } catch (err) {
     console.error('inquiries setup error:', err.message);
+  }
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS order_backups (
+      id         SERIAL PRIMARY KEY,
+      reference  TEXT,
+      error      TEXT,
+      payload    JSONB NOT NULL,
+      restored   BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );`);
+    console.log('order_backups table ensured.');
+  } catch (err) {
+    console.error('order_backups setup error:', err.message);
   }
 
   const adminEmail = process.env.ADMIN_EMAIL;
