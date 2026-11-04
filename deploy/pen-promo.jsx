@@ -25,9 +25,9 @@
   ];
 
   const penS = {
-    overlay: { position: 'fixed', inset: 0, zIndex: 950, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflowY: 'auto' },
-    modal: { position: 'relative', width: '100%', maxWidth: 640, background: '#161617', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 22, padding: '32px 28px 26px', color: '#f5f5f7', boxShadow: '0 30px 80px rgba(0,0,0,0.6)' },
-    close: { position: 'absolute', top: 14, right: 14, width: 34, height: 34, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)', fontSize: 18, cursor: 'pointer', fontFamily: 'inherit' },
+    overlay: { position: 'fixed', inset: 0, zIndex: 950, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' },
+    modal: { position: 'relative', width: '100%', maxWidth: 640, margin: 'auto 0', background: '#161617', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 22, padding: '32px 28px 26px', color: '#f5f5f7', boxShadow: '0 30px 80px rgba(0,0,0,0.6)' },
+    close: { position: 'sticky', top: 0, float: 'right', marginTop: -18, marginRight: -14, zIndex: 3, width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)', fontSize: 18, cursor: 'pointer', fontFamily: 'inherit' },
     badge: { display: 'inline-block', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#2997ff', background: 'rgba(41,151,255,0.12)', border: '1px solid rgba(41,151,255,0.3)', borderRadius: 999, padding: '4px 12px', marginBottom: 14 },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14, marginTop: 24 },
     card: { display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, overflow: 'hidden' },
@@ -35,7 +35,16 @@
 
   const PenPromoModal = ({ onClose, onAdd }) => (
     <div style={penS.overlay} onClick={onClose}>
-      <div style={penS.modal} onClick={e => e.stopPropagation()} role="dialog" aria-label="New pen injectors">
+      <style>{`
+        @media (max-width: 600px) {
+          .pen-promo-modal { padding: 22px 16px 18px !important; border-radius: 18px !important; }
+          .pen-promo-modal h2 { font-size: 22px !important; }
+          .pen-promo-card { flex-direction: row !important; }
+          .pen-promo-card .pen-promo-img { aspect-ratio: auto !important; width: 96px; flex-shrink: 0; }
+          .pen-promo-card ul { display: none; }
+        }
+      `}</style>
+      <div className="pen-promo-modal" style={penS.modal} onClick={e => e.stopPropagation()} role="dialog" aria-label="New pen injectors">
         <button type="button" style={penS.close} onClick={onClose} aria-label="Close">×</button>
         <span style={penS.badge}>New at PeakFormBio</span>
         <h2 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 10 }}>Peptide pen injectors are here</h2>
@@ -44,8 +53,8 @@
         </p>
         <div style={penS.grid}>
           {PENS.map(p => (
-            <div key={p.id} style={penS.card}>
-              <div style={{ aspectRatio: '4 / 3', background: p.imgBg }}>
+            <div key={p.id} className="pen-promo-card" style={penS.card}>
+              <div className="pen-promo-img" style={{ aspectRatio: '4 / 3', background: p.imgBg }}>
                 <img src={p.img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
               </div>
               <div style={{ padding: '16px 16px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
