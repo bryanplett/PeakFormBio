@@ -1813,8 +1813,12 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
           }
         } catch (e) { console.warn('One-time coupon re-check failed:', e); }
       }
+      let saveError = '';
+      const backupRows = [];
       try {
-        const { data: { user } } = await sb.auth.getUser();
+        let { data: { user } } = await sb.auth.getUser();
+        // Expired session: fall back to the profile already loaded on the page.
+        if (!user && userData && userData.id) user = { id: userData.id };
         if (user) {
           for (const rawItem of snap.cart) {
             // Wholesale kits are saved as their vials (e.g. 1 kit of 10 → 10×
@@ -1837,6 +1841,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
               coupon_code:      snap.couponCodeToStore,
               order_reference:  snap.reference,
             };
+            backupRows.push({ ...orderDetails, product: item.label, quantity: item.qty });
             const tryInsert = (lineCols) =>
               sb.from('orders').insert({ ...orderDetails, ...lineCols }).select().single();
 
@@ -1864,10 +1869,31 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
             insertedOrders.push(data);
           }
         } else {
+          saveError = 'Not signed in (session expired)';
           console.warn('Order placed without a signed-in user; skipping DB insert.');
         }
       } catch (err) {
+        saveError = (err && (err.message || err.error)) || String(err);
         console.error('Order insert failed:', err);
+      }
+      // If anything failed to save, send the full order to the server's backup
+      // so it can be restored from Admin → All Orders.
+      const savedAll = !saveError && insertedOrders.length === snap.cart.length;
+      if (!savedAll) {
+        if (!saveError) saveError = `Only ${insertedOrders.length} of ${snap.cart.length} items saved`;
+        try {
+          const savedIds = new Set(insertedOrders.map(o => o && o.product));
+          await fetch('/api/public/order-backup', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              reference: snap.reference, error: saveError,
+              client_id: userData?.id || null, client_email: userData?.email || '', client_name: userData?.name || '',
+              rows: backupRows.filter(r => !savedIds.has(r.product)),
+              cart: snap.cart,
+              order: { payment_method: snap.paymentMethodLabel, shipping_method: snap.shippingMethodFinal || null, shipping_address: snap.shippingAddress, shipping_cost: snap.shippingCost, phone_at_order: snap.phone, coupon_code: snap.couponCodeToStore, notes: snap.notes || null, order_reference: snap.reference, status: 'pending' },
+            }),
+          });
+        } catch (e) { console.error('Order backup failed:', e); }
       }
 
       if (insertedOrders.length && typeof window.decrementInventoryForOrder === 'function') {
@@ -1884,11 +1910,9 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
       try {
         const summary = snap.cart.map(it => `• ${it.label} × ${it.qty}`).join('\n');
         const totalItems = snap.cart.reduce((s, it) => s + it.qty, 0);
-        await fetch('https://formspree.io/f/mnjwvgan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({
-            _subject: `New Order: ${snap.cart.length} item${snap.cart.length > 1 ? 's' : ''} (${totalItems} total)`,
+        const notifyPayload = {
+            _subject: `${savedAll ? '' : '⚠ NOT SAVED TO WEBSITE — '}New Order: ${snap.cart.length} item${snap.cart.length > 1 ? 's' : ''} (${totalItems} total)`,
+            website_status: savedAll ? 'Saved to website' : `⚠ NOT SAVED TO WEBSITE (${saveError}). Restore it from Admin → All Orders.`,
             client_name: userData?.name && userData.name !== userData?.email ? userData.name : '(no name on file)',
             client_email: userData?.email || 'Unknown',
             client_phone: snap.phone || '(no phone on file)',
@@ -1905,8 +1929,23 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
             subtotal: `$${subtotalEffective.toFixed(2)}`,
             order_total: `$${snap.amountDue.toFixed(2)}`,
             submitted_at: new Date().toLocaleString(),
-          }),
-        });
+          };
+        let notified = false;
+        try {
+          const r = await fetch('/api/public/order-notify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(notifyPayload),
+          });
+          notified = r.ok;
+          if (!r.ok) console.warn('Resend order email failed, falling back to Formspree');
+        } catch (e) { console.warn('Resend order email error, falling back to Formspree', e); }
+        if (!notified) {
+          await fetch('https://formspree.io/f/mnjwvgan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(notifyPayload),
+          });
+        }
       } catch (err) {
         console.error('Notification failed:', err);
       }
