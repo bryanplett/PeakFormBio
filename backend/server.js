@@ -205,7 +205,7 @@ async function faSendEmail(to, subject, text) {
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'PeakFormBio <onboarding@resend.dev>', to: [to], subject, text }),
+    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'PeakFormBio <onboarding@resend.dev>', to: String(to).split(',').map(x => x.trim()).filter(Boolean), subject, text }),
   });
   return r.ok ? 'sent' : 'failed (' + (await r.text()).slice(0, 120) + ')';
 }
@@ -337,7 +337,8 @@ app.get('/api/admin/groupbuy-settings', async (req, res) => {
 app.post('/api/public/order-notify', async (req, res) => {
   try {
     const b = req.body || {};
-    const to = process.env.ORDER_NOTIFY_EMAIL || 'bryan@peakformbio.com';
+    // Uses your existing ADMIN_NOTIFY_EMAILS variable if set (comma-separated OK).
+    const to = process.env.ORDER_NOTIFY_EMAIL || process.env.ADMIN_NOTIFY_EMAILS || process.env.ADMIN_NOTIFY_EMAIL || 'bryan@peakformbio.com';
     const subject = String(b._subject || 'New Order').slice(0, 200);
     const label = {
       website_status: 'Website', order_reference: 'Order', client_name: 'Client', client_email: 'Email', client_phone: 'Phone',
