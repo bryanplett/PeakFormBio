@@ -15,6 +15,8 @@
 <script src="inventory-helper.js"></script>
 <script src="payment-config.js"></script>
 <script src="peptide-data.js"></script>
+<script src="peptide-specs.js?v=1"></script>
+<script type="text/babel" src="spec-card.jsx?v=2"></script>
 <script src="accessory-kits.js"></script>
 <script type="text/babel" src="weighin.jsx"></script>
 <script type="text/babel" src="onboarding-quiz.jsx"></script>
@@ -820,6 +822,7 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
   // share one card across multiple strengths (Semaglutide / Tirzepatide /
   // Retatrutide). When supplied, the card shows a strength selector and
   // adds the chosen variant — not `parsed.fullLabel` — to the cart.
+  if (window.usePeptideSpecs) window.usePeptideSpecs();
   const hasVariants = Array.isArray(variants) && variants.length > 0;
   const [selectedIdx, setSelectedIdx] = React.useState(0);
   const activeVariant = hasVariants ? variants[selectedIdx] : null;
@@ -906,6 +909,17 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
         transition: 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
       }}>
         {(() => {
+          // Peptides in the spec database (Admin → Spec Cards) show their spec card.
+          const specBase = kitInfo && kitInfo.base ? kitInfo.base : display.name;
+          const spec = window.findPeptideSpec && window.SpecCard ? window.findPeptideSpec(specBase) : null;
+          if (spec) {
+            const st = window.splitProductName(kitInfo && kitInfo.base ? kitInfo.base : `${display.name} — ${display.strength || ''}`).strength;
+            return (
+              <div style={{ width: 200, filter: active ? 'brightness(1.03)' : 'none', transition: 'filter 0.4s' }}>
+                <window.SpecCard spec={spec} strength={st} />
+              </div>
+            );
+          }
           const photo = getProductPhoto(display.fullLabel);
           if (photo) {
             return (

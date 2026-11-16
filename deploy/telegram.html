@@ -12,6 +12,8 @@
 <script src="api-client.js"></script>
 <script src="pricelists.js"></script>
 <script src="categories.js"></script>
+<script src="peptide-specs.js?v=1"></script>
+<script type="text/babel" src="spec-card.jsx?v=2"></script>
 <script src="payment-config.js"></script>
 <script type="text/babel" src="age-verification.jsx"></script>
 <style>
@@ -108,6 +110,8 @@ const Vial = ({ name, strength, tint, size = 120 }) => (
 const ProductCard = ({ product, inCart, onToggle, tint }) => {
   const { name, strength, price, fullLabel } = parseLabel(product.label);
   const photo = getPhoto(fullLabel);
+  if (window.usePeptideSpecs) window.usePeptideSpecs();
+  const spec = window.findPeptideSpec && window.SpecCard ? window.findPeptideSpec(name) : null;
   const [hover, setHover] = React.useState(false);
 
   return (
@@ -124,9 +128,13 @@ const ProductCard = ({ product, inCart, onToggle, tint }) => {
       }}
     >
       {/* Image area */}
-      <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 0', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ height: spec ? 260 : 180, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 0', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: '20% 10%', background: `radial-gradient(circle,${tint}44 0%,transparent 70%)`, opacity: hover || inCart ? 0.8 : 0, transition: 'opacity .4s', filter: 'blur(16px)', pointerEvents: 'none' }} />
-        {photo ? (
+        {spec ? (
+          <div style={{ height: '100%', aspectRatio: '746 / 1075', position: 'relative' }}>
+            <window.SpecCard spec={spec} strength={window.splitProductName(`${name} — ${strength || ''}`).strength} />
+          </div>
+        ) : photo ? (
           <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '32% center', borderRadius: 12, filter: hover ? 'brightness(1.05)' : 'brightness(0.95)', transition: 'filter .3s', position: 'relative' }} />
         ) : (
           <Vial name={name} strength={strength} tint={tint} size={110} />

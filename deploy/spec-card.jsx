@@ -160,5 +160,18 @@
     );
   };
 
+  // Re-render a component once the live spec database (Admin → Spec Cards) has
+  // loaded, so specs added in Admin show up without waiting for a reload.
+  window.usePeptideSpecs = function () {
+    const [, bump] = React.useState(0);
+    React.useEffect(() => {
+      if (!window.loadPeptideSpecs) return;
+      let alive = true;
+      window.loadPeptideSpecs().then(() => { if (alive) bump(n => n + 1); });
+      return () => { alive = false; };
+    }, []);
+    return window.PEPTIDE_SPECS;
+  };
+
   window.SpecCard = SpecCard;
 })();
