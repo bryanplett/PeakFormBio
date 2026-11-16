@@ -10,7 +10,7 @@
   const NON_PEPTIDE = /program|service|accessor|supplement|coaching|lab suppl|sports nutrition/i;
   const blank = () => ({ id: '', name: '', aliases: [], mw: '', formula: '', cas: '', form: '', tagline: '',
     description: '', highlights: '', purity: '', storage: '', sequence: '', synonyms: '', coaUrl: '',
-    clinicalStatus: '', mechanism: '', effects: '', sideEffects: '', warnings: '' });
+    clinicalStatus: '', mechanism: '', effects: '', sideEffects: '', warnings: '', shelfLife: '', handling: '' });
   const slug = (s) => String(s || '').toLowerCase().replace(/\+/g, '-plus').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   // Every pricelist product, grouped by base name → { base, category, strengths[] }
@@ -193,8 +193,11 @@
                 {area('Reported effects', 'effects', 'One per line', 'Each line becomes a bullet.', 4)}
                 {area('Possible side effects', 'sideEffects', 'One per line', 'Each line becomes a bullet.', 4)}
                 {area('Contraindications & warnings', 'warnings', 'One per line', 'Each line becomes a bullet with a warning marker.', 4)}
-                {field('Purity', 'purity', 'e.g. ≥99% (HPLC)')}
+                <div style={{ fontSize: 13.5, fontWeight: 600, margin: '18px 0 10px' }}>Handling &amp; storage</div>
                 {field('Storage', 'storage', 'e.g. Store at −20 °C, protected from light')}
+                {field('Shelf life', 'shelfLife', 'e.g. 24 months unopened')}
+                {area('Handling notes', 'handling', 'One per line', 'Each line becomes a bullet in the Handling & Storage section.', 3)}
+                {field('Purity', 'purity', 'e.g. ≥99% (HPLC)')}
                 {field('Sequence', 'sequence', 'Amino-acid sequence (optional)')}
                 {field('Synonyms', 'synonyms', 'Other names, comma separated')}
                 {field('Certificate of analysis link', 'coaUrl', 'https://…', 'Shows a "View certificate of analysis" link on the page.')}

@@ -127,7 +127,6 @@
       ['Synonyms', spec.synonyms],
       ['Form', spec.cas ? (spec.form || D.form) : spec.form],
       ['Purity', spec.purity],
-      ['Storage', spec.storage],
       ['Available strengths', options.length > 1 ? [...new Set(options.map(o => o.label).filter(Boolean))].join(' · ') : null],
     ].filter(r => r[1]) : [];
 
@@ -288,6 +287,12 @@
               ['Reported Effects', bullets(spec.effects, Dot)],
               ['Possible Side Effects', bullets(spec.sideEffects, Dot)],
               ['Contraindications & Warnings', bullets(spec.warnings, Warn)],
+              ['Handling & Storage', (spec.storage || spec.shelfLife || spec.handling) ? <>
+                {[['Storage', spec.storage], ['Shelf life', spec.shelfLife]].filter(r => r[1]).map(([k, v]) => (
+                  <div key={k} className="pp-row"><div className="pp-k">{k}</div><div className="pp-v">{v}</div></div>
+                ))}
+                {lines(spec.handling).length > 0 && <div style={{ marginTop: (spec.storage || spec.shelfLife) ? 14 : 0 }}>{bullets(spec.handling, Dot)}</div>}
+              </> : null],
             ].filter(([, body]) => body && (!Array.isArray(body) || body.length));
             return sections.map(([title, body]) => (
               <section key={title} className="pp-sec" style={title === 'Contraindications & Warnings' ? { borderColor: 'rgba(255,159,10,0.25)' } : null}>

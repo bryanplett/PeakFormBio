@@ -299,9 +299,10 @@ app.get('/api/public/peptide-specs', async (_req, res) => {
 const SPEC_FIELDS = ['id', 'name', 'aliases', 'mw', 'formula', 'cas', 'form', 'tagline', '_deleted',
   // Product page (Admin → Spec Cards → Product page). Free text written by the admin.
   'description', 'highlights', 'purity', 'storage', 'sequence', 'synonyms', 'coaUrl',
-  'clinicalStatus', 'mechanism', 'effects', 'sideEffects', 'warnings'];
+  'clinicalStatus', 'mechanism', 'effects', 'sideEffects', 'warnings', 'shelfLife', 'handling'];
 const SPEC_LIMITS = { description: 6000, highlights: 3000, sequence: 1000, synonyms: 600, coaUrl: 600,
-  clinicalStatus: 3000, mechanism: 6000, effects: 4000, sideEffects: 4000, warnings: 4000 };
+  clinicalStatus: 3000, mechanism: 6000, effects: 4000, sideEffects: 4000, warnings: 4000,
+  shelfLife: 300, handling: 3000 };
 app.post('/api/admin/peptide-specs', async (req, res) => {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
