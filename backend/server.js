@@ -38,14 +38,22 @@ app.get('/api/public/catalog', async (_req, res) => {
     if (!pricelists || typeof pricelists !== 'object') return res.json({ products: [] });
     const tier = pricelists.standard || Object.values(pricelists)[0] || { products: [] };
     const out = [];
-    const seen = new Set();
+    const byKey = new Map();
     for (const p of (tier.products || [])) {
       if (!p || p.public === false) continue;            // portal-only
-      const base = String(p.name || '').split(/[—–]/)[0].trim();  // strip strength
+      const [rawBase, rawStrength] = String(p.name || '').split(/[—–]/);
+      const base = (rawBase || '').trim();                // strip strength
       const key = base.toLowerCase();
-      if (!base || seen.has(key)) continue;
-      seen.add(key);
-      out.push({ name: base, category: p.category || '' });
+      if (!base) continue;
+      const strength = (rawStrength || '').trim();
+      if (byKey.has(key)) {                               // collect every strength (spec cards show them)
+        const entry = byKey.get(key);
+        if (strength && !entry.strengths.includes(strength)) entry.strengths.push(strength);
+        continue;
+      }
+      const entry = { name: base, category: p.category || '', strengths: strength ? [strength] : [] };
+      byKey.set(key, entry);
+      out.push(entry);
     }
     res.json({ products: out });
   } catch (err) {
@@ -272,6 +280,54 @@ app.post('/api/admin/fulfillment/assign', async (req, res) => {
     await faSet('fulfillment_assignments', all);
     res.json({ ok: true, emailStatus, smsStatus });
   } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// ── Peptide spec database (Admin → Catalog → Spec Cards) ────────────────────
+// Drives the auto-generated product spec cards on the public catalog. Stored as
+// one JSON array in app_settings ('peptide_specs'); entries override the bundled
+// seed in deploy/peptide-specs.js by id. Public read is safe: chemistry data only.
+app.get('/api/public/peptide-specs', async (_req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT value FROM app_settings WHERE key = 'peptide_specs'");
+    const v = rows[0]?.value;
+    res.json({ specs: Array.isArray(v) ? v : [] });
+  } catch (e) {
+    res.json({ specs: [] });                              // never break the public page
+  }
+});
+
+const SPEC_FIELDS = ['id', 'name', 'aliases', 'mw', 'formula', 'cas', 'form', 'tagline', '_deleted'];
+app.post('/api/admin/peptide-specs', async (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  try {
+    const jwt = await import('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'change-me-in-production';
+    const user = jwt.default.verify(token, secret);
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
+    const specs = Array.isArray(req.body?.specs) ? req.body.specs : null;
+    if (!specs) return res.status(400).json({ message: 'specs array required' });
+    const clean = specs
+      .filter(s => s && typeof s.id === 'string' && s.id.trim())
+      .map(s => {
+        const o = {};
+        for (const k of SPEC_FIELDS) {
+          if (s[k] === undefined) continue;
+          if (k === 'aliases') o[k] = Array.isArray(s[k]) ? s[k].map(a => String(a).slice(0, 60)).slice(0, 20) : [];
+          else if (k === '_deleted') o[k] = !!s[k];
+          else o[k] = String(s[k]).slice(0, 200);
+        }
+        return o;
+      });
+    await pool.query(
+      `INSERT INTO app_settings (key, value) VALUES ('peptide_specs', $1)
+       ON CONFLICT (key) DO UPDATE SET value = $1`,
+      [JSON.stringify(clean)]
+    );
+    res.json({ ok: true, count: clean.length });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
 });
 
 // Read settings (admin auth required)
