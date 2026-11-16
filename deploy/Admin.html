@@ -36,6 +36,9 @@
 <script type="text/babel" src="referrals-report.jsx"></script>
 <script src="recon-presets.js"></script>
 <script type="text/babel" src="recon-presets-manager.jsx"></script>
+<script src="peptide-specs.js?v=1"></script>
+<script type="text/babel" src="spec-card.jsx?v=1"></script>
+<script type="text/babel" src="peptide-specs-manager.jsx?v=1"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -2084,11 +2087,13 @@ const App = () => {
   const [showFulfillmentBoard, setShowFulfillmentBoard] = React.useState(false);
   const [showReferrals, setShowReferrals] = React.useState(false);
   const [showReconGuide, setShowReconGuide] = React.useState(false);
+  const [showSpecCards, setShowSpecCards] = React.useState(false);
   const [newInquiries, setNewInquiries] = React.useState(0);
   const [newOrders, setNewOrders] = React.useState(0);
   const [newTelegramOrders, setNewTelegramOrders] = React.useState(0);
 
   const clearViews = () => {
+    setShowSpecCards(false);
     setShowPickup(false);
     setShowBuilder(false);
     setShowCalculator(false);
@@ -2179,6 +2184,7 @@ const App = () => {
           ]} />
           <NavGroup label="Catalog" options={[
             { label: 'Pricelist', onClick: () => { clearViews(); setShowPricelist(true); } },
+            { label: 'Spec Cards', onClick: () => { clearViews(); setShowSpecCards(true); } },
             { label: 'Coupons', onClick: () => { clearViews(); setShowCoupons(true); } },
           ]} />
           <NavGroup label="Client Tools" options={[
@@ -2207,6 +2213,8 @@ const App = () => {
           ? <MacrosCalculator sb={sb} clients={clients} onBack={() => setShowCalculator(false)} />
           : showPayments && window.PaymentSettings
           ? <window.PaymentSettings sb={sb} onBack={() => setShowPayments(false)} />
+          : showSpecCards && window.PeptideSpecsManager
+          ? <window.PeptideSpecsManager onBack={() => setShowSpecCards(false)} />
           : showPricelist && window.PricelistManager
           ? <window.PricelistManager sb={sb} clients={clients} onBack={() => setShowPricelist(false)} />
           : showRecipes

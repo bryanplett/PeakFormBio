@@ -5,12 +5,16 @@
 // to the bundled pricelist if the feed is unavailable or not yet migrated.
 // Exports: ProductCatalog
 
-// ── Build [{id,title,tint,blurb,products:[{name,photo}]}] from a product list ──
-function buildCatalogData(products) {
+// ── Build [{id,title,tint,blurb,products:[{name,photo,strength,spec}]}] from a product list ──
+// Strength variants collapse into one tile; their strengths are kept so the spec
+// card can show them ("10 / 30 MG"). A product whose base name matches an entry in
+// the peptide spec database (peptide-specs.js / Admin → Spec Cards) renders as a
+// spec card automatically; anything else keeps its photo.
+function buildCatalogData(products, specs) {
   const cats = window.CATALOG_CATEGORIES || [];
   const buckets = {};
   cats.forEach(c => { buckets[c.title] = { id: c.id, title: c.title, tint: c.tint, blurb: c.blurb, products: [] }; });
-  const seen = new Set();
+  const byKey = {};
   (products || []).forEach(p => {
     if (p.public === false) return;                 // portal-only
     const cat = window.resolveCategory ? window.resolveCategory(p.name, p.category) : p.category;
@@ -18,10 +22,25 @@ function buildCatalogData(products) {
     if (!bucket) return;                            // unknown category → skip
     const base = window.baseProductName ? window.baseProductName(p.name) : p.name;
     const key = bucket.id + '|' + base.toLowerCase();
-    if (seen.has(key)) return;                      // dedupe strength variants
-    seen.add(key);
-    bucket.products.push({ name: base, photo: window.getProductPhoto ? window.getProductPhoto(base) : null });
+    const strengths = (p.strengths && p.strengths.length ? p.strengths : [String(p.name || '').split(/[—–]/)[1]])
+      .map(x => window.splitProductName ? window.splitProductName('x — ' + (x || '')).strength : (x || '').trim())
+      .filter(Boolean);
+    if (byKey[key]) {                               // dedupe strength variants
+      strengths.forEach(x => { if (!byKey[key].strengths.includes(x)) byKey[key].strengths.push(x); });
+      return;
+    }
+    const entry = {
+      name: base,
+      photo: window.getProductPhoto ? window.getProductPhoto(base) : null,
+      spec: window.findPeptideSpec ? window.findPeptideSpec(base, specs) : null,
+      strengths,
+    };
+    byKey[key] = entry;
+    bucket.products.push(entry);
   });
+  cats.forEach(c => buckets[c.title].products.forEach(p => {
+    p.strength = window.joinStrengths ? window.joinStrengths(p.strengths) : (p.strengths[0] || '');
+  }));
   return cats.map(c => buckets[c.title]).filter(b => b.products.length);
 }
 
@@ -79,7 +98,7 @@ const VialMark = ({ name, strength, tint, size = 140 }) => (
 );
 
 // ─── Self-contained product card (full Canva art, no crop) ──────────────────
-const RevealCard = ({ product, tint, onSchedule }) => {
+const RevealCard = ({ product, tint, onSchedule, portrait }) => {
   const [hover, setHover] = React.useState(false);
   return (
     <div
@@ -87,10 +106,10 @@ const RevealCard = ({ product, tint, onSchedule }) => {
       onMouseLeave={() => setHover(false)}
       style={{
         position: 'relative',
-        aspectRatio: '1 / 1',
-        borderRadius: 20,
-        background: '#0f0f10',
-        border: `1px solid ${hover ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)'}`,
+        aspectRatio: product.spec ? '746 / 1075' : (portrait ? '746 / 1075' : '1 / 1'),
+        borderRadius: product.spec ? 'calc(40 / 746 * 100%) / calc(40 / 1075 * 100%)' : 20,
+        background: product.spec ? 'transparent' : '#0f0f10',
+        border: product.spec ? 'none' : `1px solid ${hover ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)'}`,
         cursor: 'pointer', overflow: 'hidden',
         transform: hover ? 'translateY(-6px)' : 'translateY(0)',
         boxShadow: hover
@@ -98,7 +117,15 @@ const RevealCard = ({ product, tint, onSchedule }) => {
           : '0 2px 10px rgba(0,0,0,0.4)',
         transition: 'transform 0.45s cubic-bezier(0.22,1,0.36,1), box-shadow 0.45s, border-color 0.3s',
       }}>
-      {product.photo ? (
+      {product.spec && window.SpecCard ? (
+        <div style={{
+          width: '100%', height: '100%',
+          transform: hover ? 'scale(1.02)' : 'scale(1)',
+          transition: 'transform 0.6s cubic-bezier(0.22,1,0.36,1)',
+        }}>
+          <window.SpecCard spec={product.spec} strength={product.strength} />
+        </div>
+      ) : product.photo ? (
         <img
           src={product.photo}
           alt={product.strength ? `${product.name} ${product.strength}` : product.name}
@@ -160,7 +187,8 @@ const CategorySection = ({ category, onSchedule }) => (
       gap: 20,
     }}>
       {category.products.map(p => (
-        <RevealCard key={p.name} product={p} tint={category.tint} onSchedule={onSchedule} />
+        <RevealCard key={p.name} product={p} tint={category.tint} onSchedule={onSchedule}
+          portrait={category.products.some(x => x.spec)} />
       ))}
     </div>
   </div>
@@ -169,6 +197,21 @@ const CategorySection = ({ category, onSchedule }) => (
 // ─── Catalog component ──────────────────────────────────────────────────────
 const ProductCatalog = ({ onSchedule }) => {
   const [catalog, setCatalog] = React.useState(() => buildCatalogData(bundledProducts()));
+  const productsRef = React.useRef(bundledProducts());
+  const specsRef = React.useRef(window.PEPTIDE_SPECS || null);
+
+  // Pull the live spec database (Admin → Spec Cards); re-render tiles once it lands.
+  React.useEffect(() => {
+    if (!window.loadPeptideSpecs) return;
+    let cancelled = false;
+    window.loadPeptideSpecs().then(specs => {
+      if (cancelled) return;
+      specsRef.current = specs;
+      const next = buildCatalogData(productsRef.current, specs);
+      if (next.length) setCatalog(next);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Overlay the LIVE public feed so Admin category edits show here. The feed
   // returns public products only ([{ name, category }]). We adopt it only when
@@ -180,11 +223,11 @@ const ProductCatalog = ({ onSchedule }) => {
       .then(r => (r && r.ok) ? r.json() : null)
       .then(data => {
         if (cancelled || !data || !Array.isArray(data.products) || !data.products.length) return;
-        const feed = data.products.map(p => ({ name: p.name, category: p.category, public: true }));
+        const feed = data.products.map(p => ({ name: p.name, category: p.category, strengths: p.strengths || [], public: true }));
         const known = feed.filter(p => window.getCategoryMeta && window.getCategoryMeta(window.resolveCategory ? window.resolveCategory(p.name, p.category) : p.category));
         if (known.length && known.length >= feed.length * 0.6) {
-          const next = buildCatalogData(known);
-          if (next.length) setCatalog(next);
+          const next = buildCatalogData(known, specsRef.current);
+          if (next.length) { productsRef.current = known; setCatalog(next); }
         }
       })
       .catch(() => {});

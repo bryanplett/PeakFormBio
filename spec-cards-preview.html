@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spec Cards — Preview</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script>
+  // Preview only: serve card art from deploy/, and stub the spec API with localStorage.
+  window.SPEC_CARD_ASSET_BASE = 'deploy/assets/spec-card/';
+  localStorage.setItem('_pfb_token', 'preview');
+  (function () {
+    const realFetch = window.fetch.bind(window);
+    const KEY = 'pfb_preview_peptide_specs';
+    const json = (o, status) => Promise.resolve(new Response(JSON.stringify(o), { status: status || 200, headers: { 'Content-Type': 'application/json' } }));
+    window.fetch = (url, opts) => {
+      const u = String(url);
+      if (u.startsWith('/api/public/peptide-specs')) return json({ specs: JSON.parse(localStorage.getItem(KEY) || '[]') });
+      if (u.startsWith('/api/admin/peptide-specs')) {
+        const body = JSON.parse((opts && opts.body) || '{}');
+        localStorage.setItem(KEY, JSON.stringify(body.specs || []));
+        return json({ ok: true, count: (body.specs || []).length });
+      }
+      if (u.startsWith('/api/public/catalog')) return json({ products: [] });   // use bundled pricelist
+      return realFetch(url, opts);
+    };
+  })();
+</script>
+<script src="deploy/categories.js"></script>
+<script src="deploy/pricelists.js"></script>
+<script src="deploy/peptide-specs.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: #0a0a0a; color: #f5f5f7; -webkit-font-smoothing: antialiased; }
+  .field-input { width: 100%; border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 11px 14px; font-size: 15px; color: #f5f5f7; background: rgba(255,255,255,0.06); outline: none; }
+  .field-input:focus { border-color: #2997ff; box-shadow: 0 0 0 3px rgba(41,151,255,0.14); }
+  .btn-ghost { background: transparent; color: #2997ff; border: 1px solid rgba(41,151,255,0.5); border-radius: 980px; padding: 9px 18px; font-size: 14px; cursor: pointer; }
+  .banner { background: #161617; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px 24px; font-size: 13px; color: rgba(255,255,255,0.6); }
+  .tabs { display: flex; gap: 4px; padding: 0 24px; border-bottom: 1px solid rgba(255,255,255,0.08); background: #0f0f10; }
+  .tabs button { background: none; border: none; color: rgba(255,255,255,0.5); padding: 12px 16px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tabs button.on { color: #fff; border-bottom-color: #2997ff; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="banner">Preview — spec cards built from the peptide spec database. Admin edits here save to this browser only (localStorage stub).</div>
+<div id="root"></div>
+<script type="text/babel" src="deploy/spec-card.jsx"></script>
+<script type="text/babel" src="deploy/catalog.jsx"></script>
+<script type="text/babel" src="deploy/peptide-specs-manager.jsx"></script>
+<script type="text/babel">
+  const App = () => {
+    const [tab, setTab] = React.useState(location.hash === '#admin' ? 'admin' : 'catalog');
+    return (
+      <>
+        <div className="tabs">
+          <button className={tab === 'catalog' ? 'on' : ''} onClick={() => setTab('catalog')}>Website catalog</button>
+          <button className={tab === 'admin' ? 'on' : ''} onClick={() => setTab('admin')}>Admin → Spec Cards</button>
+        </div>
+        {tab === 'catalog'
+          ? <window.ProductCatalog onSchedule={() => {}} />
+          : <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px 80px' }}><window.PeptideSpecsManager /></div>}
+      </>
+    );
+  };
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
