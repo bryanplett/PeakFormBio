@@ -80,6 +80,35 @@
   };
   global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (CLINICAL_STATUS[s.id] && !s.clinicalStatus) s.clinicalStatus = CLINICAL_STATUS[s.id]; });
 
+
+  // Mechanism of Action for each product page, copied from the Peptide Library
+  // (peptide-data.js "mechanism"). Edit per product in Admin → Product Pages.
+  var MECHANISM = {
+    "bpc-157": "Modulates the nitric-oxide system, promotes angiogenesis (new blood-vessel formation), upregulates growth-hormone receptor expression, and interacts with the dopaminergic system. Animal work reports accelerated tendon-, ligament-, and gut-tissue repair.",
+    "tb-500": "Regulates actin, a cell-building protein, promoting cell migration, blood-vessel growth, and tissue remodeling. Animal studies report improved wound healing and reduced inflammation/scarring.",
+    "selank": "Synthetic analog of the immunomodulatory peptide tuftsin; modulates GABA, serotonin, and BDNF pathways and stabilizes enkephalins.",
+    "semax": "ACTH(4-10) analog that raises BDNF and NGF, modulates dopamine/serotonin, and is studied for neuroprotection.",
+    "kpv": "Tripeptide fragment of α-MSH with intracellular anti-inflammatory action (NF-κB modulation); studied for gut and skin inflammation.",
+    "dsip": "A neuromodulatory peptide that may promote delta-wave (deep) sleep and has been studied for stress, pain, and hormonal regulation.",
+    "ss-31": "Concentrates in the inner mitochondrial membrane, stabilizing cardiolipin to improve mitochondrial energy production and reduce oxidative damage.",
+    "cjc-1295-dac": "GHRH analog modified with a DAC group that binds serum albumin, sustaining GHRH activity for days and creating a continuous \"GH bleed\" rather than discrete pulses.",
+    "5-amino-1mq": "Blocks the enzyme NNMT in fat cells, raising cellular NAD+ and SAM and promoting fat-cell metabolism — without acting on appetite.",
+    "snap-8": "A peptide that competes with the SNARE complex involved in neurotransmitter release at the neuromuscular junction, gently reducing muscle contraction that causes expression lines.",
+    "pt-141": "Melanocortin-receptor (MC4R) agonist that acts centrally on sexual-desire pathways rather than on blood flow.",
+    "mots-c": "Mitochondrial-encoded peptide that activates AMPK and improves insulin sensitivity and metabolic flexibility.",
+    "epithalon": "Synthetic analog of the pineal peptide epithalamin; research suggests it can activate telomerase and help regulate melatonin/circadian rhythm.",
+    "ghrp-2": "Ghrelin-receptor agonist with potent GH-releasing action and somewhat less appetite stimulation than GHRP-6, though still some cortisol/prolactin effect.",
+    "ghrp-6": "Ghrelin-receptor agonist that strongly stimulates GH release; also markedly increases hunger and can raise cortisol/prolactin at higher doses.",
+    "ipamorelin": "Selective ghrelin/GH-secretagogue receptor agonist that triggers a pulse of growth hormone from the pituitary with minimal effect on cortisol or prolactin.",
+    "tesamorelin": "Stabilized GHRH analog that raises GH and IGF-1, preferentially reducing visceral adipose tissue.",
+    "ghk-cu": "Delivers copper to cells, stimulates collagen, elastin, and glycosaminoglycan synthesis, and has antioxidant and anti-inflammatory activity. Declines naturally with age.",
+    "glutathione": "A tripeptide (glutamate-cysteine-glycine) that neutralizes free radicals, recycles other antioxidants, and supports liver detoxification pathways.",
+    "semaglutide": "Mimics the incretin hormone GLP-1: suppresses appetite, slows gastric emptying, and improves insulin secretion and sensitivity.",
+    "tirzepatide": "Activates both GIP and GLP-1 receptors for stronger appetite suppression and metabolic benefit than GLP-1 alone.",
+    "retatrutide": "Adds glucagon-receptor activity to dual incretin action, boosting energy expenditure alongside appetite suppression.",
+  };
+  global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (MECHANISM[s.id] && !s.mechanism) s.mechanism = MECHANISM[s.id]; });
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9+]/g, ''); };
 
