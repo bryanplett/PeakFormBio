@@ -9,7 +9,8 @@
 (function (global) {
   const NON_PEPTIDE = /program|service|accessor|supplement|coaching|lab suppl|sports nutrition/i;
   const blank = () => ({ id: '', name: '', aliases: [], mw: '', formula: '', cas: '', form: '', tagline: '',
-    description: '', highlights: '', purity: '', storage: '', sequence: '', synonyms: '', coaUrl: '' });
+    description: '', highlights: '', purity: '', storage: '', sequence: '', synonyms: '', coaUrl: '',
+    clinicalStatus: '', mechanism: '', effects: '', sideEffects: '', warnings: '' });
   const slug = (s) => String(s || '').toLowerCase().replace(/\+/g, '-plus').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   // Every pricelist product, grouped by base name → { base, category, strengths[] }
@@ -182,8 +183,16 @@
                     Shown when a customer taps this product in the store. Anything left blank is hidden.
                   </div>
                 </div>
-                {area('Description', 'description', 'Write the overview for this product…', 'Leave an empty line between paragraphs.', 6)}
-                {area('Key points', 'highlights', 'One per line', 'Each line becomes a check-marked bullet under the description.', 4)}
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '0 0 12px' }}>
+                  These sections appear under Specifications, in this order. Leave an empty line between paragraphs.
+                </div>
+                {area('Clinical status', 'clinicalStatus', 'Write the clinical / regulatory status…', null, 3)}
+                {area('Overview', 'description', 'Write the overview for this product…', null, 6)}
+                {area('Overview — key points', 'highlights', 'One per line', 'Each line becomes a check-marked bullet under the Overview.', 3)}
+                {area('Mechanism of action', 'mechanism', 'Write the mechanism of action…', null, 5)}
+                {area('Reported effects', 'effects', 'One per line', 'Each line becomes a bullet.', 4)}
+                {area('Possible side effects', 'sideEffects', 'One per line', 'Each line becomes a bullet.', 4)}
+                {area('Contraindications & warnings', 'warnings', 'One per line', 'Each line becomes a bullet with a warning marker.', 4)}
                 {field('Purity', 'purity', 'e.g. ≥99% (HPLC)')}
                 {field('Storage', 'storage', 'e.g. Store at −20 °C, protected from light')}
                 {field('Sequence', 'sequence', 'Amino-acid sequence (optional)')}

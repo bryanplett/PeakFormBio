@@ -119,7 +119,6 @@
     // "Semaglutide" stays as the store spells it; "BPC" shows the full "BPC-157".
     const nk = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9+]/g, '');
     const displayName = spec && spec.name && nk(spec.name) !== nk(name) ? spec.name : name;
-    const highlights = lines(spec && spec.highlights);
     const specRows = spec ? [
       ['CAS number', spec.cas],
       ['Molecular formula', spec.formula && <Formula value={spec.formula} />],
@@ -249,21 +248,6 @@
             </div>
           </div>
 
-          {/* Description (admin-written) */}
-          {spec && (spec.description || highlights.length > 0) && (
-            <section className="pp-sec">
-              <h2 className="pp-h2">Overview</h2>
-              {lines(spec.description).length > 0 && String(spec.description).split(/\n\s*\n/).map((para, i) => (
-                <p key={i} style={{ fontSize: 15.5, lineHeight: 1.7, color: 'rgba(255,255,255,0.78)', margin: '0 0 14px', whiteSpace: 'pre-line' }}>{para.trim()}</p>
-              ))}
-              {highlights.length > 0 && (
-                <ul style={{ listStyle: 'none', padding: 0, margin: '6px 0 0', display: 'grid', gap: 10 }}>
-                  {highlights.map((h, i) => <li key={i} style={{ display: 'flex', gap: 10, fontSize: 15, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)' }}><Check tint={tint} />{h}</li>)}
-                </ul>
-              )}
-            </section>
-          )}
-
           {/* Specifications */}
           {specRows.length > 0 && (
             <section className="pp-sec">
@@ -275,6 +259,43 @@
               </div>
             </section>
           )}
+
+          {/* Admin-written sections, in this order, each hidden when empty */}
+          {spec && (() => {
+            const paras = (t) => String(t || '').split(/\n\s*\n/).map(x => x.trim()).filter(Boolean).map((para, i) => (
+              <p key={i} style={{ fontSize: 15.5, lineHeight: 1.7, color: 'rgba(255,255,255,0.78)', margin: '0 0 14px', whiteSpace: 'pre-line' }}>{para}</p>
+            ));
+            const bullets = (t, icon) => {
+              const items = lines(t);
+              if (!items.length) return null;
+              return (
+                <ul style={{ listStyle: 'none', padding: 0, margin: '4px 0 0', display: 'grid', gap: 10 }}>
+                  {items.map((h, i) => <li key={i} style={{ display: 'flex', gap: 10, fontSize: 15, lineHeight: 1.5, color: 'rgba(255,255,255,0.8)' }}>{icon}{h}</li>)}
+                </ul>
+              );
+            };
+            const Dot = <span style={{ flex: 'none', width: 7, height: 7, borderRadius: '50%', background: tint, marginTop: 8 }} />;
+            const Warn = (
+              <svg width="18" height="18" viewBox="0 0 20 20" style={{ flex: 'none', marginTop: 1 }}>
+                <path d="M10 2.5L18.5 17H1.5Z" fill="rgba(255,159,10,0.15)" stroke="#ff9f0a" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M10 8v4" stroke="#ff9f0a" strokeWidth="1.8" strokeLinecap="round" /><circle cx="10" cy="14.4" r="1" fill="#ff9f0a" />
+              </svg>
+            );
+            const sections = [
+              ['Clinical Status', paras(spec.clinicalStatus)],
+              ['Overview', (spec.description || spec.highlights) ? <>{paras(spec.description)}{bullets(spec.highlights, <Check tint={tint} />)}</> : null],
+              ['Mechanism of Action', paras(spec.mechanism)],
+              ['Reported Effects', bullets(spec.effects, Dot)],
+              ['Possible Side Effects', bullets(spec.sideEffects, Dot)],
+              ['Contraindications & Warnings', bullets(spec.warnings, Warn)],
+            ].filter(([, body]) => body && (!Array.isArray(body) || body.length));
+            return sections.map(([title, body]) => (
+              <section key={title} className="pp-sec" style={title === 'Contraindications & Warnings' ? { borderColor: 'rgba(255,159,10,0.25)' } : null}>
+                <h2 className="pp-h2">{title}</h2>
+                {body}
+              </section>
+            ));
+          })()}
 
           {/* Related */}
           {related.length > 0 && (
