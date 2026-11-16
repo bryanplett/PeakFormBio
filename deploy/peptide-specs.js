@@ -166,6 +166,63 @@
   };
   global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (EFFECTS_COPY[s.id] && !s.effects) s.effects = EFFECTS_COPY[s.id]; });
 
+
+  // Possible Side Effects for each product page, copied from the Peptide Library
+  // (peptide-data.js "sideEffects", one per line). Edit per product in Admin → Product Pages.
+  var SIDEEFFECTS_COPY = {
+    "bpc-157": "Injection-site irritation\nOccasional nausea\nDizziness\nFatigue\nHeadache",
+    "tb-500": "Injection-site reactions\nHead-rush / lightheadedness shortly after dosing\nFatigue",
+    "selank": "Nasal irritation\nMild fatigue\nRare headache",
+    "semax": "Nasal irritation\nOverstimulation at high doses",
+    "kpv": "Generally well tolerated\nInjection-site irritation",
+    "dsip": "Injection-site reactions\nGrogginess\nHeadache",
+    "ss-31": "Injection-site reactions",
+    "cjc-1295-dac": "Water retention\nTingling/numbness\nInjection-site reactions\nHeadache",
+    "5-amino-1mq": "Generally well tolerated in early use\nPossible mild GI effects",
+    "snap-8": "Rare mild irritation",
+    "pt-141": "Nausea\nFlushing\nHeadache\nTransient blood-pressure rise",
+    "mots-c": "Injection-site reactions\nFatigue",
+    "epithalon": "Injection-site reactions\nGenerally well tolerated in studies",
+    "ghrp-2": "Hunger\nWater retention\nFlushing\nMild prolactin/cortisol rise",
+    "ghrp-6": "Strong hunger\nWater retention\nTingling\nCortisol/prolactin rise at higher doses",
+    "ipamorelin": "Injection-site reactions\nHead-rush / flushing\nWater retention\nTingling",
+    "tesamorelin": "Injection-site reactions\nJoint pain\nSwelling\nRaised blood glucose",
+    "ghk-cu": "Mild skin irritation\nRedness at application site",
+    "glutathione": "Generally well tolerated\nPossible bloating (oral)",
+    "semaglutide": "Nausea\nConstipation / diarrhea\nReduced appetite\nInjection-site reactions",
+    "tirzepatide": "Nausea\nDiarrhea / constipation\nDecreased appetite\nInjection-site reactions",
+    "retatrutide": "Nausea\nGI upset\nAppetite loss\nIncreased heart rate",
+  };
+  global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (SIDEEFFECTS_COPY[s.id] && !s.sideEffects) s.sideEffects = SIDEEFFECTS_COPY[s.id]; });
+
+  // Contraindications & Warnings for each product page, copied from the Peptide Library
+  // (peptide-data.js "warnings", one per line). Edit per product in Admin → Product Pages.
+  var WARNINGS_COPY = {
+    "bpc-157": "Theoretical caution with active cancer (promotes angiogenesis — unproven in humans)\nFDA Category 2 — restricted from compounding\nNot medical advice",
+    "tb-500": "WADA-prohibited in sport\nTheoretical caution with active malignancy\nNot medical advice",
+    "selank": "Not approved in the US\nNot medical advice",
+    "semax": "Not approved in the US\nNot medical advice",
+    "kpv": "Preclinical\nNot medical advice",
+    "dsip": "Limited human data\nNot medical advice",
+    "ss-31": "Approved only for specific indication\nNot medical advice",
+    "cjc-1295-dac": "Caution with diabetes\nWADA-prohibited\nNot medical advice",
+    "5-amino-1mq": "Preclinical/early data\nNot medical advice",
+    "snap-8": "Topical use only\nNot medical advice",
+    "pt-141": "Avoid with uncontrolled hypertension/CV disease\nMay darken skin/moles with repeated use\nNot medical advice",
+    "mots-c": "Preclinical\nNot medical advice",
+    "epithalon": "Human evidence limited\nNot medical advice",
+    "ghrp-2": "Caution with diabetes\nWADA-prohibited\nNot medical advice",
+    "ghrp-6": "Caution with diabetes\nWADA-prohibited\nNot medical advice",
+    "ipamorelin": "Caution with diabetes/insulin resistance\nWADA-prohibited in sport\nNot medical advice",
+    "tesamorelin": "Avoid with active malignancy\nCaution with diabetes\nPrescription only\nNot medical advice",
+    "ghk-cu": "Patch-test topical products\nNot medical advice",
+    "glutathione": "Caution with asthma (inhaled forms)\nNot medical advice",
+    "semaglutide": "Boxed warning: thyroid C-cell tumor risk (rodents)\nAvoid with personal/family history of medullary thyroid carcinoma or MEN-2\nPancreatitis caution\nNot medical advice",
+    "tirzepatide": "Boxed warning: thyroid C-cell tumor risk (rodents)\nAvoid with MTC/MEN-2 history\nPancreatitis caution\nNot medical advice",
+    "retatrutide": "Investigational — not FDA-approved\nNot medical advice",
+  };
+  global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (WARNINGS_COPY[s.id] && !s.warnings) s.warnings = WARNINGS_COPY[s.id]; });
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9+]/g, ''); };
 
