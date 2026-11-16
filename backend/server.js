@@ -296,7 +296,10 @@ app.get('/api/public/peptide-specs', async (_req, res) => {
   }
 });
 
-const SPEC_FIELDS = ['id', 'name', 'aliases', 'mw', 'formula', 'cas', 'form', 'tagline', '_deleted'];
+const SPEC_FIELDS = ['id', 'name', 'aliases', 'mw', 'formula', 'cas', 'form', 'tagline', '_deleted',
+  // Product page (Admin → Spec Cards → Product page). Free text written by the admin.
+  'description', 'highlights', 'purity', 'storage', 'sequence', 'synonyms', 'coaUrl'];
+const SPEC_LIMITS = { description: 6000, highlights: 3000, sequence: 1000, synonyms: 600, coaUrl: 600 };
 app.post('/api/admin/peptide-specs', async (req, res) => {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
@@ -315,7 +318,7 @@ app.post('/api/admin/peptide-specs', async (req, res) => {
           if (s[k] === undefined) continue;
           if (k === 'aliases') o[k] = Array.isArray(s[k]) ? s[k].map(a => String(a).slice(0, 60)).slice(0, 20) : [];
           else if (k === '_deleted') o[k] = !!s[k];
-          else o[k] = String(s[k]).slice(0, 200);
+          else o[k] = String(s[k]).slice(0, SPEC_LIMITS[k] || 200);
         }
         return o;
       });

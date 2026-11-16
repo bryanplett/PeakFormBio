@@ -1,13 +1,15 @@
 // peptide-specs-manager.jsx — Admin → Catalog → Spec Cards
-// Edit the peptide spec database (name on card, molecular weight, formula, CAS,
-// form, tagline). Every product on the pricelist whose base name matches a spec
-// (by name or alias) automatically shows the spec card on the public catalog.
+// Edit the peptide database: spec-card fields (name on card, molecular weight,
+// formula, CAS, form, tagline) and the product-page fields (description, key
+// points, purity, storage, sequence, synonyms, COA link). Every pricelist product
+// whose base name matches an entry (by name or alias) uses it on its product page.
 // Saves to app_settings 'peptide_specs' via POST /api/admin/peptide-specs.
 // Exports: window.PeptideSpecsManager
 
 (function (global) {
   const NON_PEPTIDE = /program|service|accessor|supplement|coaching|lab suppl|sports nutrition/i;
-  const blank = () => ({ id: '', name: '', aliases: [], mw: '', formula: '', cas: '', form: '', tagline: '' });
+  const blank = () => ({ id: '', name: '', aliases: [], mw: '', formula: '', cas: '', form: '', tagline: '',
+    description: '', highlights: '', purity: '', storage: '', sequence: '', synonyms: '', coaUrl: '' });
   const slug = (s) => String(s || '').toLowerCase().replace(/\+/g, '-plus').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
   // Every pricelist product, grouped by base name → { base, category, strengths[] }
@@ -78,7 +80,7 @@
         });
         const d = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(d.message || ('HTTP ' + res.status));
-        setDirty(false); setMsg('✓ Saved. Spec cards on the website update on next page load.');
+        setDirty(false); setMsg('✓ Saved. Product pages update on next page load.');
       } catch (e) { setMsg('Could not save: ' + e.message); }
       finally { setSaving(false); }
     };
@@ -96,6 +98,16 @@
       </label>
     );
 
+    const area = (label, key, placeholder, hint, rows = 4) => (
+      <label style={{ display: 'block', marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 6, letterSpacing: 0.3 }}>{label}</div>
+        <textarea className="field-input" rows={rows} value={cur[key] || ''} placeholder={placeholder}
+          onChange={e => update({ [key]: e.target.value })}
+          style={{ width: '100%', padding: '9px 12px', fontSize: 14, lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }} />
+        {hint && <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', marginTop: 5 }}>{hint}</div>}
+      </label>
+    );
+
     const shown = specs.map((s, i) => ({ s, i })).filter(({ s }) => !q || (s.name + ' ' + (s.aliases || []).join(' ')).toLowerCase().includes(q.toLowerCase()));
     const D = global.PEPTIDE_SPEC_DEFAULTS || {};
 
@@ -103,8 +115,8 @@
       <div style={{ color: '#f5f5f7' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           {onBack && <button className="btn-ghost" onClick={onBack}>← Back</button>}
-          <h2 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>Spec Cards</h2>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{specs.length} peptides in the database</span>
+          <h2 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>Product Pages &amp; Spec Cards</h2>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{specs.length} products in the database</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
             {msg && <span style={{ fontSize: 13, color: msg.startsWith('✓') ? '#30d158' : '#ff9f0a' }}>{msg}</span>}
             <button onClick={save} disabled={saving || !dirty}
@@ -118,7 +130,7 @@
         {missing.length > 0 && (
           <div style={{ background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.3)', borderRadius: 14, padding: '12px 16px', marginBottom: 20 }}>
             <div style={{ fontSize: 13, color: '#ff9f0a', fontWeight: 600, marginBottom: 8 }}>
-              {missing.length} pricelist product{missing.length === 1 ? '' : 's'} without a spec card (they show their photo instead). Click one to add it:
+              {missing.length} pricelist product{missing.length === 1 ? '' : 's'} not in the database yet (their product page shows only the photo, price and card blurb). Click one to add it:
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {missing.map(p => (
@@ -143,6 +155,7 @@
                     background: i === sel ? 'rgba(41,151,255,0.16)' : 'transparent', color: i === sel ? '#fff' : 'rgba(255,255,255,0.75)' }}>
                   {s.name || '(unnamed)'}
                   {!s.mw || !s.cas ? <span style={{ color: '#ff9f0a', fontSize: 11, marginLeft: 6 }}>incomplete</span> : null}
+                  {!s.description ? <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginLeft: 6 }}>no description</span> : null}
                 </div>
               ))}
             </div>
@@ -162,11 +175,25 @@
                 {field('CAS number', 'cas', '137525-51-0')}
                 {field('Form', 'form', D.form, 'Leave blank for "' + D.form + '".')}
                 {field('Tagline', 'tagline', D.tagline, 'Leave blank for the default line.')}
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '22px 0 16px', paddingTop: 18 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Product page</div>
+                  <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', marginBottom: 14 }}>
+                    Shown when a customer taps this product in the store. Anything left blank is hidden.
+                  </div>
+                </div>
+                {area('Description', 'description', 'Write the overview for this product…', 'Leave an empty line between paragraphs.', 6)}
+                {area('Key points', 'highlights', 'One per line', 'Each line becomes a check-marked bullet under the description.', 4)}
+                {field('Purity', 'purity', 'e.g. ≥99% (HPLC)')}
+                {field('Storage', 'storage', 'e.g. Store at −20 °C, protected from light')}
+                {field('Sequence', 'sequence', 'Amino-acid sequence (optional)')}
+                {field('Synonyms', 'synonyms', 'Other names, comma separated')}
+                {field('Certificate of analysis link', 'coaUrl', 'https://…', 'Shows a "View certificate of analysis" link on the page.')}
                 <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
                   {!confirmDelete
                     ? <button className="btn-ghost" onClick={() => setConfirmDelete(true)} style={{ color: '#ff453a' }}>Remove from database</button>
                     : <>
-                        <span style={{ fontSize: 13, alignSelf: 'center', color: '#ff453a' }}>Remove {cur.name}? Its products go back to photos.</span>
+                        <span style={{ fontSize: 13, alignSelf: 'center', color: '#ff453a' }}>Remove {cur.name}? Its product page loses these details.</span>
                         <button className="btn-ghost" onClick={removeSpec} style={{ color: '#ff453a' }}>Remove</button>
                         <button className="btn-ghost" onClick={() => setConfirmDelete(false)}>Cancel</button>
                       </>}

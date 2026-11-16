@@ -38,7 +38,7 @@
 <script type="text/babel" src="recon-presets-manager.jsx"></script>
 <script src="peptide-specs.js?v=1"></script>
 <script type="text/babel" src="spec-card.jsx?v=3"></script>
-<script type="text/babel" src="peptide-specs-manager.jsx?v=2"></script>
+<script type="text/babel" src="peptide-specs-manager.jsx?v=3"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -2184,7 +2184,7 @@ const App = () => {
           ]} />
           <NavGroup label="Catalog" options={[
             { label: 'Pricelist', onClick: () => { clearViews(); setShowPricelist(true); } },
-            { label: 'Spec Cards', onClick: () => { clearViews(); setShowSpecCards(true); } },
+            { label: 'Product Pages', onClick: () => { clearViews(); setShowSpecCards(true); } },
             { label: 'Coupons', onClick: () => { clearViews(); setShowCoupons(true); } },
           ]} />
           <NavGroup label="Client Tools" options={[
