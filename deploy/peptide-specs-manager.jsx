@@ -178,7 +178,7 @@
           {/* live preview */}
           <div style={{ position: 'sticky', top: 20 }}>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>Live preview{matched[0] ? ` — ${matched[0].base}` : ''}</div>
-            {cur && global.SpecCard && <global.SpecCard spec={cur} strength={strength} />}
+            {cur && global.SpecCard && <global.SpecCard spec={cur} strength={strength} zoom={false} />}
           </div>
         </div>
       </div>

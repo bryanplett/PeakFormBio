@@ -173,5 +173,71 @@
     return window.PEPTIDE_SPECS;
   };
 
-  window.SpecCard = SpecCard;
+  // Click-to-enlarge: the small card is a button that opens a full-size copy in
+  // an overlay (rendered fresh at the larger size, so text stays sharp).
+  // Pass zoom={false} to turn this off.
+  const SpecCardLightbox = ({ spec, strength, onClose }) => {
+    React.useEffect(() => {
+      const onKey = e => { if (e.key === 'Escape') onClose(); };
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', onKey);
+      return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+    }, []);
+    const stop = e => e.stopPropagation();
+    return ReactDOM.createPortal(
+      <div role="dialog" aria-modal="true" aria-label={`${(spec && spec.name) || 'Peptide'} spec card`}
+        onClick={e => { e.stopPropagation(); onClose(); }}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.78)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, boxSizing: 'border-box',
+          cursor: 'zoom-out', animation: 'pfbSpecFade 0.18s ease-out',
+        }}>
+        <style>{'@keyframes pfbSpecFade{from{opacity:0}to{opacity:1}}@keyframes pfbSpecPop{from{transform:scale(.94)}to{transform:scale(1)}}'}</style>
+        <div onClick={stop} style={{
+          position: 'relative', cursor: 'default', animation: 'pfbSpecPop 0.2s ease-out',
+          width: 'min(560px, calc(100vw - 40px), calc((100vh - 40px) * 746 / 1075))',
+          filter: 'drop-shadow(0 24px 60px rgba(0,0,0,0.55))',
+        }}>
+          <SpecCard spec={spec} strength={strength} zoom={false} />
+          <button type="button" aria-label="Close" onClick={e => { e.stopPropagation(); onClose(); }}
+            style={{
+              position: 'absolute', top: -14, right: -14, width: 40, height: 40, borderRadius: '50%',
+              border: 'none', background: '#fff', color: '#0a0a0a', fontSize: 22, lineHeight: '40px',
+              cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.4)', padding: 0,
+            }}>×</button>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  const ZoomableSpecCard = (props) => {
+    const [open, setOpen] = React.useState(false);
+    if (props.zoom === false || !window.ReactDOM || !ReactDOM.createPortal) return <SpecCard {...props} />;
+    const openIt = e => { e.stopPropagation(); e.preventDefault(); setOpen(true); };
+    return (
+      <div role="button" tabIndex={0} title="Click to enlarge"
+        aria-label={`Enlarge ${(props.spec && props.spec.name) || ''} spec card`}
+        onClick={openIt}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openIt(e); }}
+        style={{ position: 'relative', cursor: 'zoom-in', width: '100%', ...(props.wrapStyle || {}) }}>
+        <SpecCard {...props} />
+        <div aria-hidden="true" style={{
+          position: 'absolute', right: 8, bottom: 8, width: 30, height: 30, borderRadius: '50%',
+          background: 'rgba(10,10,10,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round">
+            <circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.5 L21 21" /><path d="M10.5 7.5 V13.5 M7.5 10.5 H13.5" />
+          </svg>
+        </div>
+        {open && <SpecCardLightbox spec={props.spec} strength={props.strength} onClose={() => setOpen(false)} />}
+      </div>
+    );
+  };
+
+  window.SpecCard = ZoomableSpecCard;
+  window.SpecCardStatic = SpecCard;
 })();
