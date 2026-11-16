@@ -51,6 +51,35 @@
     { id: 'retatrutide',  name: 'RETATRUTIDE',  aliases: [],                                  mw: '4731.3 g/mol',  formula: 'C221H342N46O68',      cas: '2381089-83-2' },
   ];
 
+
+  // Clinical Status for each product page, copied from the Peptide Library
+  // (peptide-data.js "status"). Edit per product in Admin → Product Pages.
+  var CLINICAL_STATUS = {
+    "bpc-157": "Preclinical. Placed on the FDA Category 2 bulk-substance list in Sep 2023 (restricted from compounding). Human data limited to a few small pilot studies.",
+    "tb-500": "Preclinical. On the FDA July 2026 PCAC review agenda. No completed Phase 3 human trials.",
+    "selank": "Studied in Phase 2 clinical research. Not FDA-approved.",
+    "semax": "Studied in Phase 2 clinical research. Not FDA-approved.",
+    "kpv": "Preclinical; on the FDA July 2026 PCAC review agenda.",
+    "dsip": "Preclinical — primarily animal/lab data. Not FDA-approved; human evidence limited.",
+    "ss-31": "Approved for Barth syndrome; investigational for other mitochondrial conditions.",
+    "cjc-1295-dac": "Studied in Phase 2 clinical research. Not FDA-approved.",
+    "5-amino-1mq": "Preclinical — primarily animal/lab data. Not FDA-approved; human evidence limited.",
+    "snap-8": "Studied in Phase 2 clinical research. Not FDA-approved.",
+    "pt-141": "FDA-approved (Vyleesi) for premenopausal HSDD.",
+    "mots-c": "Preclinical — primarily animal/lab data. Not FDA-approved; human evidence limited.",
+    "epithalon": "Preclinical — primarily animal/lab data. Not FDA-approved; human evidence limited.",
+    "ghrp-2": "Preclinical — primarily animal/lab data. Not FDA-approved; human evidence limited.",
+    "ghrp-6": "Preclinical — primarily animal/lab data. Not FDA-approved; human evidence limited.",
+    "ipamorelin": "Studied in Phase 2 clinical research. Not FDA-approved.",
+    "tesamorelin": "FDA-approved (Egrifta) for HIV-associated lipodystrophy.",
+    "ghk-cu": "Studied in Phase 2 clinical research. Not FDA-approved.",
+    "glutathione": "Studied in Phase 2 clinical research. Not FDA-approved.",
+    "semaglutide": "FDA-approved. Large Phase 3 trials show ~15% mean body-weight reduction at higher doses.",
+    "tirzepatide": "FDA-approved. Phase 3 trials report ~20–22% mean weight loss at top dose.",
+    "retatrutide": "Phase 3 (TRIUMPH program). Phase 2 showed ~24% mean weight loss at 48 weeks. Not FDA-approved.",
+  };
+  global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (CLINICAL_STATUS[s.id] && !s.clinicalStatus) s.clinicalStatus = CLINICAL_STATUS[s.id]; });
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9+]/g, ''); };
 
