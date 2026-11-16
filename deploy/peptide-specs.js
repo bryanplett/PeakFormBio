@@ -109,6 +109,63 @@
   };
   global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (MECHANISM[s.id] && !s.mechanism) s.mechanism = MECHANISM[s.id]; });
 
+
+  // Overview for each product page, copied from the Peptide Library
+  // (peptide-data.js "overview"). Edit per product in Admin → Product Pages.
+  var DESCRIPTION_COPY = {
+    "bpc-157": "Synthetic 15-amino-acid fragment derived from a protein in human gastric juice. Studied extensively in animals for tissue healing.",
+    "tb-500": "A synthetic fragment of the naturally occurring protein Thymosin Beta-4, used in research for tissue repair and recovery.",
+    "selank": "Anxiolytic peptide approved in Russia; non-sedative and non-addictive.",
+    "semax": "Nootropic peptide approved in Russia that supports focus, memory, and neuroplasticity.",
+    "kpv": "Anti-inflammatory C-terminal fragment of alpha-MSH that does not cause immunosuppression.",
+    "dsip": "Sleep-promoting peptide that may enhance deep sleep without suppressing REM.",
+    "ss-31": "Mitochondria-targeted peptide; an approved indication exists for the rare disorder Barth syndrome.",
+    "cjc-1295-dac": "Long-acting CJC-1295 with a Drug Affinity Complex that extends half-life to several days via albumin binding.",
+    "5-amino-1mq": "NNMT inhibitor that boosts NAD+ for fat metabolism without affecting appetite.",
+    "snap-8": "Topical peptide that reduces wrinkle depth by relaxing facial muscle contraction.",
+    "pt-141": "FDA-approved for hypoactive sexual desire disorder; works through brain melanocortin pathways.",
+    "mots-c": "Mitochondrial-derived peptide studied for metabolic regulation and as an exercise mimetic.",
+    "epithalon": "Tetrapeptide studied as a telomerase activator for anti-aging effects on cellular lifespan.",
+    "ghrp-2": "Potent GH-releasing peptide with strong GH output and less hunger than GHRP-6.",
+    "ghrp-6": "First-generation GH secretagogue producing strong GH release with significant appetite stimulation.",
+    "ipamorelin": "Selective growth-hormone secretagogue, considered one of the cleanest and best-tolerated GHRPs.",
+    "tesamorelin": "FDA-approved GHRH analog indicated for reducing visceral fat in HIV-associated lipodystrophy.",
+    "ghk-cu": "Naturally occurring copper-binding tripeptide widely used in skincare for wound healing and anti-aging.",
+    "glutathione": "The body’s master antioxidant — critical for detoxification, immune function, and cellular protection.",
+    "semaglutide": "GLP-1 receptor agonist, FDA-approved for type-2 diabetes and chronic weight management.",
+    "tirzepatide": "Dual GLP-1 / GIP receptor agonist, FDA-approved for type-2 diabetes and weight management.",
+    "retatrutide": "Triple receptor agonist (GLP-1 / GIP / glucagon) — the most potent weight-loss peptide currently in trials.",
+  };
+  global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (DESCRIPTION_COPY[s.id] && !s.description) s.description = DESCRIPTION_COPY[s.id]; });
+
+  // Reported Effects (one per line) for each product page, copied from the Peptide Library
+  // (peptide-data.js "benefits"). Edit per product in Admin → Product Pages.
+  var EFFECTS_COPY = {
+    "bpc-157": "May accelerate tendon, ligament, and muscle healing\nAssociated with gut-lining repair in animal models\nPromotes new blood-vessel formation at injury sites\nMay reduce inflammation and oxidative stress\nStudied for neuroprotective effects in animals",
+    "tb-500": "May support muscle, tendon, and ligament recovery\nPromotes cell migration to injury sites\nMay reduce inflammation and adhesions/scarring\nStudied for cardiac tissue repair",
+    "selank": "Reduces anxiety without sedation\nMay improve focus and mental clarity\nNon-addictive profile",
+    "semax": "May enhance focus and memory\nRaises BDNF/NGF in studies\nResearched for stroke recovery (in Russia)",
+    "kpv": "Anti-inflammatory without immunosuppression\nStudied for IBD/gut and skin conditions\nMay aid healing of inflamed tissue",
+    "dsip": "May improve deep-sleep quality\nStudied for stress resilience\nPossible mild analgesic effect",
+    "ss-31": "Improves mitochondrial energy output\nStudied for heart failure and mitochondrial disease\nReduces oxidative stress",
+    "cjc-1295-dac": "Once-weekly convenience\nSustained elevation of GH/IGF-1",
+    "5-amino-1mq": "Promotes fat-cell metabolism\nRaises NAD+\nDoes not suppress appetite",
+    "snap-8": "Softens expression wrinkles topically\nNeedle-free \"relaxing\" alternative concept\nSmoother forehead/eye-area appearance",
+    "pt-141": "Increases sexual desire/arousal in both sexes (research)\nCentrally acting — not a vasodilator",
+    "mots-c": "May improve metabolic health and insulin sensitivity\nStudied as an exercise-mimetic\nMitochondrial support",
+    "epithalon": "Studied for telomere maintenance\nMay support sleep and circadian rhythm\nAntioxidant activity in studies",
+    "ghrp-2": "Potent GH release\nLess hunger than GHRP-6",
+    "ghrp-6": "Strong GH pulse\nAppetite stimulation (useful for bulking/underweight)",
+    "ipamorelin": "Stimulates a natural GH pulse\nMinimal cortisol/prolactin impact vs older GHRPs\nMay support recovery, body composition, and sleep\nLittle appetite stimulation",
+    "tesamorelin": "Reduces visceral (belly) fat in studies\nRaises GH/IGF-1\nMay improve some cognitive markers in research",
+    "ghk-cu": "Stimulates collagen and elastin production\nImproves skin firmness and reduces fine lines\nSupports wound healing\nMay support hair-follicle health",
+    "glutathione": "Master antioxidant / detox support\nImmune and liver support\nStudied for skin brightening (IV)",
+    "semaglutide": "Significant appetite suppression and weight loss\nImproved glycemic control\nCardiovascular risk reduction in trials",
+    "tirzepatide": "Greater weight loss than single-agonist GLP-1s in trials\nStrong glycemic control\nAppetite and craving reduction",
+    "retatrutide": "Largest weight loss reported among incretin agents in trials\nImproves glycemic and metabolic markers\nMay benefit fatty-liver disease",
+  };
+  global.PEPTIDE_SPECS_SEED.forEach(function (s) { if (EFFECTS_COPY[s.id] && !s.effects) s.effects = EFFECTS_COPY[s.id]; });
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9+]/g, ''); };
 
