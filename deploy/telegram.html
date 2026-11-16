@@ -12,6 +12,10 @@
 <script src="api-client.js"></script>
 <script src="pricelists.js"></script>
 <script src="categories.js"></script>
+<script src="peptide-specs.js?v=5"></script>
+<script type="text/babel" src="spec-card.jsx?v=3"></script>
+<script src="product-photos.js?v=1"></script>
+<script type="text/babel" src="product-page.jsx?v=3"></script>
 <script src="payment-config.js"></script>
 <script type="text/babel" src="age-verification.jsx"></script>
 <style>
@@ -105,7 +109,7 @@ const Vial = ({ name, strength, tint, size = 120 }) => (
 );
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-const ProductCard = ({ product, inCart, onToggle, tint }) => {
+const ProductCard = ({ product, inCart, onToggle, onOpen, tint }) => {
   const { name, strength, price, fullLabel } = parseLabel(product.label);
   const photo = getPhoto(fullLabel);
   const [hover, setHover] = React.useState(false);
@@ -114,7 +118,11 @@ const ProductCard = ({ product, inCart, onToggle, tint }) => {
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onClick={() => onOpen && onOpen(fullLabel)}
+      role="link" tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' && onOpen) onOpen(fullLabel); }}
       style={{
+        cursor: 'pointer',
         background: 'linear-gradient(180deg,#1a1a1c 0%,#111112 100%)',
         border: `1px solid ${inCart ? tint : hover ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)'}`,
         borderRadius: 20,
@@ -140,7 +148,7 @@ const ProductCard = ({ product, inCart, onToggle, tint }) => {
         <div style={{ marginTop: 'auto', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 17, fontWeight: 700, color: tint }}>{price}</span>
           <button
-            onClick={() => onToggle(fullLabel)}
+            onClick={(e) => { e.stopPropagation(); onToggle(fullLabel); }}
             style={{
               background: inCart ? tint : 'rgba(255,255,255,0.08)',
               color: inCart ? '#000' : '#fff',
@@ -407,6 +415,7 @@ const TelegramStore = () => {
   const [checkoutOpen, setCheckoutOpen] = React.useState(false);
   const [confirmation, setConfirmation] = React.useState(null);
   const [search, setSearch] = React.useState('');
+  const [openLabel, setOpenLabel] = React.useState(null);   // product page
 
   React.useEffect(() => {
     window.loadPricelists(sb).then(() => {
@@ -434,6 +443,14 @@ const TelegramStore = () => {
     setCart(prev => {
       const existing = prev.find(i => i.label === label);
       if (existing) return prev.filter(i => i.label !== label);
+      return [...prev, { label, qty: 1 }];
+    });
+  };
+
+  const addToCart = (label) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.label === label);
+      if (existing) return prev.map(i => i.label === label ? { ...i, qty: i.qty + 1 } : i);
       return [...prev, { label, qty: 1 }];
     });
   };
@@ -520,6 +537,7 @@ const TelegramStore = () => {
                   tint={cat.tint}
                   inCart={cartLabels.has(product.label)}
                   onToggle={toggleCart}
+                  onOpen={setOpenLabel}
                 />
               ))}
             </div>
@@ -529,13 +547,44 @@ const TelegramStore = () => {
 
       {/* Sticky cart bar when items in cart */}
       {cartCount > 0 && !cartOpen && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 200, animation: 'slideUp .2s ease' }}>
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 350, animation: 'slideUp .2s ease' }}>
           <button className="tg-btn-primary" onClick={() => setCartOpen(true)} style={{ padding: '14px 32px', fontSize: 15, boxShadow: '0 8px 24px rgba(0,102,204,0.4)', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '50%', minWidth: 22, height: 22, fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{cartCount}</span>
             View Cart
           </button>
         </div>
       )}
+
+      {/* Product page */}
+      {openLabel && window.ProductPage && (() => {
+        const cat = grouped.find(g => g.items.some(it => it.label === openLabel));
+        if (!cat) return null;
+        const p0 = parseLabel(openLabel);
+        const same = cat.items.filter(it => parseLabel(it.label).name === p0.name);
+        const mg = (l) => { const m = parseLabel(l).strength.match(/[\d.]+/); return m ? parseFloat(m[0]) : 0; };
+        same.sort((a, b) => mg(a.label) - mg(b.label));
+        const names = [...new Set(cat.items.map(it => parseLabel(it.label).name))].filter(n => n !== p0.name);
+        const related = names.map(n => {
+          const its = cat.items.filter(it => parseLabel(it.label).name === n);
+          const prices = its.map(it => parseFloat((parseLabel(it.label).price || '').replace(/[$,]/g, ''))).filter(x => x > 0);
+          const min = prices.length ? Math.min(...prices) : 0;
+          return { key: its[0].label, name: n, photo: getPhoto(its[0].label), price: min ? (its.length > 1 ? 'from ' : '') + '$' + min : '' };
+        });
+        return (
+          <window.ProductPage
+            name={p0.name}
+            categoryTitle={cat.title}
+            tint={cat.tint}
+            photo={getPhoto(openLabel)}
+            options={same.map(it => { const pp = parseLabel(it.label); return { key: it.label, label: pp.strength, price: pp.price, inCart: cartLabels.has(it.label) }; })}
+            initialKey={openLabel}
+            onAdd={addToCart}
+            onClose={() => setOpenLabel(null)}
+            related={related}
+            onOpenRelated={setOpenLabel}
+          />
+        );
+      })()}
 
       {/* Cart Drawer */}
       {cartOpen && (
