@@ -1000,6 +1000,84 @@ function OrderSheet({ group, client, couponsByCode, sb, onClose, onChanged }) {
   );
 }
 
+// Orders whose save failed at checkout (the "NOT SAVED TO WEBSITE" emails).
+// The client portal sends them to the server's backup table; Restore inserts
+// them into orders and marks the backup handled. Same flow as desktop Admin.
+function UnsavedOrders({ sb, clients, onRestored }) {
+  const [backups, setBackups] = React.useState([]);
+  const [busy, setBusy] = React.useState(null);
+  const [toast, showToast] = useToast();
+  const auth = () => ({ Authorization: 'Bearer ' + (localStorage.getItem('_pfb_token') || '') });
+
+  const loadBackups = React.useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/order-backups', { headers: auth() });
+      if (r.ok) setBackups(await r.json());
+    } catch (e) {}
+  }, []);
+  React.useEffect(() => { loadBackups(); }, [loadBackups]);
+
+  const markHandled = (b) =>
+    fetch('/api/admin/order-backups/' + b.id + '/restored', { method: 'POST', headers: auth() });
+
+  const restore = async (b) => {
+    setBusy(b.id);
+    const p = b.payload || {};
+    const clientId = p.client_id || ((clients || []).find(c =>
+      (c.email || '').toLowerCase() === String(p.client_email || '').toLowerCase()) || {}).id;
+    if (!clientId) { showToast('No client matches ' + (p.client_email || 'this order')); setBusy(null); return; }
+    const rows = (p.rows && p.rows.length)
+      ? p.rows
+      : (p.cart || []).map(it => ({ ...(p.order || {}), product: it.label, quantity: it.qty }));
+    for (const row of rows) {
+      const { error } = await sb.from('orders').insert({ ...row, client_id: clientId });
+      if (error) { showToast('Restore failed: ' + error.message); setBusy(null); return; }
+    }
+    await markHandled(b);
+    setBusy(null);
+    showToast((b.reference || 'Order') + ' restored');
+    loadBackups();
+    onRestored && onRestored();
+  };
+
+  const dismiss = async (b) => {
+    if (!window.confirm('Dismiss ' + (b.reference || 'this order') + ' without restoring it?')) return;
+    await markHandled(b);
+    loadBackups();
+  };
+
+  if (!backups.length) return toast;
+  return (
+    <div className="card" style={{ padding: 14, marginBottom: 16, border: '1px solid rgba(255,69,58,0.45)', background: 'rgba(255,69,58,0.07)' }}>
+      <div style={{ fontSize: 15, fontWeight: 650, color: 'var(--danger)' }}>
+        {backups.length} order{backups.length > 1 ? 's' : ''} didn't save
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--ink-60)', margin: '3px 0 12px' }}>
+        You got the email, but the save failed. Restore adds it to your orders.
+      </div>
+      <div className="stack">
+        {backups.map(b => {
+          const p = b.payload || {};
+          return (
+            <div key={b.id} style={{ padding: 12, borderRadius: 12, background: 'rgba(0,0,0,0.25)' }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600 }}>{b.reference || '—'} · {p.client_name || p.client_email || 'Unknown client'}</div>
+              <div style={{ fontSize: 13, color: 'var(--ink-60)', marginTop: 2 }}>{(p.cart || []).map(it => `${it.qty}× ${it.label}`).join(', ')}</div>
+              <div style={{ fontSize: 12, color: 'var(--ink-45)', marginTop: 2 }}>{fmtDateTime(b.created_at)} · {b.error || 'unknown error'}</div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button className="btn btn--blue" style={{ flex: 1 }} disabled={busy === b.id} onClick={() => restore(b)}>
+                  {busy === b.id ? 'Restoring…' : 'Restore'}
+                </button>
+                <button className="btn btn--neutral" style={{ flex: 1 }} disabled={busy === b.id} onClick={() => dismiss(b)}>Dismiss</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {toast}
+    </div>
+  );
+}
+
 function OrdersScreen({ sb, clients, initialFilter }) {
   const [orders, setOrders] = React.useState(null);
   const [coupons, setCoupons] = React.useState([]);
@@ -1068,6 +1146,7 @@ function OrdersScreen({ sb, clients, initialFilter }) {
 
   return (
     <div className="fade-in">
+      <UnsavedOrders sb={sb} clients={clients} onRestored={load} />
       <div className="searchbar" style={{ marginBottom: 12 }}>
         <Icon name="search" size={19} style={{ color: 'var(--ink-45)' }} />
         <input placeholder="Search orders, clients, products…" value={query} onChange={e => setQuery(e.target.value)} />
@@ -1105,7 +1184,7 @@ function OrdersScreen({ sb, clients, initialFilter }) {
   );
 }
 
-window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
+window.MOrders = { OrdersScreen, OrderCard, OrderSheet, UnsavedOrders };
 })();
 
 </script>
@@ -1114,7 +1193,7 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
 (function () {
   const { Icon, Spinner, fmtMoney, useToast } = window.MUI;
   const P = window.PFBOrders;
-  const { OrderCard, OrderSheet } = window.MOrders;
+  const { OrderCard, OrderSheet, UnsavedOrders } = window.MOrders;
 
   function Stat({ num, label, icon, color, onClick }) {
     return (
@@ -1178,6 +1257,8 @@ window.MOrders = { OrdersScreen, OrderCard, OrderSheet };
           <div style={{ fontSize: 14, color: 'var(--ink-60)' }}>{greeting},</div>
           <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em' }}>Bryan</div>
         </div>
+
+        <UnsavedOrders sb={sb} clients={clients} onRestored={load} />
 
         {orders === null ? <Spinner /> : (
           <React.Fragment>

@@ -1830,6 +1830,34 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
           }
         } catch (e) { console.warn('One-time coupon re-check failed:', e); }
       }
+      // A dropped connection ("Load failed" on iPhone, "Failed to fetch" on
+      // Chrome) gets two more tries before falling back to the backup. Before
+      // each retry, check whether the line saved anyway (request reached the
+      // server but the reply was lost) so a retry never double-saves it.
+      const isNetErr = (e) => !!e && /load failed|failed to fetch|networkerror|network request failed|network connection was lost|timed out|internet connection/i.test(e.message || '');
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      const findLanded = async (clientId, reference, label) => {
+        const { data, error } = await sb.from('orders').select('*').eq('client_id', clientId).eq('product', label);
+        if (error) return undefined; // still offline — unknown
+        const recent = Date.now() - 2 * 60 * 1000;
+        return (data || []).find(o => o.order_reference
+          ? o.order_reference === reference
+          : new Date(o.created_at || o.ordered_at || 0).getTime() >= recent) || null;
+      };
+      const insertWithRetry = async (tryInsert, clientId, reference, item) => {
+        let res = await tryInsert({ product: item.label, quantity: item.qty });
+        const waits = [1000, 2000, 4000];
+        for (let i = 0; i < waits.length && isNetErr(res.error); i++) {
+          console.warn(`Order save dropped (${res.error.message}); checking and retrying…`);
+          await sleep(waits[i]);
+          const landed = await findLanded(clientId, reference, item.label);
+          if (landed) return { data: landed, error: null };
+          if (landed === undefined) continue;   // still offline — wait longer
+          if (i === waits.length - 1) break;    // last pass only checks, never inserts
+          res = await tryInsert({ product: item.label, quantity: item.qty });
+        }
+        return res;
+      };
       let saveError = '';
       const backupRows = [];
       try {
@@ -1862,7 +1890,7 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
             const tryInsert = (lineCols) =>
               sb.from('orders').insert({ ...orderDetails, ...lineCols }).select().single();
 
-            let { data, error } = await tryInsert({ product: item.label, quantity: item.qty });
+            let { data, error } = await insertWithRetry(tryInsert, user.id, snap.reference, item);
             if (error) console.error('Order insert attempt 1 failed:', error.message);
             if (error && /column .* does not exist/i.test(error.message || '')) {
               const retry = await tryInsert({ item: item.label, qty: item.qty });
