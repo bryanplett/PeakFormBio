@@ -53,6 +53,7 @@ window.PFB_PRODUCT_PHOTOS = [
   { match: 'bac water',    src: 'assets/product-bacwater.png' },
   { match: 'ghrp2', src: 'assets/product-ghrp2.png' },
   { match: 'ghrp6', src: 'assets/product-ghrp6.png' },
+  { match: 'btk', src: 'assets/product-btk.png' },
   { match: 'eloralintide', src: 'assets/product-eloralintide.png' },
   { match: 'ara-290', src: 'assets/product-ara290.png' },
   { match: 'ara 290', src: 'assets/product-ara290.png' },
