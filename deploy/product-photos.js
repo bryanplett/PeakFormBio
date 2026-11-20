@@ -53,6 +53,7 @@ window.PFB_PRODUCT_PHOTOS = [
   { match: 'bac water',    src: 'assets/product-bacwater.png' },
   { match: 'ghrp2', src: 'assets/product-ghrp2.png' },
   { match: 'ghrp6', src: 'assets/product-ghrp6.png' },
+  { match: 'hair growth helper', src: 'assets/product-hair-growth-helper.png' },
   { match: 'btk', src: 'assets/product-btk.png' },
   { match: 'eloralintide', src: 'assets/product-eloralintide.png' },
   { match: 'ara-290', src: 'assets/product-ara290.png' },
@@ -76,6 +77,16 @@ window.PFB_PRODUCT_PHOTOS = [
   { match: 'nutrition plan', src: 'assets/program-nutrition.png' },
   { match: 'workout',      src: 'assets/program-workout.png' },
 ];
+
+  // Order notices (mirrors PRODUCT_NOTICES in ClientPortal.html).
+  window.PFB_PRODUCT_NOTICES = [
+    { match: 'hair growth helper', text: 'Please do not order unless you have discussed this product with PeakFormBio ahead of time.' },
+  ];
+  window.getProductNotice = window.getProductNotice || function (label) {
+    var lower = String(label || '').toLowerCase();
+    var n = window.PFB_PRODUCT_NOTICES.find(function (x) { return lower.indexOf(x.match) !== -1; });
+    return n ? n.text : null;
+  };
 
   window.getProductPhoto = function (label) {
     if (!label) return null;

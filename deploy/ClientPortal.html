@@ -17,7 +17,7 @@
 <script src="peptide-data.js"></script>
 <script src="peptide-specs.js?v=5"></script>
 <script type="text/babel" src="spec-card.jsx?v=3"></script>
-<script type="text/babel" src="product-page.jsx?v=3"></script>
+<script type="text/babel" src="product-page.jsx?v=4"></script>
 <script src="accessory-kits.js"></script>
 <script type="text/babel" src="weighin.jsx"></script>
 <script type="text/babel" src="onboarding-quiz.jsx"></script>
@@ -753,6 +753,7 @@ const PRODUCT_PHOTOS = [
   { match: 'bac water',    src: 'assets/product-bacwater.png' },
   { match: 'ghrp2', src: 'assets/product-ghrp2.png' },
   { match: 'ghrp6', src: 'assets/product-ghrp6.png' },
+  { match: 'hair growth helper', src: 'assets/product-hair-growth-helper.png' },
   { match: 'btk', src: 'assets/product-btk.png' },
   { match: 'eloralintide', src: 'assets/product-eloralintide.png' },
   { match: 'ara-290', src: 'assets/product-ara290.png' },
@@ -776,6 +777,17 @@ const PRODUCT_PHOTOS = [
   { match: 'nutrition plan', src: 'assets/program-nutrition.png' },
   { match: 'workout',      src: 'assets/program-workout.png' },
 ];
+
+// Order notices shown on a product's card and product page (lowercase substring match).
+const PRODUCT_NOTICES = [
+  { match: 'hair growth helper', short: 'Discuss with PeakFormBio before ordering',
+    text: 'Please do not order unless you have discussed this product with PeakFormBio ahead of time.' },
+];
+const getProductNotice = (label) => {
+  const lower = String(label || '').toLowerCase();
+  return PRODUCT_NOTICES.find(n => lower.includes(n.match)) || null;
+};
+window.getProductNotice = getProductNotice;
 
 const getProductPhoto = (label) => {
   if (!label) return null;
@@ -982,6 +994,11 @@ const PortalRevealCard = ({ parsed, blurb, tint, isSelected, onSelect, onExpand,
             <span style={{ flexShrink: 0, fontSize: 18, fontWeight: 700, color: tint }}>{display.price}</span>
           )}
         </h3>
+        {getProductNotice(display.fullLabel) && (
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: '#ff9f0a', marginBottom: 8, lineHeight: 1.3 }}>
+            ⚠ {getProductNotice(display.fullLabel).short}
+          </div>
+        )}
         {!isKitCard && <div style={{
           display: 'flex', alignItems: 'center',
           marginBottom: 14, height: 22, gap: 8,
@@ -1355,6 +1372,7 @@ const PortalCatalog = ({ productOptions, selectedLabels = [], onSelect, inventor
             tint={foundCat.tint}
             photo={getProductPhoto(found.parsed.fullLabel)}
             blurb={found.blurb}
+            notice={(getProductNotice(found.parsed.fullLabel) || {}).text}
             options={options}
             initialKey={found.parsed.fullLabel}
             onAdd={onSelect}
