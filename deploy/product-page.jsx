@@ -71,7 +71,7 @@
   );
 
   const ProductPage = (props) => {
-    const { name, categoryTitle, tint = BLUE, photo, blurb, options = [], initialKey, onAdd, onClose, related = [], onOpenRelated } = props;
+    const { name, categoryTitle, tint = BLUE, photo, blurb, notice, options = [], initialKey, onAdd, onClose, related = [], onOpenRelated } = props;
     if (window.usePeptideSpecs) window.usePeptideSpecs();
     const spec = window.findPeptideSpec ? window.findPeptideSpec(name) : null;
     const D = window.PEPTIDE_SPEC_DEFAULTS || {};
@@ -191,6 +191,13 @@
               </div>
               {(blurb || (spec && spec.tagline)) && (
                 <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(255,255,255,0.75)', margin: '0 0 18px' }}>{blurb || spec.tagline}</p>
+              )}
+
+              {notice && (
+                <div role="note" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', margin: '0 0 18px', borderRadius: 12,
+                  background: 'rgba(255,159,10,0.10)', border: '1px solid rgba(255,159,10,0.45)', color: '#ffb340', fontSize: 14.5, lineHeight: 1.45, fontWeight: 500 }}>
+                  <span aria-hidden="true">⚠</span><span>{notice}</span>
+                </div>
               )}
 
               {sel && sel.price && (

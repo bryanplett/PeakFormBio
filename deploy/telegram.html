@@ -14,8 +14,8 @@
 <script src="categories.js"></script>
 <script src="peptide-specs.js?v=5"></script>
 <script type="text/babel" src="spec-card.jsx?v=3"></script>
-<script src="product-photos.js?v=1"></script>
-<script type="text/babel" src="product-page.jsx?v=3"></script>
+<script src="product-photos.js?v=2"></script>
+<script type="text/babel" src="product-page.jsx?v=4"></script>
 <script src="payment-config.js"></script>
 <script type="text/babel" src="age-verification.jsx"></script>
 <style>
@@ -576,6 +576,7 @@ const TelegramStore = () => {
             categoryTitle={cat.title}
             tint={cat.tint}
             photo={getPhoto(openLabel)}
+            notice={window.getProductNotice ? window.getProductNotice(openLabel) : null}
             options={same.map(it => { const pp = parseLabel(it.label); return { key: it.label, label: pp.strength, price: pp.price, inCart: cartLabels.has(it.label) }; })}
             initialKey={openLabel}
             onAdd={addToCart}
