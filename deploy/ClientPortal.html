@@ -1504,6 +1504,10 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   const [kitOptOut, setKitOptOut] = React.useState(false);
   const kitOptedOutRef = React.useRef(new Set());
   const reminderConfirmedRef = React.useRef(false);
+  // GLP-switch warning: { previous, next } when the cart holds a different
+  // GLP than the client's most recent GLP order; null when hidden.
+  const [glpSwitchPrompt, setGlpSwitchPrompt] = React.useState(null);
+  const glpSwitchConfirmedRef = React.useRef(false);
   // Direct-payment checkout doesn't insert the order until the buyer taps
   // "Place order" on the payment-instructions screen. These hold the snapshot
   // + finalize function needed to do that insert later.
@@ -1722,11 +1726,39 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
     return productOptions.find(l => l.toLowerCase().startsWith(lower)) || null;
   };
 
+  // ─── GLP-switch check ────────────────────────────────────────────────
+  // If the cart holds a GLP (Semaglutide / Tirzepatide / Retatrutide) that is
+  // different from the GLP in the client's most recent GLP order, warn them
+  // before checkout. userData.orders is newest-first; cancelled orders are
+  // ignored. Short names (Sema / Tirz / Reta) are matched for older orders.
+  const glpSwitch = React.useMemo(() => {
+    const glpOf = (label) => {
+      const m = /\b(sema(?:glutide)?|tirz(?:epatide)?|reta(?:trutide)?)\b/i.exec(label || '');
+      if (!m) return null;
+      const k = m[1].slice(0, 4).toLowerCase();
+      return k === 'sema' ? 'Semaglutide' : k === 'tirz' ? 'Tirzepatide' : 'Retatrutide';
+    };
+    const lastGlpOrder = (userData?.orders || []).find(o => o.status !== 'Cancelled' && glpOf(o.item));
+    if (!lastGlpOrder) return null;
+    const previous = glpOf(lastGlpOrder.item);
+    const next = [...new Set(cart.map(it => glpOf(it.label)).filter(Boolean))].filter(g => g !== previous);
+    return next.length ? { previous, next } : null;
+  }, [cart, userData?.orders]);
+
+  // Any cart change means the client must confirm the switch again.
+  React.useEffect(() => { glpSwitchConfirmedRef.current = false; }, [cart]);
+
   const submit = async (e) => {
     e.preventDefault();
     if (cart.length === 0 || submitting) return;
     if (userData?.profile?.status === 'restricted') {
       setFieldErrors({ stock: 'Ordering is paused on your account. Please contact PeakFormBio at 669-333-6600.' });
+      return;
+    }
+
+    // Different GLP than last time → make the client confirm before ordering.
+    if (glpSwitch && !glpSwitchConfirmedRef.current) {
+      setGlpSwitchPrompt(glpSwitch);
       return;
     }
 
@@ -3105,6 +3137,93 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
           </div>
         )}
       </div>
+
+      {/* ── GLP-switch warning modal ──────────────────────────────────────── */}
+      {glpSwitchPrompt && (
+        <div
+          onClick={() => setGlpSwitchPrompt(null)}
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.72)',
+            backdropFilter: 'blur(3px)',
+            WebkitBackdropFilter: 'blur(3px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24, zIndex: 9000, overflowY: 'auto',
+            animation: 'fadeIn 0.2s ease',
+          }}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog" aria-modal="true" aria-labelledby="glp-switch-title"
+            style={{
+              width: '100%', maxWidth: 480,
+              background: '#161617',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 22,
+              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.7)',
+              overflow: 'hidden',
+            }}>
+            <div style={{ padding: '32px 32px 22px', textAlign: 'center' }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%', margin: '0 auto 16px',
+                background: 'rgba(255,159,10,0.10)', border: '1px solid rgba(255,159,10,0.35)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ff9f0a',
+              }}>
+                {/* Warning icon */}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3.5 2.5 20h19L12 3.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                  <path d="M12 10v4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  <circle cx="12" cy="17.2" r="0.9" fill="currentColor"/>
+                </svg>
+              </div>
+              <h2 id="glp-switch-title" style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 12, color: '#f5f5f7' }}>
+                You're ordering a different GLP
+              </h2>
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.82)', lineHeight: 1.55, margin: '0 auto 12px' }}>
+                Your last GLP order was <strong style={{ color: '#f5f5f7' }}>{glpSwitchPrompt.previous}</strong>.
+                This order includes <strong style={{ color: '#f5f5f7' }}>{glpSwitchPrompt.next.join(' and ')}</strong>.
+              </p>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, margin: '0 auto' }}>
+                Improper transition or titration between GLPs can lead to adverse side effects.
+                Would you like to proceed with this order?
+              </p>
+            </div>
+            <div style={{
+              padding: '18px 28px 26px',
+              display: 'flex', gap: 10,
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <button
+                type="button"
+                onClick={() => setGlpSwitchPrompt(null)}
+                style={{
+                  background: 'transparent', color: 'rgba(255,255,255,0.6)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 12, padding: '12px 18px',
+                  fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                ← Back to cart
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  glpSwitchConfirmedRef.current = true;
+                  setGlpSwitchPrompt(null);
+                  // Re-run checkout; submit() now skips the GLP check.
+                  const form = document.querySelector('form[data-checkout-form="1"]');
+                  if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+                  else if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                }}
+                style={{
+                  flex: 1, background: '#0066cc', color: '#fff',
+                  border: 'none', borderRadius: 12, padding: '12px 18px',
+                  fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                Yes, proceed with order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Pre-checkout reminder modal ───────────────────────────────────── */}
       {showReminder && (
