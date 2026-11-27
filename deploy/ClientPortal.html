@@ -28,7 +28,7 @@
 <script type="text/babel" src="payment-instructions.jsx"></script>
 <script type="text/babel" src="recent-order.jsx?v=1"></script>
 <script type="text/babel" src="hormone-portal.jsx?v=1"></script>
-<script type="text/babel" src="pen-promo.jsx?v=6"></script>
+<script type="text/babel" src="restock-notice.jsx?v=1"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -4335,13 +4335,7 @@ const Portal = ({ userId, onLogout }) => {
       {/* Main content */}
       <main style={{ flex: 1, minWidth: 0, padding: '48px 40px', paddingBottom: 80, background: '#0a0a0a' }}>
         <SpecialPromoBanner onOpen={() => setCarnitineOpen(true)} />
-        {window.PenPromo && (
-          <window.PenPromo onAdd={(name) => {
-            switchTab('order');
-            window.history.replaceState({}, '', window.location.pathname + `?add=${encodeURIComponent(name)}&qty=1` + window.location.hash);
-            window.dispatchEvent(new CustomEvent('pfb-deep-link'));
-          }} />
-        )}
+        {window.RestockNotice && <window.RestockNotice />}
         {carnitineOpen && (
           <SpecialModal
             onClose={() => setCarnitineOpen(false)}
