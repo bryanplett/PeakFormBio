@@ -2172,8 +2172,13 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
   // dropdown in coupons-manager.jsx, so matching is just a case-insensitive
   // whole-word test against that name — no per-product hardcoding needed.
   const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Wholesale vial kits (5 / 10 vials) are already 30–50% off, so no coupon
+  // discounts them.
+  const isVialKit = (label) => !!(window.PFB_KIT_INFO || {})[label];
+  const cartHasVialKit = cart.some(it => isVialKit(it.label));
   const lineMatchesCoupon = (label) => {
     if (!matchedCoupon) return false;
+    if (isVialKit(label)) return false;
     if (matchedCoupon.scope === 'all') return true;
     const scope = matchedCoupon.scope || '';
     const test = new RegExp('\\b' + escapeRegExp(scope) + '\\b', 'i');
@@ -2576,8 +2581,15 @@ const OrderForm = ({ userData, onOrderPlaced }) => {
                   Code applied{couponHasNoTarget
                     ? (matchedCoupon.scope === 'glutathione'
                         ? ', but you need exactly 2 Glutathione in your cart for this discount.'
-                        : `, but no ${matchedCoupon.scope} items in your cart yet.`)
+                        : matchedCoupon.scope === 'all'
+                          ? ', but coupons don’t apply to vial kits.'
+                          : `, but no ${matchedCoupon.scope} items in your cart yet.`)
                     : '.'}
+                </p>
+              )}
+              {couponActive && couponSavings > 0 && cartHasVialKit && (
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 4, letterSpacing: '-0.1px' }}>
+                  Vial kits are already discounted and aren’t included in coupon savings.
                 </p>
               )}
             </div>
