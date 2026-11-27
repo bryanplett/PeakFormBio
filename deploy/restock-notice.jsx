@@ -24,6 +24,7 @@
       icon: '%',
       title: '30% off during the restock',
       body: 'We appreciate your patience. To make up for any inconvenience, enjoy 30% off for the full duration of the restock and upgrade.',
+      code: 'Restock',
       highlight: true,
     },
     {
@@ -56,6 +57,13 @@
               <div>
                 <div style={rnS.itemTitle}>{it.title}</div>
                 <div style={rnS.itemBody}>{it.body}</div>
+                {it.code && (
+                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>Use code</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', color: '#2997ff', border: '1px dashed rgba(41,151,255,0.6)', borderRadius: 8, padding: '4px 10px', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{it.code}</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>at checkout</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
